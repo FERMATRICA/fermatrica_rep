@@ -1,0 +1,9 @@
+<c:manualLayout xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+  <c:layoutTarget val="inner"/>
+  <c:xMode val="edge"/>
+  <c:yMode val="edge"/>
+  <c:x val="0.05"/>
+  <c:y val="0.7"/>
+  <c:w val="0.8"/>
+  <c:h val="0.25"/>
+</c:manualLayout>

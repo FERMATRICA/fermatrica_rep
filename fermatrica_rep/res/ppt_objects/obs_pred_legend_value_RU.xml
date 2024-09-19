@@ -1,0 +1,191 @@
+  <p:grpSp xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+	<p:nvGrpSpPr>
+	  <p:cNvPr id="10" name="Value Legend"/>
+	  <p:cNvGrpSpPr/>
+	  <p:nvPr/>
+	</p:nvGrpSpPr>
+	<p:grpSpPr>
+	  <a:xfrm>
+		<a:off x="5355853" y="1493449"/>
+		<a:ext cx="1078136" cy="487782"/>
+		<a:chOff x="1983980" y="5171984"/>
+		<a:chExt cx="1078136" cy="487782"/>
+	  </a:xfrm>
+	</p:grpSpPr>
+	<p:sp>
+	  <p:nvSpPr>
+		<p:cNvPr id="11" name="Rectangle 10"/>
+		<p:cNvSpPr/>
+		<p:nvPr/>
+	  </p:nvSpPr>
+	  <p:spPr>
+		<a:xfrm>
+		  <a:off x="1983980" y="5171984"/>
+		  <a:ext cx="1078136" cy="487782"/>
+		</a:xfrm>
+		<a:prstGeom prst="rect">
+		  <a:avLst/>
+		</a:prstGeom>
+		<a:solidFill>
+		  <a:schemeClr val="bg1"/>
+		</a:solidFill>
+		<a:ln>
+		  <a:solidFill>
+			<a:srgbClr val="416FC3"/>
+		  </a:solidFill>
+		</a:ln>
+	  </p:spPr>
+	  <p:style>
+		<a:lnRef idx="1">
+		  <a:schemeClr val="accent1"/>
+		</a:lnRef>
+		<a:fillRef idx="3">
+		  <a:schemeClr val="accent1"/>
+		</a:fillRef>
+		<a:effectRef idx="2">
+		  <a:schemeClr val="accent1"/>
+		</a:effectRef>
+		<a:fontRef idx="minor">
+		  <a:schemeClr val="lt1"/>
+		</a:fontRef>
+	  </p:style>
+	  <p:txBody>
+		<a:bodyPr rtlCol="0" anchor="ctr"/>
+		<a:lstStyle/>
+		<a:p>
+		  <a:pPr algn="ctr"/>
+		  <a:endParaRPr lang="en-US" sz="800"/>
+		</a:p>
+	  </p:txBody>
+	</p:sp>
+	<p:cxnSp>
+	  <p:nvCxnSpPr>
+		<p:cNvPr id="12" name="Straight Connector 11"/>
+		<p:cNvCxnSpPr/>
+		<p:nvPr/>
+	  </p:nvCxnSpPr>
+	  <p:spPr>
+		<a:xfrm>
+		  <a:off x="2112963" y="5334667"/>
+		  <a:ext cx="276225" cy="0"/>
+		</a:xfrm>
+		<a:prstGeom prst="line">
+		  <a:avLst/>
+		</a:prstGeom>
+		<a:ln w="19050">
+		  <a:solidFill>
+			<a:schemeClr val="tx1"/>
+		  </a:solidFill>
+		</a:ln>
+	  </p:spPr>
+	  <p:style>
+		<a:lnRef idx="2">
+		  <a:schemeClr val="accent1"/>
+		</a:lnRef>
+		<a:fillRef idx="0">
+		  <a:schemeClr val="accent1"/>
+		</a:fillRef>
+		<a:effectRef idx="1">
+		  <a:schemeClr val="accent1"/>
+		</a:effectRef>
+		<a:fontRef idx="minor">
+		  <a:schemeClr val="tx1"/>
+		</a:fontRef>
+	  </p:style>
+	</p:cxnSp>
+	<p:cxnSp>
+	  <p:nvCxnSpPr>
+		<p:cNvPr id="13" name="Straight Connector 12"/>
+		<p:cNvCxnSpPr/>
+		<p:nvPr/>
+	  </p:nvCxnSpPr>
+	  <p:spPr>
+		<a:xfrm>
+		  <a:off x="2112962" y="5507373"/>
+		  <a:ext cx="276225" cy="0"/>
+		</a:xfrm>
+		<a:prstGeom prst="line">
+		  <a:avLst/>
+		</a:prstGeom>
+		<a:ln w="19050">
+		  <a:solidFill>
+			<a:srgbClr val="104E8B"/>
+		  </a:solidFill>
+		</a:ln>
+	  </p:spPr>
+	  <p:style>
+		<a:lnRef idx="2">
+		  <a:schemeClr val="accent1"/>
+		</a:lnRef>
+		<a:fillRef idx="0">
+		  <a:schemeClr val="accent1"/>
+		</a:fillRef>
+		<a:effectRef idx="1">
+		  <a:schemeClr val="accent1"/>
+		</a:effectRef>
+		<a:fontRef idx="minor">
+		  <a:schemeClr val="tx1"/>
+		</a:fontRef>
+	  </p:style>
+	</p:cxnSp>
+	<p:sp>
+	  <p:nvSpPr>
+		<p:cNvPr id="14" name="TextBox 13"/>
+		<p:cNvSpPr txBox="1"/>
+		<p:nvPr/>
+	  </p:nvSpPr>
+	  <p:spPr>
+		<a:xfrm>
+		  <a:off x="2378427" y="5231067"/>
+		  <a:ext cx="412292" cy="215444"/>
+		</a:xfrm>
+		<a:prstGeom prst="rect">
+		  <a:avLst/>
+		</a:prstGeom>
+		<a:noFill/>
+	  </p:spPr>
+	  <p:txBody>
+		<a:bodyPr wrap="none" rtlCol="0">
+		  <a:spAutoFit/>
+		</a:bodyPr>
+		<a:lstStyle/>
+		<a:p>
+		  <a:r>
+			<a:rPr lang="ru-RU" sz="800" dirty="0" smtClean="0"/>
+			<a:t>Факт</a:t>
+		  </a:r>
+		  <a:endParaRPr lang="en-US" sz="800" dirty="0"/>
+		</a:p>
+	  </p:txBody>
+	</p:sp>
+	<p:sp>
+	  <p:nvSpPr>
+		<p:cNvPr id="15" name="TextBox 14"/>
+		<p:cNvSpPr txBox="1"/>
+		<p:nvPr/>
+	  </p:nvSpPr>
+	  <p:spPr>
+		<a:xfrm>
+		  <a:off x="2368578" y="5388482"/>
+		  <a:ext cx="570990" cy="215444"/>
+		</a:xfrm>
+		<a:prstGeom prst="rect">
+		  <a:avLst/>
+		</a:prstGeom>
+		<a:noFill/>
+	  </p:spPr>
+	  <p:txBody>
+		<a:bodyPr wrap="none" rtlCol="0">
+		  <a:spAutoFit/>
+		</a:bodyPr>
+		<a:lstStyle/>
+		<a:p>
+		  <a:r>
+			<a:rPr lang="ru-RU" sz="800" dirty="0" smtClean="0"/>
+			<a:t>Прогноз</a:t>
+		  </a:r>
+		  <a:endParaRPr lang="en-US" sz="800" dirty="0"/>
+		</a:p>
+	  </p:txBody>
+	</p:sp>
+  </p:grpSp>
