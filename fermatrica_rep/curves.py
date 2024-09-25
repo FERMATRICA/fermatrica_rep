@@ -68,6 +68,7 @@ def _curve_simple_data_worker(
 
                 crv = {k: func_tmp(pd.DataFrame({var: v,
                                                  'date': datetime.datetime.now(),
+                                                 'wrk_index': list(range(0, len(v))),
                                                  'kpi_coef_cor_sm': 1.}), var, params_tmp) for k, v in crv.items()}
 
             except AttributeError as ae:
@@ -88,6 +89,7 @@ def _curve_simple_data_worker(
         crv = pd.concat(pd.DataFrame({'bdg__': k, var: v}) for k, v in crv.items())
         crv['date'] = datetime.datetime.now()
         crv['kpi_coef_cor_sm'] = 1.
+        crv['wrk_index'] = crv.index
 
         for func in list_funcs:
             params_tmp = params[(params['variable'] == var) & (params['fun'] == func)][['arg', 'value']]
@@ -112,7 +114,7 @@ def _curve_simple_data_worker(
 @profile
 def curves_simple_data(
         model: "Model"
-        , dt_p: pd.DataFrame
+        , ds: pd.DataFrame
         , model_rep: "ModelRep"
         , budget_lim: int | float = 100
         , budget_step: int | float = 1
@@ -123,7 +125,7 @@ def curves_simple_data(
     Prepare data to plot simple curves
     
     :param model: Model object
-    :param dt_p: dataset
+    :param ds: dataset
     :param model_rep: ModelRep object (export setting)
     :param budget_lim: maximum budget per tool in millions
     :param budget_step: step in millions
@@ -137,8 +139,8 @@ def curves_simple_data(
     if type(adstock_len) is float:
         adstock_len = int(adstock_len)
 
-    if dt_p is None or dt_p.empty:
-        dt_p = model.obj.models['main'].model.data.frame
+    if ds is None or ds.empty:
+        ds = model.obj.models['main'].model.data.frame
 
     if 'main' not in model.obj.models:
         return '"main" not found in model_objects - no main model info in loaded model'
@@ -173,7 +175,7 @@ def curves_simple_data(
                                                      , if_precise=if_precise
                                                      , adstock_len=adstock_len)
 
-            max_bdgt = dt_p.get(var[0], default=pd.Series(budget_lim * 1e+6)).max() * var[2]
+            max_bdgt = ds.get(var[0], default=pd.Series(budget_lim * 1e+6)).max() * var[2]
             max_bdgt = (max_bdgt + (budget_step * 1e+6) / 2) // (budget_step * 1e+6) * (budget_step * 1e+6)
 
             pattern = re.compile(r'^[0-9]+_')

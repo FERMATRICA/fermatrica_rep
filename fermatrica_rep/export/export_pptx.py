@@ -278,10 +278,10 @@ Generate presentation step by step
 
 
 def export_option_table(prs,
-                        model: "Model",
-                        model_rep: "ModelRep",
-                        dt_pred: pd.DataFrame,
-                        ds: pd.DataFrame,
+                        model: "Model | list",
+                        model_rep: "ModelRep | list",
+                        dt_pred: pd.DataFrame | list,
+                        ds: pd.DataFrame | list,
                         opt_set: "OptionSettings",
                         options_m: dict,
                         if_exact: bool = True,
@@ -290,16 +290,22 @@ def export_option_table(prs,
     Export options summary as a table.
 
     :param prs: Presentation object from python_pptx package
-    :param model: Model object
-    :param model_rep: ModelRep object (reporting settings)
-    :param dt_pred: prediction data
-    :param ds: main dataset
+    :param model: Model object or list of Model objects
+    :param model_rep: ModelRep object (reporting settings) or list ModelRep objects
+    :param dt_pred: prediction data or list of prediction datas
+    :param ds: main dataset or list of main datasets
     :param opt_set: OptionSetting object containing calculate settings
     :param options_m: dictionary of dictionaries defining options to calculate in detailed report and option table
     :param if_exact: apply only to specific time period, without next years
     :return: Presentation object from python_pptx package
     """
-    superbrand = model.conf.target_superbrand
+
+    if isinstance(model, list):
+        superbrand = model[-1].conf.target_superbrand
+        bs_key_filter = dt_pred[-1].loc[(dt_pred[-1]['superbrand'] == superbrand), 'bs_key'].unique()
+    else:
+        superbrand = model.conf.target_superbrand
+        bs_key_filter = dt_pred.loc[(dt_pred['superbrand'] == superbrand), 'bs_key'].unique()
 
     prs = slides.options(prs=prs,
                          model=model,
@@ -309,7 +315,7 @@ def export_option_table(prs,
                          options_m=options_m,
                          opt_set=opt_set,
                          if_exact=if_exact,
-                         bs_key_filter=dt_pred.loc[(dt_pred['superbrand'] == superbrand), 'bs_key'].unique())
+                         bs_key_filter=bs_key_filter)
 
     return prs
 

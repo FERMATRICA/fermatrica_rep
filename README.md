@@ -1,5 +1,78 @@
 # FERMATRICA Flexible Econometrics Framework. Reporting
 
+[_Russian version below_](#RU)
+
+Reporting and post-modeling for econometric models built using FERMATRICA.
+
+### 1. Key Ideas
+
+FERMATRICA_REP encompasses all reporting and business analysis functionality for an already built model. (The model is constructed using FERMATRICA.) The main blocks are:
+
+1. Model exploration - actual data and forecasts, decomposition into factors, statistical outputs, and efficiency curves. For most of this type of functionality, historical data is sufficient; only some components require an understanding of future periods (`fermatrica_rep.curves_full)`.
+2. Forecasting the future - KPI forecasts for future periods under specified conditions. Translating annual budgets into marketing variables, calculating summaries for investment scenarios, optimizing budgets against specified KPIs.
+3. Visualization and export of results - tables, `plotly` graphs, export to XLSX and PPTX. 
+
+The functionality of FERMATRICA_REP can be used independently or through the FERMATRICA_DASH dashboard (reporting logic is encapsulated within FERMATRICA_REP).
+
+### 2. Components
+
+The repository includes modules responsible for reporting and post-modeling for econometric models built using FERMATRICA.
+
+- Standard reporting components
+  - Metrics and statistical outputs (`fermatrica_rep.stats`)
+  - Fit (actual data and forecasts) (`fermatrica_rep.fit`, `fermatrica_rep.category`)
+  - Decomposition over time (`fermatrica_rep.decomposition`)
+  - Decomposition over a period (waterfall) (`fermatrica_rep.waterfall`)
+  - Efficiency curves (`fermatrica_rep.curves`, `fermatrica_rep.curves_full`)
+  - Transformations (`fermatrica_rep.transformation`)
+- Calculation of investment options/scenarios (`fermatrica_rep.options`)
+- Budget optimizer (`fermatrica_rep.options.optim`)
+- Export model to XLSX (`fermatrica_rep.model_exp`)
+- Standard slide generator in PPTX (`fermatrica_rep.reporting`)
+
+### 3. Installation
+
+To facilitate work, it is recommended to install all components of the FERMATRICA framework. It is assumed that work will be conducted in PyCharm (VScode is OK also for sure).
+
+1. Create a Python virtual environment of your choice (Anaconda, Poetry, etc.) or use a previously created one. It makes sense to establish a separate virtual environment for econometric tasks and for every new version of FERMATRICA.
+    1. Mini-guide on virtual environments (external): https://blog.sedicomm.com/2021/06/29/chto-takoe-venv-i-virtualenv-v-python-i-kak-ih-ispolzovat/
+    2. For framework version v010, let the virtual environment be named FERMATRICA_v010.
+2. Clone the FERMATRICA repositories to a location of your choice.
+    ```commandline
+    cd [my_fermatrica_folder]
+    git clone https://github.com/FERMATRICA/fermatrica_utils.git 
+    git clone https://github.com/FERMATRICA/fermatrica.git
+    git clone https://github.com/FERMATRICA/fermatrica_rep.git 
+    ```
+   1. To work with the interactive dashboard, also clone its repository:
+       ```commandline
+       git clone https://github.com/FERMATRICA/fermatrica_dash.git
+       ```
+    2. For preliminary data work:
+       ```commandline
+       git clone https://github.com/FERMATRICA/fermatrica_data.git
+       ```
+3. In each of the repositories, select the FERMATRICA_v010 environment (FERMATRICA_v020, FERMATRICA_v030, etc.) through Add interpreter in the PyCharm interface and switch to the corresponding git branch.
+    ```commandline
+    cd [my_fermatrica_folder]/[fermatrica_part_folder]
+    git checkout v010 [v020, v030...]
+    ```
+4. Install all cloned packages except FERMATRICA_DASH using pip install.
+    ```commandline
+    cd [my_fermatrica_folder]/[fermatrica_part_folder]
+    pip install .
+    ```
+   1. Instead of navigating to each project's folder, you can specify the path to it in pip install:
+       ```commandline
+       pip install [path_to_fermatrica_part]
+       ```
+5. If necessary, install third-party packages/libraries required for the functioning of FERMATRICA using `conda install` or `pip install`. To update versions of third-party packages, use `conda update` or `pip install -U`.
+
+>FERMATRICA_REP may require installed MS Office for proper functionality. This is due to the complexity of exporting to the PPTX format. Operation on systems other than Windows is not guaranteed.
+
+-------------------------------------
+
+<a name="RU"></a>
 Репортинг и постмоделлинг для эконометрических моделей, построенных при помощи FERMATRICA.
 
 ### 1. Ключевые идеи

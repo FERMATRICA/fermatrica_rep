@@ -31,9 +31,9 @@ from fermatrica_rep.model_rep import ModelRep
 import fermatrica_rep.options.calc as calc
 
 
-def _objective_fun_generate(ds: pd.DataFrame
-                            , model: "Model"
-                            , model_rep: "ModelRep"
+def _objective_fun_generate(ds: pd.DataFrame | list
+                            , model: "Model | list"
+                            , model_rep: "ModelRep | list"
                             , borders: pd.DataFrame
                             , option: dict
                             , opt_set: "OptionSettings"
@@ -46,9 +46,9 @@ def _objective_fun_generate(ds: pd.DataFrame
     the closure one time instead of passing every iteration. Works fine in single-process environment
     only, so to be used for local algorithms mostly.
 
-    :param ds: dataset
-    :param model: Model object
-    :param model_rep: ModelRep object (export settings)
+    :param ds: dataset or list of datasets
+    :param model: Model object or list Model objects
+    :param model_rep: ModelRep object (export settings) or list of ModelRep objects
     :param borders: dataframe of low and upper borders for every variable to vary
     :param option: base budget option / scenario to calculate as dictionary. Optimized values to be inserted
         in this option when optimizing and later export
@@ -103,7 +103,9 @@ def _objective_fun_generate(ds: pd.DataFrame
         ds, ds_pred, opt_sum = calc.option_report(model, ds, model_rep,
                                                   option, opt_set, if_exact=if_exact)
 
-        # do we need this?
+        if isinstance(model_rep, list):
+            opt_sum = opt_sum[-1]
+
         if if_exact:
             if if_volume:
                 score = opt_sum["pred_exact_0"]["pred_exact_vol"]
@@ -133,9 +135,9 @@ def _objective_fun_generate(ds: pd.DataFrame
     return objective_fun
 
 
-def _constraint_fun_generate_target(ds: pd.DataFrame
-                                    , model: "Model"
-                                    , model_rep: "ModelRep"
+def _constraint_fun_generate_target(ds: pd.DataFrame | list
+                                    , model: "Model | list"
+                                    , model_rep: "ModelRep | list"
                                     , borders: pd.DataFrame
                                     , option: dict
                                     , opt_set: "OptionSettings"
@@ -153,9 +155,9 @@ def _constraint_fun_generate_target(ds: pd.DataFrame
     For optimization with known KPI value objective function is rather simple and equals to budget size. All real
     calculations are moved to inequality constraints function.
 
-    :param ds: dataset
-    :param model: Model object
-    :param model_rep: ModelRep object (export settings)
+    :param ds: dataset or list of datasets
+    :param model: Model object or list of Model objects
+    :param model_rep: ModelRep object (export settings) or list of ModelRep objects
     :param borders: dataframe of low and upper borders for every variable to vary
     :param option: base budget option / scenario to calculate as dictionary. Optimized values to be inserted
         in this option when optimizing and later export
@@ -214,7 +216,9 @@ def _constraint_fun_generate_target(ds: pd.DataFrame
         ds, ds_pred, opt_sum = calc.option_report(model, ds, model_rep,
                                                   option, opt_set, if_exact=if_exact)
 
-        # do we need this?
+        if isinstance(model_rep, list):
+            opt_sum = opt_sum[-1]
+
         if if_exact:
             if if_volume:
                 score = opt_sum["pred_exact_0"]["pred_exact_vol"]
@@ -243,9 +247,9 @@ def _constraint_fun_generate_target(ds: pd.DataFrame
     return constraint_fun
 
 
-def optimize_budget_local_cobyla(ds: pd.DataFrame
-                                 , model: "Model"
-                                 , model_rep: "ModelRep"
+def optimize_budget_local_cobyla(ds: pd.DataFrame | list
+                                 , model: "Model | list"
+                                 , model_rep: "ModelRep | list"
                                  , borders_dict: dict
                                  , option: dict
                                  , opt_set: "OptionSettings"
@@ -273,9 +277,9 @@ def optimize_budget_local_cobyla(ds: pd.DataFrame
     or https://nlopt.readthedocs.io/en/latest/NLopt_Algorithms/#cobyla-constrained-optimization-by-linear-approximations
     and Powell's articles mentioned via link.
 
-    :param ds: dataset
-    :param model: Model object
-    :param model_rep: ModelRep object (export settings)
+    :param ds: dataset or list of datasets
+    :param model: Model object or list of Model objects
+    :param model_rep: ModelRep object (export settings) or list of ModelRep objects
     :param borders_dict: dictionary of low and upper borders for every variable to vary
     :param option: base budget option / scenario to calculate as dictionary. Optimized values to be inserted
         in this option when optimizing and later export
@@ -368,9 +372,9 @@ def optimize_budget_local_cobyla(ds: pd.DataFrame
     return option
 
 
-def optimize_target_local_cobyla(ds: pd.DataFrame
-                                 , model_rep: "ModelRep"
-                                 , model: "Model"
+def optimize_target_local_cobyla(ds: pd.DataFrame | list
+                                 , model_rep: "ModelRep | list"
+                                 , model: "Model | list"
                                  , borders_dict: dict
                                  , opt_set
                                  , option: dict
@@ -398,9 +402,9 @@ def optimize_target_local_cobyla(ds: pd.DataFrame
     or https://nlopt.readthedocs.io/en/latest/NLopt_Algorithms/#cobyla-constrained-optimization-by-linear-approximations
     and Powell's articles mentioned via link.
 
-    :param ds: dataset
-    :param model: Model object
-    :param model_rep: ModelRep object (export settings)
+    :param ds: dataset or list of datasets
+    :param model: Model object or list of Model objects
+    :param model_rep: ModelRep object (export settings) or list of ModelRep objects
     :param borders_dict: dictionary of low and upper borders for every variable to vary
     :param option: base budget option / scenario to calculate as dictionary. Optimized values to be inserted
         in this option when optimizing and later export

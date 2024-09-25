@@ -195,11 +195,11 @@ def _opt_grid_summarize(model_rep: "ModelRep"
     return curves_full_df
 
 
-def option_report_multi_post(model: "Model"
-                             , ds: pd.DataFrame
-                             , model_rep: "ModelRep"
+def option_report_multi_post(model: "Model | list"
+                             , ds: pd.DataFrame | list
+                             , model_rep: "ModelRep | list"
                              , opt_set: "OptionSettings"
-                             , translation: pd.DataFrame
+                             , translation: pd.DataFrame | None = None
                              , adhoc_curves_max_costs: "None | Callable" = None
                              , budget_step: int | float = 1
                              , fixed_vars: dict | None = None
@@ -215,11 +215,12 @@ def option_report_multi_post(model: "Model"
     Higher-level function for multiple option calculations. Use it to calculate efficiency curves
     (full version) and option combinations without optimisation.
 
-    :param model: Model object
-    :param ds: dataset
-    :param model_rep: ModelRep object (export settings)
+    :param model: Model object or list of Model objects
+    :param ds: dataset or list of datasets
+    :param model_rep: ModelRep object (export settings) or list of ModelRep objects
     :param opt_set: OptionSettings object (option setting: target period etc.)
-    :param translation: translation dataframe (from files like `options.xlsx`, `translation` sheet)
+    :param translation: translation dataframe (from files like `options.xlsx`, `translation` sheet) or None
+        (i.e. defaults to trans_dict attribute of `model_rep` argument)
     :param adhoc_curves_max_costs: adhoc function to set maximum observed values for every variable (optional)
     :param budget_step: budget iteration step in millions, defaults to 1 (i.e. 1M)
     :param fixed_vars: translation variables with their values to be fixed across grid
@@ -231,6 +232,12 @@ def option_report_multi_post(model: "Model"
     :param bdg_max: maximum budget size (all options with larger budgets to be dropped)
     :return: options summaries per every option with option split and info, as dataframe
     """
+
+    if translation is None:
+        if isinstance(model_rep, list):
+            translation = pd.DataFrame(model_rep[-1].trans_dict.copy())
+        else:
+            translation = pd.DataFrame(model_rep.trans_dict.copy())
 
     if grid_type == 'curves':
         grid = opt_grid(translation, budget_step, fixed_vars)
@@ -253,8 +260,20 @@ def option_report_multi_post(model: "Model"
 
     opt_sum = calc.option_report_multi_var(model, ds, model_rep, curves_full_df, opt_set,
                                            cores=cores, if_exact=if_exact)
-    opt_sum_fr = pd.DataFrame.from_dict(opt_sum, orient='index')
 
-    grid_data = _opt_grid_summarize(model_rep, grid, opt_sum_fr, grid_type)
+    if isinstance(model_rep, list):
+
+        grid_data = [None] * len(model_rep)
+
+        for i, val in enumerate(model_rep):
+
+            opt_sum_cur = {k:v[i] for k,v in opt_sum.items()}
+
+            opt_sum_fr = pd.DataFrame.from_dict(opt_sum_cur, orient='index')
+            grid_data[i] = _opt_grid_summarize(model_rep[i], grid, opt_sum_fr, grid_type)
+
+    else:
+        opt_sum_fr = pd.DataFrame.from_dict(opt_sum, orient='index')
+        grid_data = _opt_grid_summarize(model_rep, grid, opt_sum_fr, grid_type)
 
     return grid_data

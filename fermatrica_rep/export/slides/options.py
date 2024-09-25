@@ -20,10 +20,10 @@ import fermatrica_rep.options.calc as calc
 
 
 def create(prs: Presentation,
-           model: "Model",
-           model_rep: "ModelRep",
-           dt_pred: pd.DataFrame,
-           ds: pd.DataFrame,
+           model: "Model | list",
+           model_rep: "ModelRep | list",
+           dt_pred: pd.DataFrame | list,
+           ds: pd.DataFrame | list,
            options_m: dict,
            opt_set: "OptionSettings",
            bs_key_filter: list | tuple | None = None,
@@ -40,10 +40,10 @@ def create(prs: Presentation,
     2. Summary table
 
     :param prs: Presentation object from python_pptx package
-    :param model: Model object
-    :param model_rep: ModelRep object (reporting settings)
-    :param dt_pred: prediction data
-    :param ds: main dataset
+    :param model: Model object or list of Model objects
+    :param model_rep: ModelRep object (reporting settings) or list ModelRep objects
+    :param dt_pred: prediction data or list of prediction datas
+    :param ds: main dataset or list of main datasets
     :param options_m: dictionary of dictionaries defining options to calculate
     :param opt_set: OptionSetting object containing calculate settings
     :param bs_key_filter: list or tuple of 'bs_key' values to preserve
@@ -51,16 +51,24 @@ def create(prs: Presentation,
     :return: Presentation object from python_pptx package
     """
 
-    language = model_rep.language
-    slide_width = model_rep.pptx_cnf['slide_width']
-    slide_height = model_rep.pptx_cnf['slide_height']
+    if isinstance(model_rep, list):
+        model_rep_main = model_rep[-1]
+        dt_pred = dt_pred[-1]
+        price_var = model[-1].conf.price_var
+    else:
+        model_rep_main = model_rep
+        price_var = model.conf.price_var
+
+    language = model_rep_main.language
+    slide_width = model_rep_main.pptx_cnf['slide_width']
+    slide_height = model_rep_main.pptx_cnf['slide_height']
 
     # slide_layout = [x for x in prs.slide_masters[1].slide_layouts if x.name == "Blank_slide"][0]
-    slide_layout = model_rep.pptx_cnf['Blank_slide']
+    slide_layout = model_rep_main.pptx_cnf['Blank_slide']
 
     dt_pred_prep = dt_pred.assign(year=dt_pred['date'].dt.year,
-                                  observed_val=dt_pred['observed'] * dt_pred[model.conf.price_var],
-                                  predicted_val=dt_pred['predicted'] * dt_pred[model.conf.price_var]). \
+                                  observed_val=dt_pred['observed'] * dt_pred[price_var],
+                                  predicted_val=dt_pred['predicted'] * dt_pred[price_var]). \
         loc[(dt_pred['bs_key'].isin(bs_key_filter)) & (dt_pred['listed'].isin([2, 3, 4]))]. \
         groupby('year')[['observed', 'predicted', 'observed_val', 'predicted_val']].sum().reset_index()
 
@@ -80,11 +88,11 @@ def create(prs: Presentation,
     for options_names_subset in options_names:
         slide = prs.slides.add_slide(slide_layout)
 
-        slide_title = model_rep.vis_dict.loc[(model_rep.vis_dict['section'] == 'option_compare') & (
-                model_rep.vis_dict['variable'] == 'title'), language].iloc[0]
+        slide_title = model_rep_main.vis_dict.loc[(model_rep_main.vis_dict['section'] == 'option_compare') & (
+                model_rep_main.vis_dict['variable'] == 'title'), language].iloc[0]
         slide.shapes[0].text_frame.text = slide_title
-        slide.shapes[0].text_frame.paragraphs[0].font.size = model_rep.pptx_cnf['font_size_gross']
-        slide.shapes[0].text_frame.paragraphs[0].font.name = model_rep.pptx_cnf['font_family_header']
+        slide.shapes[0].text_frame.paragraphs[0].font.size = model_rep_main.pptx_cnf['font_size_gross']
+        slide.shapes[0].text_frame.paragraphs[0].font.name = model_rep_main.pptx_cnf['font_family_header']
 
         # options text boxes
         x, y = (0.05 + 0.9 * 2/10) * slide_width, slide.shapes[0].top + slide.shapes[0].height + 0.05 * slide_height
@@ -93,8 +101,8 @@ def create(prs: Presentation,
         paragraph = textbox.text_frame.paragraphs[0]
         paragraph.text = f"{opt_str} 1. {list(options_m)[0]}"
         paragraph.font.bold = True
-        paragraph.font.size = model_rep.pptx_cnf["font_size_main"]
-        paragraph.font.name = model_rep.pptx_cnf["font_family_body"]
+        paragraph.font.size = model_rep_main.pptx_cnf["font_size_main"]
+        paragraph.font.name = model_rep_main.pptx_cnf["font_family_body"]
         textbox.text_frame.word_wrap = True
 
         for n, option in enumerate(options_names_subset):
@@ -104,8 +112,8 @@ def create(prs: Presentation,
             paragraph = textbox.text_frame.paragraphs[0]
             paragraph.text = f"{opt_str} {list(options_m).index(option) + 1}. {option}"
             paragraph.font.bold = True
-            paragraph.font.size = model_rep.pptx_cnf["font_size_main"]
-            paragraph.font.name = model_rep.pptx_cnf["font_family_body"]
+            paragraph.font.size = model_rep_main.pptx_cnf["font_size_main"]
+            paragraph.font.name = model_rep_main.pptx_cnf["font_family_body"]
             textbox.text_frame.word_wrap = True
 
         # prepare data
@@ -151,7 +159,7 @@ def create(prs: Presentation,
 
         # set font, size, position
 
-        opt_table = table_text_format(opt_table, model_rep)
+        opt_table = table_text_format(opt_table, model_rep_main)
 
         # adjust table size
         opt_table = adjust_table_width(table=opt_table,
@@ -184,7 +192,7 @@ def create(prs: Presentation,
                                  pred_year_end=pred_year_end)
 
         # set font, size, position
-        calc_table = table_text_format(calc_table, model_rep)
+        calc_table = table_text_format(calc_table, model_rep_main)
 
         # adjust table size
         calc_table = adjust_table_width(table=calc_table,
@@ -193,9 +201,9 @@ def create(prs: Presentation,
     return prs
 
 
-def _tables_data_worker(model: "Model",
-                        model_rep: "ModelRep",
-                        ds: pd.DataFrame,
+def _tables_data_worker(model: "Model | list",
+                        model_rep: "ModelRep | list",
+                        ds: pd.DataFrame | list,
                         opt_set: "OptionSettings",
                         options_m: dict,
                         options_names_subset: list,
@@ -210,9 +218,9 @@ def _tables_data_worker(model: "Model",
 
     First option (zero) is duplicated on every slide to facilitate option compare by the end user.
 
-    :param model: Model object
-    :param model_rep: ModelRep object (reporting settings)
-    :param ds: main dataset
+    :param model: Model object or list of Model objects
+    :param model_rep: ModelRep object (reporting settings) or list ModelRep objects
+    :param ds: main dataset or list of main datasets
     :param opt_set: OptionSetting object containing calculate settings
     :param options_m: dictionary of dictionaries defining options to calculate
     :param options_names_subset:
@@ -223,12 +231,17 @@ def _tables_data_worker(model: "Model",
     :return:
     """
 
+    if isinstance(model_rep, list):
+        model_rep_main = model_rep[-1]
+    else:
+        model_rep_main = model_rep
+
     # ---------- options table ----------
 
-    language = model_rep.language
+    language = model_rep_main.language
 
-    invest_col = model_rep.vis_dict.loc[(model_rep.vis_dict['section'] == 'option_compare') &
-                                        (model_rep.vis_dict['variable'] == 'costs_title'), model_rep.language].iloc[0]
+    invest_col = model_rep_main.vis_dict.loc[(model_rep_main.vis_dict['section'] == 'option_compare') &
+                                        (model_rep_main.vis_dict['variable'] == 'costs_title'), model_rep_main.language].iloc[0]
 
     options_df = pd.DataFrame.from_dict(options_m['zero'].items()).rename(columns={0: invest_col,
                                                                                    1: 'zero_short'})
@@ -258,7 +271,7 @@ def _tables_data_worker(model: "Model",
 
     options_df['tmp'] = options_df[invest_col].str.replace('bdg_', '')
     options_df = options_df.merge(
-        model_rep.vis_dict.loc[(model_rep.vis_dict['section'] == 'costs_type'), ['variable', language]]
+        model_rep_main.vis_dict.loc[(model_rep_main.vis_dict['section'] == 'costs_type'), ['variable', language]]
         , how='left', left_on='tmp', right_on='variable')
 
     options_df = options_df.groupby(group_cols).first().reset_index()
@@ -280,27 +293,30 @@ def _tables_data_worker(model: "Model",
 
     # ---------- calc table ----------
 
-    sales_col_name = model_rep.vis_dict.loc[(model_rep.vis_dict['section'] == 'option_compare') &
-                                            (model_rep.vis_dict['variable'] == 'sales_title'), model_rep.language].iloc[0]
-    sales_vol = model_rep.vis_dict.loc[(model_rep.vis_dict['section'] == 'option_compare_sales') &
-                                       (model_rep.vis_dict['variable'] == 'res'), model_rep.language].iloc[0]
-    sales_val = model_rep.vis_dict.loc[(model_rep.vis_dict['section'] == 'option_compare_sales') &
-                                       (model_rep.vis_dict['variable'] == 'res_rub_distr'), model_rep.language].iloc[0]
-    incr_sales = model_rep.vis_dict.loc[(model_rep.vis_dict['section'] == 'option_compare_sales') &
-                                        (model_rep.vis_dict['variable'] == 'res_rub_progress_distr'), model_rep.language].iloc[0]
-    profit = model_rep.vis_dict.loc[(model_rep.vis_dict['section'] == 'option_compare_sales') &
-                                    (model_rep.vis_dict['variable'] == 'profit'), model_rep.language].iloc[0]
-    romi = model_rep.vis_dict.loc[(model_rep.vis_dict['section'] == 'option_compare_sales') &
-                                  (model_rep.vis_dict['variable'] == 'romi'), model_rep.language].iloc[0]
-    growth_vol = model_rep.vis_dict.loc[(model_rep.vis_dict['section'] == 'option_compare_sales') &
-                                        (model_rep.vis_dict['variable'] == 'grw'),
-                                        model_rep.language].iloc[0].replace("***", str(pred_year_start - 1))
+    sales_col_name = model_rep_main.vis_dict.loc[(model_rep_main.vis_dict['section'] == 'option_compare') &
+                                            (model_rep_main.vis_dict['variable'] == 'sales_title'), model_rep_main.language].iloc[0]
+    sales_vol = model_rep_main.vis_dict.loc[(model_rep_main.vis_dict['section'] == 'option_compare_sales') &
+                                       (model_rep_main.vis_dict['variable'] == 'res'), model_rep_main.language].iloc[0]
+    sales_val = model_rep_main.vis_dict.loc[(model_rep_main.vis_dict['section'] == 'option_compare_sales') &
+                                       (model_rep_main.vis_dict['variable'] == 'res_rub_distr'), model_rep_main.language].iloc[0]
+    incr_sales = model_rep_main.vis_dict.loc[(model_rep_main.vis_dict['section'] == 'option_compare_sales') &
+                                        (model_rep_main.vis_dict['variable'] == 'res_rub_progress_distr'), model_rep_main.language].iloc[0]
+    profit = model_rep_main.vis_dict.loc[(model_rep_main.vis_dict['section'] == 'option_compare_sales') &
+                                    (model_rep_main.vis_dict['variable'] == 'profit'), model_rep_main.language].iloc[0]
+    romi = model_rep_main.vis_dict.loc[(model_rep_main.vis_dict['section'] == 'option_compare_sales') &
+                                  (model_rep_main.vis_dict['variable'] == 'romi'), model_rep_main.language].iloc[0]
+    growth_vol = model_rep_main.vis_dict.loc[(model_rep_main.vis_dict['section'] == 'option_compare_sales') &
+                                        (model_rep_main.vis_dict['variable'] == 'grw'),
+                                        model_rep_main.language].iloc[0].replace("***", str(pred_year_start - 1))
 
     calc_df = pd.DataFrame(columns=[sales_col_name, sales_vol, sales_val, incr_sales, profit, romi, growth_vol])
     calc_df[sales_col_name] = list(options_df)[1:]
 
     ds, dt_pred, opt_sum = calc.option_report(model, ds, model_rep, options_m['zero'],
                                                 opt_set, if_exact=if_exact)
+
+    if isinstance(model_rep, list):
+        opt_sum = opt_sum[-1]
 
     calc_df[calc_df[sales_col_name] == 'zero_short'] = ['zero_short',
                                                         opt_sum['pred_exact_0']['pred_exact_vol'],
@@ -322,8 +338,12 @@ def _tables_data_worker(model: "Model",
     zero_val_long = opt_sum['pred_long_val']
 
     for option_name in options_names_subset:
+
         ds, dt_pred, opt_sum = calc.option_report(model, ds, model_rep, options_m[option_name],
                                                     opt_set, if_exact=if_exact)
+
+        if isinstance(model_rep, list):
+            opt_sum = opt_sum[-1]
 
         incr_sales_short = opt_sum['pred_exact_0']['pred_exact_val'] - zero_val_short
         profit_short = incr_sales_short - 1e6 * options_m[option_name]['bdg']

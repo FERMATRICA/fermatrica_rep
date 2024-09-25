@@ -168,28 +168,27 @@ Predict & summaries
 """
 
 
-def option_report(model: "Model"
-                  , ds: pd.DataFrame
-                  , model_rep  #: "ModelRep"
-                  , option_dict: dict | list
-                  , option_settings: "OptionSettings"
-                  , targets_new: dict | None = None
-                  , allow_past: bool = False
-                  , if_exact: bool = False
-                  , if_multi: bool = False) -> tuple:
+def _option_report_worker(model: "Model"
+                          , ds: pd.DataFrame
+                          , model_rep  #: "ModelRep"
+                          , option_dict: dict
+                          , option_settings: "OptionSettings"
+                          , targets_new: dict | None = None
+                          , allow_past: bool = False
+                          , if_exact: bool = False
+                          , if_multi: bool = False) -> tuple:
+
     """
-    Calculate and report specific option:
+    Worker function to calculate and report specific option (one model in chain only):
 
     1. Translate option into real data (yearly budget to weekly/monthly OTS etc.)
     2. Run transformation and prediction with updated data
     3. Summarize results to get quick access to business valuable metrics
         (yearly sales, uplifts etc.)
 
-    Higher-level function to be used directly in user's pipeline.
-
-    :param model: Model object
-    :param ds: dataset
-    :param model_rep: ModelRep object (export settings)
+    :param model: Model object or list of Model objects
+    :param ds: dataset or list of datasets
+    :param model_rep: ModelRep object (export settings) of list of ModelRep objects
     :param option_dict: budget option / scenario to calculate as dictionary or list of option dictionaries
     :param option_settings: OptionSettings object (option setting: target period etc.) or list of OptionSettings
     :param targets_new: apply option to one entity, summarize another (useful for cross-elasticity). If not None:
@@ -211,7 +210,7 @@ def option_report(model: "Model"
     if isinstance(option_settings.target, list) and isinstance(option_settings.target[0], str):
         option_settings.target = [option_settings.target]
 
-    # option_settings.zip_mask = zip(option_settings.apply_vars, option_settings.target)
+    #
 
     if if_exact:
         ds = _option_translate_exact(model_conf, ds, model_rep, option_dict, option_settings, allow_past)
@@ -230,6 +229,95 @@ def option_report(model: "Model"
     # get summaries
 
     option_summary = option_summarize(model_conf, model_rep, option_dict, option_settings, dt_pred, targets_new)
+
+    # return
+
+    return ds, dt_pred, option_summary
+
+
+def option_report(model: "Model | list"
+                  , ds: pd.DataFrame | list
+                  , model_rep  #: "ModelRep"
+                  , option_dict: dict | list
+                  , option_settings: "OptionSettings"
+                  , targets_new: dict | None = None
+                  , allow_past: bool = False
+                  , if_exact: bool = False
+                  , if_multi: bool = False) -> tuple:
+    """
+    Calculate and report specific option:
+
+    1. Translate option into real data (yearly budget to weekly/monthly OTS etc.)
+    2. Run transformation and prediction with updated data
+    3. Summarize results to get quick access to business valuable metrics
+        (yearly sales, uplifts etc.)
+
+    Higher-level function to be used directly in user's pipeline.
+
+    :param model: Model object or list of Model objects
+    :param ds: dataset or list of datasets
+    :param model_rep: ModelRep object (export settings) of list of ModelRep objects
+    :param option_dict: budget option / scenario to calculate as dictionary or list of option dictionaries
+    :param option_settings: OptionSettings object (option setting: target period etc.) or list of OptionSettings
+    :param targets_new: apply option to one entity, summarize another (useful for cross-elasticity). If not None:
+        {'targets_new': [], 'apply_vars_new': []}
+    :param allow_past: allow translation to the past (filled with observed data) periods
+    :param if_exact: apply only to the specific time period, without next years
+    :param if_multi: return only summary, without data and prediction (use if a lot of options are calculated
+        and only summaries are actually necessary)
+    :return: (1, summary) or (dataset, prediction data, summary). 1 is required for technical reasons
+    """
+
+    if isinstance(model_rep, list):
+
+        dt_pred = [None] * len(model_rep)
+        option_summary = [None] * len(model_rep)
+
+        for i, val in enumerate(model_rep):
+
+            # fuse output of previous model into the current one
+
+            if i > 0:
+
+                if pd.notna(model_rep[i].adhoc_code_src) and len(model_rep[i].adhoc_code_src) > 0:
+
+                    for k, v in model_rep[i].adhoc_code_src.items():
+                        fr_cur_name = inspect.currentframe().f_globals['__name__']
+                        import_module_from_string(k, v, fr_cur_name)
+
+                    fun_name = 'code_py.adhoc.reporting.pred_merge_' + str(i)
+
+                    if (fun_name in locals() or fun_name in globals() or
+                            (len(fun_name.split('.')) > 1 and getattr(globals()['.'.join(fun_name.split('.')[:-1])],
+                                                                      fun_name.split('.')[-1], False))):
+
+                        ds[i] = eval(fun_name)(ds_cur=ds[i]
+                                            , dt_pred_prev=dt_pred[i-1]
+                                            , allow_past=allow_past)
+
+            # run
+
+            ds[i], dt_pred[i], option_summary[i] = _option_report_worker(model=model[i]
+                                                                         , ds=ds[i]
+                                                                         , model_rep=model_rep[i]
+                                                                         , option_dict=option_dict
+                                                                         , option_settings=option_settings
+                                                                         , targets_new=targets_new
+                                                                         , allow_past=allow_past
+                                                                         , if_exact=if_exact
+                                                                         , if_multi=if_multi)
+
+    else:
+        ds, dt_pred, option_summary = _option_report_worker(model=model
+                                     , ds=ds
+                                     , model_rep=model_rep
+                                     , option_dict=option_dict
+                                     , option_settings=option_settings
+                                     , targets_new=targets_new
+                                     , allow_past=allow_past
+                                     , if_exact=if_exact
+                                     , if_multi=if_multi)
+
 
     if if_multi:
         del ds, dt_pred
@@ -518,8 +606,8 @@ def option_report_multi(model: "Model"
     return option_summaries
 
 
-def option_report_multi_var(model: "Model"
-                            , ds: pd.DataFrame
+def option_report_multi_var(model: "Model | list"
+                            , ds: pd.DataFrame | list
                             , model_rep  #: "ModelRep"
                             , option_dict_d: dict
                             , option_settings: "OptionSettings"
@@ -535,9 +623,9 @@ def option_report_multi_var(model: "Model"
 
     Version 2, actively used.
 
-    :param model: Model object
-    :param ds: dataset
-    :param model_rep: ModelRep object (export settings)
+    :param model: Model object or list of Model objects
+    :param ds: dataset or list of datasets
+    :param model_rep: ModelRep object (export settings) or list of ModelRep objects
     :param option_dict_d: dictionary of budget options / scenarios to calculate as dictionary
     :param option_settings: OptionSettings object (option setting: target period etc.)
     :param targets_new: apply option to one entity, summarize another (useful for cross-elasticity). If not None:
@@ -563,15 +651,20 @@ def option_report_multi_var(model: "Model"
     opt_keys = option_dict_d.keys()
     opt_list = [option_dict_d[x] for x in opt_keys]
 
-    option_summaries_var = {}
+    option_summaries = {}
 
     if cores > 1:
 
         # destroy callable objects for multiprocessing
         model_iter = copy.deepcopy(model)
 
-        model_iter.obj.transform_lhs_fn = None
-        model_iter.obj.custom_predict_fn = None
+        if isinstance(model_iter, list):
+            for i, val in enumerate(model_iter):
+                model_iter[i].obj.transform_lhs_fn = None
+                model_iter[i].obj.custom_predict_fn = None
+        else:
+            model_iter.obj.transform_lhs_fn = None
+            model_iter.obj.custom_predict_fn = None
 
         with multiprocessing.Pool(cores) as pool:
 
@@ -586,13 +679,13 @@ def option_report_multi_var(model: "Model"
                                                          , itertools.repeat(if_multi, opt_count)), chunksize=None)
 
             for i in range(len(rtrn.get())):
-                option_summaries_var[i] = rtrn.get()[i][1]
+                option_summaries[i] = rtrn.get()[i][1]
 
     else:
         for i, v in enumerate(opt_list):
-            option_summaries_var[i] = option_report(model, ds, model_rep, v, option_settings, targets_new
+            option_summaries[i] = option_report(model, ds, model_rep, v, option_settings, targets_new
                                                     , allow_past, if_exact, if_multi)[1]
 
-    return option_summaries_var
+    return option_summaries
 
 
