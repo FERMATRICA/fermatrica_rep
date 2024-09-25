@@ -44,14 +44,8 @@ To facilitate work, it is recommended to install all components of the FERMATRIC
     git clone https://github.com/FERMATRICA/fermatrica.git
     git clone https://github.com/FERMATRICA/fermatrica_rep.git 
     ```
-   1. To work with the interactive dashboard, also clone its repository:
-       ```commandline
-       git clone https://github.com/FERMATRICA/fermatrica_dash.git
-       ```
-    2. For preliminary data work:
-       ```commandline
-       git clone https://github.com/FERMATRICA/fermatrica_data.git
-       ```
+   1. To work with the interactive dashboard: _coming soon_
+    2. For preliminary data work: _coming soon_
 3. In each of the repositories, select the FERMATRICA_v010 environment (FERMATRICA_v020, FERMATRICA_v030, etc.) through Add interpreter in the PyCharm interface and switch to the corresponding git branch.
     ```commandline
     cd [my_fermatrica_folder]/[fermatrica_part_folder]
