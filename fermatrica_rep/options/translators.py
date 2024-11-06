@@ -60,7 +60,11 @@ def basic(md: "ModelConf"
     tmp = select_eff(ds, ['date', ssn_name]).loc[ds_mask, :].drop_duplicates()
 
     if (tmp.loc[:, 'date'].max() - tmp.loc[:, 'date'].min()).days <= 366:
-        ssn_cor = 1 / tmp.loc[:, ssn_name].sum()
+        ssn_cor = tmp.loc[:, ssn_name].sum()
+        if ssn_cor != 0:
+            ssn_cor = 1 / ssn_cor
+        else:
+            ssn_cor = 1 / tmp.loc[:, ssn_name].shape[0]
 
     # run
 

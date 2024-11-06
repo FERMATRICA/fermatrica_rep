@@ -8,8 +8,7 @@ Period to take into account could be set via OptionSettings object.
 
 Beware! Multiprocessing calculation to be used by functions of this file.
 """
-
-
+import copy
 from typing import Callable
 import pandas as pd
 
@@ -31,11 +30,11 @@ from fermatrica_rep.options.calc_multi import option_report_multi_post
 
 
 def create(prs: Presentation,
-           model: "Model",
-           model_rep: "ModelRep",
-           ds: pd.DataFrame,
+           model: "Model | list",
+           model_rep: "ModelRep | list",
+           ds: pd.DataFrame | list,
            opt_set_crv,
-           translation: pd.DataFrame,
+           translation: dict | None = None,
            budget_step: int | float = 5,
            bdg_max: int | float = 301,
            fixed_vars: dict | None = {'price': 1},
@@ -48,11 +47,12 @@ def create(prs: Presentation,
     with short and long term curves respectively. 
 
     :param prs: Presentation object from python_pptx package
-    :param model: Model object
-    :param model_rep: ModelRep object (reporting settings)
-    :param ds: main dataset
+    :param model: Model object or list of Model objects
+    :param model_rep: ModelRep object (export settings) or list of ModelRep objects
+    :param ds: dataset or list of datasets
     :param opt_set_crv: OptionSetting object containing calculate settings
-    :param translation: translation dataframe (from files like `options.xlsx`, `translation` sheet)
+    :param translation: translation dict (from files like `options.xlsx`, `translation` sheet) or None,
+        (i.e. defaults to trans_dict attribute of `model_rep` argument)
     :param budget_step: budget iteration step in millions, defaults to 1 (i.e. 1M)
     :param bdg_max: maximum budget size (all options with larger budgets to be dropped)
     :param adhoc_curves_max_costs: adhoc function to set maximum observed values for every variable (optional)
@@ -62,14 +62,27 @@ def create(prs: Presentation,
     :return: Presentation object from python_pptx package
     """
 
-    language = model_rep.language
-    slide_width = model_rep.pptx_cnf['slide_width']
-    slide_height = model_rep.pptx_cnf['slide_height']
+    if isinstance(model_rep, list):
+        model_rep_main = model_rep[-1]
+        date_max = ds[-1]['date'].dt.year.max()
+    else:
+        model_rep_main = model_rep
+        date_max = ds['date'].dt.year.max()
+
+    language = model_rep_main.language
+    slide_width = model_rep_main.pptx_cnf['slide_width']
+    slide_height = model_rep_main.pptx_cnf['slide_height']
 
     # fix for evading problem with pickling python-pptx object
 
-    tmp = model_rep.pptx_cnf['Blank_slide']
-    model_rep.pptx_cnf['Blank_slide'] = 0
+    if isinstance(model_rep, list):
+        tmp = [None] * len(model_rep)
+        for i, mdr in enumerate(model_rep):
+            tmp[i] = model_rep[i].pptx_cnf['Blank_slide']
+            model_rep[i].pptx_cnf['Blank_slide'] = 0
+    else:
+        tmp = model_rep.pptx_cnf['Blank_slide']
+        model_rep.pptx_cnf['Blank_slide'] = 0
 
     # load data
     curves_full_data = option_report_multi_post(model=model,
@@ -84,31 +97,40 @@ def create(prs: Presentation,
                                                 if_exact=if_exact,
                                                 cores=cores)
 
-    model_rep.pptx_cnf['Blank_slide'] = tmp
+    if isinstance(curves_full_data, list):
+        curves_full_data = curves_full_data[-1]
+
+    if isinstance(model_rep, list):
+
+        for i, mdr in enumerate(model_rep):
+            model_rep[i].pptx_cnf['Blank_slide'] = tmp[i]
+    else:
+        model_rep.pptx_cnf['Blank_slide'] = tmp
+
     # prepare slide in presentation
 
-    slide_layout = model_rep.pptx_cnf['Blank_slide']
+    slide_layout = model_rep_main.pptx_cnf['Blank_slide']
 
     # prepare colors
     tmp = curves_full_data.groupby('option').agg({'pred_long_val': 'nunique'})
     lst = tmp.loc[tmp["pred_long_val"] > 1].reset_index().option.tolist()
     lst.sort()
 
-    model_rep.fill_colours_tools(lst)
+    model_rep_main.fill_colours_tools(lst)
 
     for i in lst:
-        model_rep.palette_tools[i + "_extrapolated"] = model_rep.palette_tools[i]
+        model_rep_main.palette_tools[i + "_extrapolated"] = model_rep_main.palette_tools[i]
 
     # ----------------- short effect ------------------
 
     slide = prs.slides.add_slide(slide_layout)
 
     slide = _slide_vis_worker(slide,
-                              model_rep=model_rep,
+                              model_rep=model_rep_main,
                               opt_set_crv=opt_set_crv,
                               curves_full_data=curves_full_data,
                               plot_type='short',
-                              year_end=ds['date'].dt.year.max(),
+                              year_end=date_max,
                               budget_step=budget_step,
                               bdg_max=bdg_max
                               )
@@ -118,11 +140,11 @@ def create(prs: Presentation,
     slide = prs.slides.add_slide(slide_layout)
 
     slide = _slide_vis_worker(slide,
-                              model_rep=model_rep,
+                              model_rep=model_rep_main,
                               opt_set_crv=opt_set_crv,
                               curves_full_data=curves_full_data,
                               plot_type='long',
-                              year_end=ds['date'].dt.year.max(),
+                              year_end=date_max,
                               budget_step=budget_step,
                               bdg_max=bdg_max,
                               if_exact=if_exact)

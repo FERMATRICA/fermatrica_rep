@@ -86,7 +86,7 @@ def _curve_simple_data_worker(
         crv = {x: np.concatenate(([x / price_var * 1e+6], np.zeros(adstock_len - 1)))
                for x in np.arange(0, budget_lim + 1e-8, budget_step)}
 
-        crv = pd.concat(pd.DataFrame({'bdg__': k, var: v}) for k, v in crv.items())
+        crv = pd.concat([pd.DataFrame({'bdg__': k, var: v}) for k, v in crv.items()], ignore_index=True)
         crv['date'] = datetime.datetime.now()
         crv['kpi_coef_cor_sm'] = 1.
         crv['wrk_index'] = crv.index

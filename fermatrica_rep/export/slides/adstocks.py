@@ -23,13 +23,16 @@ from fermatrica import Model
 from fermatrica_rep.model_rep import ModelRep
 from fermatrica_rep.export.basics import set_chart_colors_fill
 from fermatrica_rep.adstocks import adstocks_data as adstocks_data
+from fermatrica_rep.options.define import OptionSettings
 
 
 def create(prs: Presentation,
-           model: "Model",
-           model_rep: "ModelRep",
-           ds: pd.DataFrame,
+           model: "Model | list",
+           ds: pd.DataFrame | list,
+           model_rep,  #: "ModelRep"
            cln_meas: list | tuple,
+           option_dict: dict | list = None,
+           option_settings: "OptionSettings" = None,
            cln_dim: list | tuple = ('superbrand', 'master', 'bs_key', 'date', 'listed', 'kpi_coef'),
            n: int = 50
            ):
@@ -37,22 +40,30 @@ def create(prs: Presentation,
     Create adstock slide and add to `prs` PPTX presentation.
 
     :param prs: Presentation object from python_pptx package
-    :param model: Model object
-    :param model_rep: ModelRep reporting settings object
-    :param ds: main dataset
+    :param model: Model object or list of Model objects
+    :param ds: dataset or list of datasets
+    :param model_rep: ModelRep object (export settings) of list of ModelRep objects
+    :param option_dict: budget option / scenario to calculate as dictionary or list of option dictionaries
+    :param option_settings: OptionSettings object (option setting: target period etc.) or list of OptionSettings
     :param cln_meas: column names to be used as measurements
     :param cln_dim: column names to be used as dimensions
     :param n: number of observations per column
     :return: Presentation object from python_pptx package
     """
-
-    language = model_rep.language
-    superbrand = model.conf.target_superbrand
+    if isinstance(model, list):
+        language = model_rep[-1].language
+        superbrand = model[-1].conf.target_superbrand
+    else:
+        language = model_rep.language
+        superbrand = model.conf.target_superbrand
 
     # data prep
     adstocks_dataframe = adstocks_data(model=model
                                        , ds=ds
+                                       , model_rep=model_rep
                                        , superbrand=superbrand
+                                       , option_settings=option_settings
+                                       , option_dict=option_dict
                                        , cln_dim=cln_dim
                                        , cln_meas=cln_meas
                                        , n=n
@@ -61,6 +72,10 @@ def create(prs: Presentation,
     superbrand = superbrand.title()
 
     # prepare slide in presentation
+
+    if isinstance(model_rep, list):
+        model_rep = model_rep[-1]
+        model = model[-1]
 
     slide_layout = model_rep.pptx_cnf['Blank_slide']
 
