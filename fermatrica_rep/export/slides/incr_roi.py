@@ -8,6 +8,8 @@ Period to take into account could be set via OptionSettings object.
 
 Beware! Multiprocessing calculation to be used by functions of this file.
 """
+import copy
+from typing import Callable
 import pandas as pd
 
 from pptx.presentation import Presentation
