@@ -17,7 +17,7 @@ as input data.
 import pandas as pd
 import plotly.graph_objects as go
 
-from fermatrica_rep.model_rep import ModelRep
+from fermatrica_rep.meta_model.model_rep import ModelRep
 
 
 def _curves_full_plot_worker(curves_full_df: pd.DataFrame
@@ -72,9 +72,36 @@ def _curves_full_plot_worker(curves_full_df: pd.DataFrame
     return fig
 
 
-def curves_full_plot_short(curves_full_df: pd.DataFrame
-                           , model_rep: "ModelRep") -> dict:
+def curves_full_plot_short(curves_full_df: pd.DataFrame | list
+                           , model_rep: "ModelRep | list") -> dict:
     """
+        Wrapper
+        Plot efficiency curves per marketing tool. "Short" means only short-term effect is measured:
+        period of "promoting" is equal to period of effect calculating. (Not the same as "on-air",
+        because in "promoting" period some silence dates could be included.)
+
+        This version could be used with models of any design. It calculates curves with calculating
+        row of budget options. This approach is model-blind and convenient when model design is complex,
+        LHS effects are great etc.
+
+        :param curves_full_df: prepared dataset or list of prepared datasets
+        :param model_rep: ModelRep object (export settings) or list of ModelRep objects
+        :return: dict of plotly figures or list of dicts of plotly figures
+        """
+
+    if isinstance(curves_full_df, list):
+        fig = [None] * len(curves_full_df)
+        for i in range(len(curves_full_df)):
+            fig[i] = _curves_full_plot_short_worker(curves_full_df[i], model_rep[i])
+    else:
+        fig = _curves_full_plot_short_worker(curves_full_df, model_rep)
+    return fig
+
+
+def _curves_full_plot_short_worker(curves_full_df: pd.DataFrame
+                                   , model_rep: "ModelRep") -> dict:
+    """
+    Worker
     Plot efficiency curves per marketing tool. "Short" means only short-term effect is measured:
     period of "promoting" is equal to period of effect calculating. (Not the same as "on-air",
     because in "promoting" period some silence dates could be included.)
@@ -117,9 +144,35 @@ def curves_full_plot_short(curves_full_df: pd.DataFrame
             'ROI': fig_roi}
 
 
-def curves_full_plot_long(curves_full_df: pd.DataFrame
+def curves_full_plot_long(curves_full_df: pd.DataFrame | list
+                           , model_rep: "ModelRep | list") -> dict:
+    """
+        Wrapper
+        Plot efficiency curves per marketing tool. "Long" means short-term and long-term effects
+        are measured both: period of "promoting" is much shorter than period of effect calculating.
+
+        This version could be used with models of any design. It calculates curves with calculating
+        row of budget options. This approach is model-blind and convenient when model design is complex,
+        LHS effects are great etc.
+
+        :param curves_full_df: prepared dataset or list of prepared datasets
+        :param model_rep: ModelRep object (export settings) or list of ModelRep objects
+        :return: dict of plotly figures or list of dicts of plotly figures
+        """
+
+    if isinstance(curves_full_df, list):
+        fig = [None] * len(curves_full_df)
+        for i in range(len(curves_full_df)):
+            fig[i] = _curves_full_plot_long_worker(curves_full_df[i], model_rep[i])
+    else:
+        fig = _curves_full_plot_long_worker(curves_full_df, model_rep)
+    return fig
+
+
+def _curves_full_plot_long_worker(curves_full_df: pd.DataFrame
                           , model_rep: "ModelRep"):
     """
+    Worker
     Plot efficiency curves per marketing tool. "Long" means short-term and long-term effects
     are measured both: period of "promoting" is much shorter than period of effect calculating.
 

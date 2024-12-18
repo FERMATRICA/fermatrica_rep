@@ -19,7 +19,7 @@ from fermatrica_utils import date_to_period
 from fermatrica.model.model import Model
 
 from fermatrica_rep.export.basics import set_table_border, fill_table
-from fermatrica_rep.model_rep import ModelRep
+from fermatrica_rep.meta_model.model_rep import ModelRep
 from fermatrica_rep.options.define import OptionSettings
 
 
@@ -140,9 +140,9 @@ def create(prs: Presentation,
         loc[(dt_pred['bs_key'].isin(bs_key_filter)) & (dt_pred['listed'].isin([2, 3, 4]))]. \
         groupby('year')[['observed', 'predicted', 'observed_val', 'predicted_val']].sum().reset_index()
     dt_pred_prep['err'] = dt_pred_prep['predicted'] / dt_pred_prep['observed'] - 1
-    dt_pred_prep['err'] = [f"{x:.1%}" if abs(x) != np.Inf else '-' for x in dt_pred_prep['err']]
+    dt_pred_prep['err'] = [f"{x:.1%}" if abs(x) != np.inf else '-' for x in dt_pred_prep['err']]
     dt_pred_prep['err_val'] = dt_pred_prep['predicted_val'] / dt_pred_prep['observed_val'] - 1
-    dt_pred_prep['err_val'] = [f"{x:.1%}" if abs(x) != np.Inf else '-' for x in dt_pred_prep['err_val']]
+    dt_pred_prep['err_val'] = [f"{x:.1%}" if abs(x) != np.inf else '-' for x in dt_pred_prep['err_val']]
 
     for col in dt_pred_prep[['observed', 'predicted', 'observed_val', 'predicted_val']]:
         dt_pred_prep[col] = ['{:,.0f}'.format(x).replace(',', ' ') if x >= 0 else '0' for x in dt_pred_prep[col]]
@@ -173,6 +173,9 @@ def create(prs: Presentation,
 
     x, y = 0.5 * slide_width - 0.45 * slide_width, slide.shapes[0].top + slide.shapes[0].height + 0.5 * slide_height
     cx, cy = 4 * cell_width, rows_pred * cell_height
+
+    x, y, cx, cy = int(round(x)), int(round(y)), int(round(cx)), int(round(cy))
+
     shape = slide.shapes.add_table(rows_pred, 4, x, y, cx, cy)
     table = shape.table
     fill_table(table, dt_pred_prep_vol)
@@ -196,6 +199,9 @@ def create(prs: Presentation,
 
     x, y = 0.5 * slide_width + 0.45 * slide_width - 4 * cell_width, slide.shapes[0].top + slide.shapes[0].height + 0.5 * slide_height
     cx, cy = 4 * cell_width, rows_pred * cell_height
+
+    x, y, cx, cy = int(round(x)), int(round(y)), int(round(cx)), int(round(cy))
+
     graphic_frame = slide.shapes.add_table(rows_pred, 4, x, y, cx, cy)
     table = graphic_frame.table
 
@@ -325,6 +331,8 @@ def _fit_chart_create(slide,
     x, y = 0.5 * slide_width - x_offset * slide_width, slide.shapes[0].top + slide.shapes[0].height
     cx, cy = 0.45 * slide_width, 0.5 * slide_height
 
+    x, y, cx, cy = int(round(x)), int(round(y)), int(round(cx)), int(round(cy))
+
     chart = slide.shapes.add_chart(
         XL_CHART_TYPE.LINE, x, y, cx, cy, chart_data_val
     ).chart
@@ -449,6 +457,9 @@ def _option_table_create(slide
 
     x, y = 0.5 * slide_width - cell_width, slide.shapes[0].top + slide.shapes[0].height + 0.5 * slide_height
     cx, cy = 2 * cell_width, rows_opt * cell_height
+
+    x, y, cx, cy = int(round(x)), int(round(y)), int(round(cx)), int(round(cy))
+
     graphic_frame = slide.shapes.add_table(rows_opt, 2, x, y, cx, cy)
     table = graphic_frame.table
 

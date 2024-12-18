@@ -12,10 +12,8 @@ Beware! Multiprocessing calculations are used.
 
 import copy
 import datetime
-import ipyparallel.serialize.codeutil
 import logging
 import math
-import multiprocessing
 import pandas as pd
 import numpy as np
 
@@ -23,11 +21,7 @@ import nlopt
 
 from fermatrica_utils import dict_multifill
 
-import fermatrica
-from fermatrica.model.model import Model
-
 from fermatrica_rep.options.define import OptionSettings
-from fermatrica_rep.model_rep import ModelRep
 import fermatrica_rep.options.calc as calc
 
 

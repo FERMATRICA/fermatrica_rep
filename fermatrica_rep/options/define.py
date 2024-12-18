@@ -52,6 +52,9 @@ def trans_dict_create(dt_trans: pd.DataFrame | None = None
 
     # convert to dictionary
 
+    if 'item_group' not in dt_trans.columns:
+        dt_trans['item_group'] = dt_trans['item'].str.replace('bdg_', '')
+
     dt_trans = dt_trans.loc[(dt_trans['function'] != '') & (pd.notna(dt_trans['function'])), :]
 
     dt_trans.set_index('item', inplace=True)

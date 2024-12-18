@@ -6,8 +6,6 @@ This module describes dynamic decomposition, for waterfall decomposition see `fe
 
 
 import copy
-import numpy as np
-import pandas as pd
 import re
 
 import patsy
@@ -17,14 +15,13 @@ import plotly.express as px
 import plotly.io as pio
 import plotly.graph_objs as go
 
-from fermatrica_utils import groupby_eff, select_eff
+from fermatrica_utils import groupby_eff
 
-import fermatrica
 from fermatrica.basics.basics import params_to_dict, fermatrica_error
 from fermatrica.model.model import Model
 from fermatrica.model.model_conf import ModelConf
 from fermatrica.model.lhs_fun import *  # to run LHS
-from fermatrica_rep.model_rep import ModelRep
+from fermatrica_rep.meta_model.model_rep import ModelRep
 
 pio.templates.default = 'ggplot2'
 
@@ -33,10 +30,30 @@ pio.templates.default = 'ggplot2'
 Extract RHS effects from specific model types
 """
 
-
-def decompose_basic(model_cur: statsmodels.regression.linear_model.OLS | statsmodels.regression.linear_model.OLSResults
-                    , ds: pd.DataFrame):
+def decompose_basic(model_cur: statsmodels.regression.linear_model.OLS | statsmodels.regression.linear_model.OLSResults | list
+                    , ds: pd.DataFrame | list):
     """
+        Wrapper
+        Simplistic decomposition from OLS statsmodels object. If possible, use `extract_effects` instead.
+
+        :param model_cur: OLS statsmodels object or list of OLS statsmodels object
+        :param ds: dataset or list of datasets
+        :return: table of effects (impacts) or list of tables of effects
+        """
+
+    if isinstance(model_cur, list):
+        ret = [None]*len(model_cur)
+        for i in range(len(model_cur)):
+            ret[i] = _decompose_basic_worker(model_cur[i], ds[i])
+    else: ret = _decompose_basic_worker(model_cur, ds)
+
+    return ret
+
+
+def _decompose_basic_worker(model_cur: statsmodels.regression.linear_model.OLS | statsmodels.regression.linear_model.OLSResults
+                            , ds: pd.DataFrame):
+    """
+    Worker
     Simplistic decomposition from OLS statsmodels object. If possible, use `extract_effects` instead.
 
     :param model_cur: OLS statsmodels object
@@ -267,11 +284,37 @@ Extract all effects
 """
 
 
-def extract_effect(model: "Model"
-                   , ds: pd.DataFrame
-                   , model_rep: "ModelRep"
-                   , if_detail: bool = False) -> pd.DataFrame:
+def extract_effect(model: "Model | list"
+                   , ds: pd.DataFrame | list
+                   , model_rep: "ModelRep | list"
+                   , if_detail: bool = False) -> pd.DataFrame | list:
     """
+        Wrapper
+        Decompose complex model / extract effects (impacts) of all types.
+
+        :param model: Model object or list of Model objects
+        :param ds: dataset or list of datasets
+        :param model_rep: ModelRep object (export settings) or list of ModelRep objects
+        :param if_detail: expand tokens
+        :return: table with column per every extracted effect / impact or list of tables with columns per every extracted effect
+        """
+
+    if isinstance(model, list):
+        split_m_m = [None] * len(model)
+        for i in range(len(model)):
+            split_m_m[i] = _extract_effect_worker(model[i], ds[i], model_rep[i], if_detail)
+    else:
+        split_m_m = _extract_effect_worker(model, ds, model_rep, if_detail)
+
+    return split_m_m
+
+
+def _extract_effect_worker(model: "Model"
+                           , ds: pd.DataFrame
+                           , model_rep: "ModelRep"
+                           , if_detail: bool = False) -> pd.DataFrame:
+    """
+    Worker
     Decompose complex model / extract effects (impacts) of all types.
 
     :param model: Model object
@@ -496,13 +539,47 @@ def extract_effect(model: "Model"
     return split_m_m
 
 
-def decompose_main_plot(split_m_m: pd.DataFrame
+def decompose_main_plot(split_m_m: pd.DataFrame | list
                         , brands: list | None
-                        , model_rep: "ModelRep"
-                        , period: str = 'day'
+                        , model_rep: "ModelRep | list"
+                        , period: str | list = 'day'
                         , show_future: bool | str = True
                         , contour_line: bool = True) -> go.Figure:
     """
+        Wrapper
+        Plot main dynamic decomposition (without faceting)
+
+        :param split_m_m: prepared dataset (see `extract_effect()`) or list of prepared datasets
+        :param brands: list of umbrella brands to preserve
+        :param model_rep: ModelRep object (export settings) or list of ModelRep objects
+        :param period: time period / interval to group by or list of time periods / intervals to group by
+        :param show_future: show future periods or not
+        :param contour_line: add contours or not
+        :return:
+        """
+
+    if isinstance(split_m_m, list):
+        fig = [None] * len(split_m_m)
+        if isinstance(period, list):
+            for i in range(len(split_m_m)):
+                fig[i] = _decompose_main_plot_worker(split_m_m[i], brands, model_rep[i], period[i], show_future, contour_line)
+        else:
+            for i in range(len(split_m_m)):
+                fig[i] = _decompose_main_plot_worker(split_m_m[i], brands, model_rep[i], period, show_future, contour_line)
+    else:
+        fig = _decompose_main_plot_worker(split_m_m, brands, model_rep, period, show_future, contour_line)
+
+    return fig
+
+
+def _decompose_main_plot_worker(split_m_m: pd.DataFrame
+                                , brands: list | None
+                                , model_rep: "ModelRep"
+                                , period: str = 'day'
+                                , show_future: bool | str = True
+                                , contour_line: bool = True) -> go.Figure:
+    """
+    Worker
     Plot main dynamic decomposition (without faceting)
 
     :param split_m_m: prepared dataset (see `extract_effect()`)
@@ -624,10 +701,47 @@ def decompose_sub_plot(split_m_m: pd.DataFrame
                        , brands: list | None
                        , model_rep: "ModelRep"
                        , sku_var: list | tuple = ('superbrand', 'market')
-                       , period: str = 'day'
+                       , period: str | list = 'day'
                        , show_future: bool | str = True
                        , contour_line: bool = True) -> go.Figure:
     """
+        Wrapper
+        Plot dynamic decomposition with faceting by `sku_var`
+
+        :param split_m_m: prepared dataset (see `extract_effect()`) or list of prepared datasets
+        :param brands: list of umbrella brands to preserve, None to keep all
+        :param model_rep: ModelRep object (export settings) or list of ModelRep objects
+        :param sku_var: list or tuple of variables to group by
+        :param period: time period / interval to group by or list of time periods / intervals to group by
+        :param show_future: show future periods or not
+        :param contour_line: add contours or not
+        :return:
+        """
+    if isinstance(split_m_m, list):
+        fig = [None] * len(split_m_m)
+        if isinstance(period, list):
+            for i in range(len(split_m_m)):
+                fig[i] = _decompose_sub_plot_worker(split_m_m[i], brands, model_rep[i], sku_var, period[i], show_future,
+                                                    contour_line)
+        else:
+            for i in range(len(split_m_m)):
+                fig[i] = _decompose_sub_plot_worker(split_m_m[i], brands, model_rep[i], sku_var, period, show_future,
+                                                    contour_line)
+    else:
+        fig = _decompose_sub_plot_worker(split_m_m, brands, model_rep, sku_var, period, show_future, contour_line)
+
+    return fig
+
+
+def _decompose_sub_plot_worker(split_m_m: pd.DataFrame
+                               , brands: list | None
+                               , model_rep: "ModelRep"
+                               , sku_var: list | tuple = ('superbrand', 'market')
+                               , period: str = 'day'
+                               , show_future: bool | str = True
+                               , contour_line: bool = True) -> go.Figure:
+    """
+    Worker
     Plot dynamic decomposition with faceting by `sku_var`
 
     :param split_m_m: prepared dataset (see `extract_effect()`)
@@ -667,6 +781,9 @@ def decompose_sub_plot(split_m_m: pd.DataFrame
         mask = split['superbrand'].isin(brands) & split['listed'].isin([2, 3, 4])
     else:
         mask = split['superbrand'].isin(brands) & split['listed'].isin([2, 3])
+
+    # cleanse sku_var from non-existing variables
+    sku_var = [x for x in sku_var if x in split.columns]
 
     tmp = groupby_eff(split, list(set(['date', 'superbrand'] + sku_var + ['variable'])), ['value'], mask, sort=False)
     tmp = tmp.value.sum().reset_index()

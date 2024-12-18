@@ -12,10 +12,9 @@ import copy
 from typing import Callable
 
 from fermatrica_utils import step_generator
-from fermatrica.model.model import Model
 
 from fermatrica_rep.options.define import OptionSettings
-from fermatrica_rep.model_rep import ModelRep
+from fermatrica_rep.meta_model.model_rep import ModelRep
 import fermatrica_rep.options.calc as calc
 
 

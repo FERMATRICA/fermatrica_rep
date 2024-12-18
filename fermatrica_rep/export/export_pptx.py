@@ -39,7 +39,7 @@ import pandas as pd
 import io
 import pkgutil
 import sys
-from typing_extensions import Callable
+import copy
 
 from pptx import Presentation
 from pptx.util import Pt
@@ -47,7 +47,7 @@ from lxml import etree
 
 from fermatrica import Model
 
-from fermatrica_rep.model_rep import ModelRep
+from fermatrica_rep.meta_model.model_rep import ModelRep
 from fermatrica_rep.decomposition import extract_effect
 from fermatrica_rep.options.define import OptionSettings
 import fermatrica_rep.export.slides as slides
@@ -321,10 +321,10 @@ def export_option_table(prs,
 
 
 def export_option_detail(prs,
-                         model: "Model",
-                         model_rep: "ModelRep",
-                         dt_pred: pd.DataFrame,
-                         ds: pd.DataFrame,
+                         model: "Model | list",
+                         model_rep: "ModelRep | list",
+                         dt_pred: pd.DataFrame | list,
+                         ds: pd.DataFrame | list,
                          opt_set: "OptionSettings",
                          sku_var: list | None = None,
                          options_m: dict | None = None,
@@ -344,10 +344,10 @@ def export_option_detail(prs,
     Set `None` to `options_m` param to get retro analysis (w/o future period).
 
     :param prs: Presentation object from python_pptx package
-    :param model_rep: ModelRep object (reporting settings)
-    :param model: Model object
-    :param dt_pred: prediction data
-    :param ds: main dataset
+    :param model: Model object or list of Model objects
+    :param model_rep: ModelRep object (reporting settings) or list ModelRep objects
+    :param dt_pred: prediction data or list of prediction datas
+    :param ds: main dataset or list of main datasets
     :param opt_set: OptionSetting object containing calculate settings
     :param sku_var: columns (variables) to report as "SKU" in detailed reporting
     :param options_m: dictionary of dictionaries defining options to calculate in detailed report and option table
@@ -366,16 +366,24 @@ def export_option_detail(prs,
 
     # prepare
 
-    superbrand = model.conf.target_superbrand
+    if isinstance(model, list):
+        superbrand = model[-1].conf.target_superbrand
+        if any([if_sku_fit_predict, if_sku_decompose, if_sku_waterfall]):
+            df_bs_keys = dt_pred[-1][dt_pred[-1]['superbrand'] == superbrand][sku_var].drop_duplicates()
+    else:
+        superbrand = model.conf.target_superbrand
+        if any([if_sku_fit_predict, if_sku_decompose, if_sku_waterfall]):
+            df_bs_keys = dt_pred[dt_pred['superbrand'] == superbrand][sku_var].drop_duplicates()
 
     if options_m is None:
         options_m = {'': None}
 
-    if any([if_sku_fit_predict, if_sku_decompose, if_sku_waterfall]):
-        df_bs_keys = dt_pred[dt_pred['superbrand'] == superbrand][sku_var].drop_duplicates()
-
     target_var = opt_set.target
     group_var = opt_set.apply_vars
+
+    model_start = model
+    ds_start = copy.deepcopy(ds)
+    model_rep_start = model_rep
 
     # iterate over options
 
@@ -384,13 +392,19 @@ def export_option_detail(prs,
         # if option is None = no options or retroanalysis
 
         if option is not None:
-            ds, dt_pred, opt_sum = calc.option_report(model, ds, model_rep, option, opt_set,
+            ds, dt_pred, opt_sum = calc.option_report(model_start, ds_start, model_rep_start, option, opt_set,
                                                         if_exact=if_exact)
             opt_title = option_name + '. ' + ' '.join(sum(target_var, [])).title()
             if_retro = False
         else:
             opt_title = ' '.join(sum(target_var, [])).title()
             if_retro = True
+
+        if isinstance(model_start, list):
+            model = model_start[-1]
+            ds = ds[-1]
+            dt_pred = dt_pred[-1]
+            model_rep = model_rep_start[-1]
 
         if custom_extract_effect is None:
             split_m_m = extract_effect(model, ds, model_rep)
@@ -502,11 +516,11 @@ def export_option_detail(prs,
 
 
 def export_curves(prs,
-                  model: "Model",
-                  model_rep: "ModelRep",
-                  ds: pd.DataFrame,
-                  trans_dict: dict,
+                  model: "Model | list",
+                  model_rep: "ModelRep | list",
+                  ds: pd.DataFrame | list,
                   opt_set_crv: "OptionSettings",
+                  trans_dict: dict | None = None,
                   budget_step: int | float = 5,
                   bdg_max: int | float = 301,
                   fixed_vars: dict | None = {'price': 1},
@@ -522,11 +536,12 @@ def export_curves(prs,
     Right now just a wrapper, maybe to be extended later.
 
     :param prs: Presentation object from python_pptx package
-    :param model_rep: ModelRep object (reporting settings)
-    :param model: Model object
-    :param ds: main dataset
-    :param trans_dict: translation dictionary (how to "translate" options into independent variables)
+    :param model: Model object or list of Model objects
+    :param model_rep: ModelRep object (export settings) or list of ModelRep objects
+    :param ds: dataset or list of datasets
     :param opt_set_crv: OptionSetting object containing calculate settings
+    :param trans_dict: translation dictionary (how to "translate" options into independent variables) or None,
+        (i.e. defaults to trans_dict attribute of `model_rep` argument)
     :param budget_step: budget iteration step in millions, defaults to 1 (i.e. 1M) (to calculate curves)
     :param bdg_max: maximum budget size (all options with larger budgets to be dropped)
     :param fixed_vars: translation variables with their values to be fixed across grid
@@ -542,7 +557,7 @@ def export_curves(prs,
                           model_rep=model_rep,
                           ds=ds,
                           opt_set_crv=opt_set_crv,
-                          translation=pd.DataFrame(trans_dict),
+                          translation=trans_dict,
                           budget_step=budget_step,
                           bdg_max=bdg_max,
                           fixed_vars=fixed_vars,
@@ -554,10 +569,12 @@ def export_curves(prs,
 
 
 def export_adstocks(prs,
-                    model: "Model",
-                    model_rep: "ModelRep",
-                    ds: pd.DataFrame,
+                    model: "Model | list",
+                    ds: pd.DataFrame | list,
+                    model_rep,  #: "ModelRep"
                     cln_meas: list | tuple,
+                    option_dict: dict | list = None,
+                    option_settings: "OptionSettings" = None,
                     cln_dim: list | tuple = ('superbrand', 'master', 'bs_key', 'date', 'listed', 'kpi_coef'),
                     n: int = 50
                     ):
@@ -567,9 +584,11 @@ def export_adstocks(prs,
     Right now just a wrapper, maybe to be extended later.
 
     :param prs: Presentation object from python_pptx package
-    :param model: Model object
-    :param model_rep: ModelRep object (reporting settings)
-    :param ds: main dataset
+    :param model: Model object or list of Model objects
+    :param ds: dataset or list of datasets
+    :param model_rep: ModelRep object (export settings) of list of ModelRep objects
+    :param option_dict: budget option / scenario to calculate as dictionary or list of option dictionaries
+    :param option_settings: OptionSettings object (option setting: target period etc.) or list of OptionSettings
     :param cln_meas: column names to be used as measurements
     :param cln_dim: column names to be used as dimensions
     :param n: number of observations per column
@@ -580,6 +599,8 @@ def export_adstocks(prs,
                           model=model,
                           model_rep=model_rep,
                           ds=ds,
+                          option_dict=option_dict,
+                          option_settings=option_settings,
                           cln_dim=cln_dim,
                           cln_meas=cln_meas,
                           n=n
@@ -616,6 +637,7 @@ def set_config(model_rep: "ModelRep",
 
     rsrc = pkgutil.get_data("fermatrica_rep", f"/res/ppt_objects/mock_text_{model_rep.language}.txt")
     txtio = io.BytesIO(rsrc)
+    txtio = io.TextIOWrapper(txtio, encoding='UTF-8', errors='replace')
 
     with txtio as f:
         model_rep.pptx_cnf['mock_text'] = f.read()

@@ -15,19 +15,51 @@ import plotly.io as pio
 
 from fermatrica_utils import groupby_eff
 
-from fermatrica_rep.model_rep import ModelRep
+from fermatrica_rep.meta_model.model_rep import ModelRep
 
 pio.templates.default = 'ggplot2'
 
 
-def waterfall_plot(split_m_m: pd.DataFrame
+def waterfall_plot(split_m_m: pd.DataFrame | list
                    , brands: list
-                   , model_rep: ModelRep
+                   , model_rep: ModelRep | list
                    , date_start: str = '2020-01-01'
                    , date_end: str = '2021-01-01'
                    , absolute_sort: bool | str = False
                    , pos_neg: bool = False):
     """
+        Wrapper
+        Plot decomposition for specific period from `date_start` to `date_end` as waterfall.
+
+        :param split_m_m: prepared dataset (see `fermatrica_rep.extract_effect()`) or list of prepared datasets
+        :param brands: list of umbrella brands to preserve
+        :param model_rep: ModelRep object (export settings) or list of ModelRep objects
+        :param date_start: start of the period
+        :param date_end: end of the period
+        :param absolute_sort: sort by absolute or signed values
+        :param pos_neg: colorize by brand or by positive/negative impacts
+        :return:
+        """
+
+    if isinstance(split_m_m, list):
+        fig = [None] * len(split_m_m)
+        for i in range(len(split_m_m)):
+            fig[i] = _waterfall_plot_worker(split_m_m[i], brands, model_rep[i], date_start, date_end, absolute_sort, pos_neg)
+    else:
+        fig = _waterfall_plot_worker(split_m_m, brands, model_rep, date_start, date_end, absolute_sort, pos_neg)
+
+    return fig
+
+
+def _waterfall_plot_worker(split_m_m: pd.DataFrame
+                           , brands: list
+                           , model_rep: ModelRep
+                           , date_start: str = '2020-01-01'
+                           , date_end: str = '2021-01-01'
+                           , absolute_sort: bool | str = False
+                           , pos_neg: bool = False):
+    """
+    Worker
     Plot decomposition for specific period from `date_start` to `date_end` as waterfall.
 
     :param split_m_m: prepared dataset (see `fermatrica_rep.extract_effect()`)
@@ -58,13 +90,41 @@ def waterfall_plot(split_m_m: pd.DataFrame
     return fig
 
 
-def waterfall_data(split_m_m: pd.DataFrame
+def waterfall_data(split_m_m: pd.DataFrame | list
                    , brands: list
                    , date_start: str = '2020-01-01'
                    , date_end: str = '2021-01-01'
-                   , absolute_sort: bool | str = False) -> pd.DataFrame:
+                   , absolute_sort: bool | str = False) -> pd.DataFrame | list:
     """
-    Prepare data for waterfall plots.
+        Wrapper
+        Prepare data of the ratio of the influence of the factor. Including for waterfall plots.
+
+        :param split_m_m: prepared dataset (see `fermatrica_rep.extract_effect()`)
+        :param brands: list of umbrella brands to preserve
+        :param date_start: start of the period
+        :param date_end: end of the period
+        :param absolute_sort: sort by absolute or signed values
+        :return:
+        """
+
+    if isinstance(split_m_m, list):
+        split = [None] * len(split_m_m)
+        for i in range(len(split_m_m)):
+            split[i] = _waterfall_data_worker(split_m_m[i], brands, date_start, date_end, absolute_sort)
+    else:
+        split = _waterfall_data_worker(split_m_m, brands, date_start, date_end, absolute_sort)
+
+    return split
+
+
+def _waterfall_data_worker(split_m_m: pd.DataFrame
+                           , brands: list
+                           , date_start: str = '2020-01-01'
+                           , date_end: str = '2021-01-01'
+                           , absolute_sort: bool | str = False) -> pd.DataFrame:
+    """
+    Worker
+    Prepare data of the ratio of the influence of the factor. Including for waterfall plots.
 
     :param split_m_m: prepared dataset (see `fermatrica_rep.extract_effect()`)
     :param brands: list of umbrella brands to preserve

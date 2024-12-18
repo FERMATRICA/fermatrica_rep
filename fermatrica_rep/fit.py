@@ -23,12 +23,13 @@ import plotly.express as px
 from fermatrica_utils import date_to_period
 
 from fermatrica.model.model import Model
-from fermatrica_rep.model_rep import ModelRep
+from fermatrica_rep.meta_model.model_rep import ModelRep
 
 
 """
 Main / basic functions
 """
+
 
 
 @profile
@@ -273,14 +274,55 @@ Plot single entity
 
 
 @profile
-def fit_main_plot_vol(model: "Model"
-                      , dt_pred: pd.DataFrame
-                      , model_rep: "ModelRep"
-                      , period: str = 'day'  # 'day', 'week', 'month', 'quarter', 'year'
+def fit_main_plot_vol(model: "Model | list"
+                      , dt_pred: pd.DataFrame | list
+                      , model_rep: "ModelRep | list"
+                      , period: str | list = 'day'  # 'day', 'week', 'month', 'quarter', 'year'
                       , err_int: float = .1
                       , show_future: bool = False
                       , target_superbrand: str | None = None):
     """
+        Wrapper
+        Plot extended fit of target superbrand's volume KPI: fit, interval, error. Faceting is
+        not allowed.
+
+        :param model: Model object or list of Model objects
+        :param dt_pred: prediction data or list of prediction data
+        :param model_rep: ModelRep object (export settings) or list of ModelRep objects
+        :param period: time period / interval to group by: 'day', 'week', 'month', 'quarter', 'year': or list of time periods | intervals
+        :param err_int: error interval in decimal (typically .1, .05, .2 etc.)
+        :param show_future: show future periods or not
+        :param target_superbrand: umbrella brand to be plotted
+        :return:
+        """
+
+    if isinstance(model, list):
+
+        fig = [None] * len(model)
+
+        if isinstance(period, list):
+            for i in range(len(model)):
+                fig[i] = _fit_main_plot_vol_worker(model[i], dt_pred[i], model_rep[i], period[i], err_int, show_future, target_superbrand)
+        else:
+            for i in range(len(model)):
+                fig[i] = _fit_main_plot_vol_worker(model[i], dt_pred[i], model_rep[i], period, err_int, show_future, target_superbrand)
+
+    else:
+        fig = _fit_main_plot_vol_worker(model, dt_pred, model_rep, period, err_int, show_future, target_superbrand)
+
+    return fig
+
+
+@profile
+def _fit_main_plot_vol_worker(model: "Model"
+                              , dt_pred: pd.DataFrame
+                              , model_rep: "ModelRep"
+                              , period: str = 'day'  # 'day', 'week', 'month', 'quarter', 'year'
+                              , err_int: float = .1
+                              , show_future: bool = False
+                              , target_superbrand: str | None = None):
+    """
+    Worker
     Plot extended fit of target superbrand's volume KPI: fit, interval, error. Faceting is
     not allowed.
 
@@ -356,14 +398,56 @@ def fit_main_plot_vol(model: "Model"
 
 
 @profile
-def fit_main_plot_val(model: "Model"
-                      , dt_pred: pd.DataFrame
-                      , model_rep: "ModelRep"
-                      , period: str = 'day'  # 'day', 'week', 'month', 'quarter', 'year'
+def fit_main_plot_val(model: "Model | list"
+                      , dt_pred: pd.DataFrame | list
+                      , model_rep: "ModelRep | list"
+                      , period: str | list = 'day'  # 'day', 'week', 'month', 'quarter', 'year'
                       , err_int: float = .1
                       , show_future: bool = False
                       , target_superbrand: str | None = None):
     """
+            Wrapper
+            Plot extended fit of target superbrand's value KPI: fit, interval, error. Faceting is
+            not allowed.
+
+            :param model: Model object or list of Model objects
+            :param dt_pred: prediction data or list of prediction data
+            :param model_rep: ModelRep object (export settings) or list of ModelRep objects
+            :param period: time period / interval to group by: 'day', 'week', 'month', 'quarter', 'year': or list of time periods | intervals
+            :param err_int: error interval in decimal (typically .1, .05, .2 etc.)
+            :param show_future: show future periods or not
+            :param target_superbrand: umbrella brand to be plotted
+            :return:
+            """
+    if isinstance(model, list):
+
+        fig = [None] * len(model)
+
+        if isinstance(period, list):
+            for i in range(len(model)):
+                fig[i] = _fit_main_plot_val_worker(model[i], dt_pred[i], model_rep[i], period[i], err_int, show_future,
+                                                   target_superbrand)
+        else:
+            for i in range(len(model)):
+                fig[i] = _fit_main_plot_val_worker(model[i], dt_pred[i], model_rep[i], period, err_int, show_future,
+                                                   target_superbrand)
+
+    else:
+        fig = _fit_main_plot_val_worker(model, dt_pred, model_rep, period, err_int, show_future, target_superbrand)
+
+    return fig
+
+
+@profile
+def _fit_main_plot_val_worker(model: "Model"
+                              , dt_pred: pd.DataFrame
+                              , model_rep: "ModelRep"
+                              , period: str = 'day'  # 'day', 'week', 'month', 'quarter', 'year'
+                              , err_int: float = .1
+                              , show_future: bool = False
+                              , target_superbrand: str | None = None):
+    """
+    Worker
     Plot extended fit of target superbrand's value KPI: fit, interval, error. Faceting is
     not allowed.
 
@@ -598,14 +682,58 @@ def _fit_mult_plot_inner(model: "Model"
 
 
 @profile
-def fit_mult_plot_vol(model: "Model"
-                      , dt_pred: pd.DataFrame
-                      , model_rep: "ModelRep"
-                      , period: str = 'day'  # 'day', 'week', 'month', 'quarter', 'year'
+def fit_mult_plot_vol(model: "Model | list"
+                      , dt_pred: pd.DataFrame | list
+                      , model_rep: "ModelRep | list"
+                      , period: str | list = 'day'  # 'day', 'week', 'month', 'quarter', 'year'
                       , show_future: bool = False
                       , group_var: list | tuple = ('superbrand',)
                       , bs_key_filter: list | tuple | None = None):
     """
+        Wrapper
+        Plot extended fit of target superbrand's volume KPI: fit, interval, error.
+
+        This function plots multiple entities, but without error intervals. If error intervals are required
+        and single entity (superbrand) is enough, see `fermatrica_rep.fit.fit_main_plot_vol`.
+        As for now conversion chain plotting is not supported (could be changed later).
+
+        :param model: Model object or list of model objects
+        :param dt_pred: prediction data or list of prediction data
+        :param model_rep: ModelRep object (export settings) or list of ModelRep objects
+        :param period: time period / interval to group by: 'day', 'week', 'month', 'quarter', 'year': or list of time periods | intervals
+        :param show_future: show future periods or not
+        :param group_var: group entities by variables (list or tuple of strings)
+        :param bs_key_filter: list or tuple of 'bs_key' values to preserve
+        :return: filled figure (graphic object)
+        :return:
+        """
+    if isinstance(model, list):
+
+        fig = [None] * len(model)
+
+        if isinstance(period, list):
+            for i in range(len(model)):
+                fig[i] = _fit_mult_plot_vol_worker(model[i], dt_pred[i], model_rep[i], period[i], show_future, group_var, bs_key_filter)
+        else:
+            for i in range(len(model)):
+                fig[i] = _fit_mult_plot_vol_worker(model[i], dt_pred[i], model_rep[i], period, show_future, group_var, bs_key_filter)
+
+    else:
+        fig = _fit_mult_plot_vol_worker(model, dt_pred, model_rep, period, show_future, group_var, bs_key_filter)
+
+    return fig
+
+
+@profile
+def _fit_mult_plot_vol_worker(model: "Model"
+                              , dt_pred: pd.DataFrame
+                              , model_rep: "ModelRep"
+                              , period: str = 'day'  # 'day', 'week', 'month', 'quarter', 'year'
+                              , show_future: bool = False
+                              , group_var: list | tuple = ('superbrand',)
+                              , bs_key_filter: list | tuple | None = None):
+    """
+    Worker
     Plot extended fit of target superbrand's volume KPI: fit, interval, error.
 
     This function plots multiple entities, but without error intervals. If error intervals are required
@@ -629,14 +757,58 @@ def fit_mult_plot_vol(model: "Model"
 
 
 @profile
-def fit_mult_plot_val(model: "Model"
-                      , dt_pred: pd.DataFrame
-                      , model_rep: "ModelRep"
-                      , period: str = 'day'  # 'day', 'week', 'month', 'quarter', 'year'
+def fit_mult_plot_val(model: "Model | list"
+                      , dt_pred: pd.DataFrame | list
+                      , model_rep: "ModelRep | list"
+                      , period: str | list = 'day'  # 'day', 'week', 'month', 'quarter', 'year'
                       , show_future: bool = False
                       , group_var: list | tuple = ('superbrand',)
                       , bs_key_filter: list | tuple | None = None):
     """
+            Wrapper
+            Plot extended fit of target superbrand's value KPI: fit, interval, error.
+
+            This function plots multiple entities, but without error intervals. If error intervals are required
+            and single entity (superbrand) is enough, see `fermatrica_rep.fit.fit_main_plot_val`.
+            As for now conversion chain plotting is not supported (could be changed later).
+
+            :param model: Model object or list of model objects
+            :param dt_pred: prediction data or list of prediction data
+            :param model_rep: ModelRep object (export settings) or list of ModelRep objects
+            :param period: time period / interval to group by: 'day', 'week', 'month', 'quarter', 'year': or list of time periods | intervals
+            :param show_future: show future periods or not
+            :param group_var: group entities by variables (list or tuple of strings)
+            :param bs_key_filter: list or tuple of 'bs_key' values to preserve
+            :return: filled figure (graphic object)
+            :return:
+            """
+    if isinstance(model, list):
+
+        fig = [None] * len(model)
+
+        if isinstance(period, list):
+            for i in range(len(model)):
+                fig[i] = _fit_mult_plot_val_worker(model[i], dt_pred[i], model_rep[i], period[i], show_future, group_var, bs_key_filter)
+        else:
+            for i in range(len(model)):
+                fig[i] = _fit_mult_plot_val_worker(model[i], dt_pred[i], model_rep[i], period, show_future, group_var, bs_key_filter)
+
+    else:
+        fig = _fit_mult_plot_val_worker(model, dt_pred, model_rep, period, show_future, group_var, bs_key_filter)
+
+    return fig
+
+
+@profile
+def _fit_mult_plot_val_worker(model: "Model"
+                              , dt_pred: pd.DataFrame
+                              , model_rep: "ModelRep"
+                              , period: str = 'day'  # 'day', 'week', 'month', 'quarter', 'year'
+                              , show_future: bool = False
+                              , group_var: list | tuple = ('superbrand',)
+                              , bs_key_filter: list | tuple | None = None):
+    """
+    Worker
     Plot extended fit of target superbrand's volume KPI: fit, interval, error.
 
     This function plots multiple entities, but without error intervals. If error intervals are required

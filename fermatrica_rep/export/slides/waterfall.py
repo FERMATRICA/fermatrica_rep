@@ -11,20 +11,15 @@ import copy
 
 from pptx.presentation import Presentation
 from pptx.chart.data import ChartData
-from pptx.util import Inches, Pt, Cm
-from pptx.enum.chart import XL_CHART_TYPE, XL_TICK_MARK, XL_LEGEND_POSITION, XL_TICK_LABEL_POSITION, \
+from pptx.enum.chart import XL_CHART_TYPE, XL_TICK_LABEL_POSITION, \
     XL_DATA_LABEL_POSITION
-from pptx.enum.dml import MSO_LINE_DASH_STYLE
-from pptx.enum.text import PP_PARAGRAPH_ALIGNMENT
-from pptx.enum.shapes import MSO_SHAPE_TYPE, MSO_CONNECTOR_TYPE
 from pptx.dml.color import RGBColor
 from pptx.oxml.xmlchemy import OxmlElement
-from pptx import enum as pptx_enum
 
 from fermatrica_utils import groupby_eff, hex_to_rgb
 
 from fermatrica.model.model import Model
-from fermatrica_rep.model_rep import ModelRep
+from fermatrica_rep.meta_model.model_rep import ModelRep
 
 
 def create(prs: Presentation,
@@ -111,6 +106,9 @@ def create(prs: Presentation,
     # mock text
     x, y = 0.05 * slide_width, slide.shapes[0].height + slide.shapes[0].top
     cx, cy = 0.25 * slide_width, 0.7 * slide_height
+
+    x, y, cx, cy = int(round(x)), int(round(y)), int(round(cx)), int(round(cy))
+
     textbox = slide.shapes.add_textbox(x, y, cx, cy)
     textbox.text = model_rep.pptx_cnf['mock_text']
 
@@ -147,6 +145,8 @@ def create(prs: Presentation,
 
     x, y = (0.5 - 0.45 + 0.25) * slide_width, slide.shapes[0].top + slide.shapes[0].height
     cx, cy = (0.9 - 0.25) * slide_width, 0.7 * slide_height
+
+    x, y, cx, cy = int(round(x)), int(round(y)), int(round(cx)), int(round(cy))
 
     graphic_frame = slide.shapes.add_chart(
         XL_CHART_TYPE.COLUMN_STACKED, x, y, cx, cy, chart_data

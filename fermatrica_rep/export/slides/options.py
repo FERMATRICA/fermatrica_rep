@@ -11,10 +11,7 @@ import numpy as np
 from pptx.presentation import Presentation
 from pptx.dml.color import RGBColor
 
-from fermatrica.model.model import Model
-
 from fermatrica_rep.export.basics import set_table_border, adjust_table_width, table_text_format
-from fermatrica_rep.model_rep import ModelRep
 from fermatrica_rep.options.define import OptionSettings
 import fermatrica_rep.options.calc as calc
 
@@ -97,6 +94,9 @@ def create(prs: Presentation,
         # options text boxes
         x, y = (0.05 + 0.9 * 2/10) * slide_width, slide.shapes[0].top + slide.shapes[0].height + 0.05 * slide_height
         cx, cy = 0.9 * 2/10 * slide_width, 0.05 * slide_height
+
+        x, y, cx, cy = int(round(x)), int(round(y)), int(round(cx)), int(round(cy))
+
         textbox = slide.shapes.add_textbox(x, y, cx, cy)
         paragraph = textbox.text_frame.paragraphs[0]
         paragraph.text = f"{opt_str} 1. {list(options_m)[0]}"
@@ -140,6 +140,9 @@ def create(prs: Presentation,
 
         x, y = (0.5 - 0.45) * slide_width, slide.shapes[1].top + slide.shapes[1].height
         cx, cy = n_cols * cell_width, n_rows * cell_height
+
+        x, y, cx, cy = int(round(x)), int(round(y)), int(round(cx)), int(round(cy))
+
         opt_shape = slide.shapes.add_table(n_rows, n_cols, x, y, cx, cy)
         opt_table = opt_shape.table
 
@@ -175,6 +178,9 @@ def create(prs: Presentation,
 
         x, y = (0.5 - 0.45) * slide_width, opt_shape.top + opt_shape.height + 0.05 * slide_height
         cx, cy = n_cols * cell_width, n_rows * cell_height
+
+        x, y, cx, cy = int(round(x)), int(round(y)), int(round(cx)), int(round(cy))
+
         calc_shape = slide.shapes.add_table(n_rows, n_cols, x, y, cx, cy)
         calc_table = calc_shape.table
 

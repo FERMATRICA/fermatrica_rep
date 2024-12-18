@@ -9,8 +9,8 @@ import pandas as pd
 
 import statsmodels.api as sm
 import statsmodels.regression.linear_model
-from statsmodels.tsa.stattools import adfuller
-from scipy.stats import shapiro
+from statsmodels.tsa.stattools import adfuller, kpss
+from scipy.stats import shapiro, spearmanr
 import statsmodels.stats as smstats
 from statsmodels.stats.weightstats import ztest
 
@@ -133,6 +133,10 @@ def tests_table_ols(model: "Model | statsmodels.regression.linear_model.OLS | st
     adf_test = adfuller(mdl.fit().resid, autolag="t-stat", regression="ct")
     dct['Augmented Dickey-Fuller test for stationary'] = ['{:,.4f}'.format(adf_test[0]), '{:,.4f}'.format(adf_test[1])]
 
+    # KPSS test for stationary
+    kpss_test = kpss(mdl.fit().resid, regression="ct")
+    dct['KPSS test for stationary'] = ['{:,.4f}'.format(kpss_test[0]), '{:,.4f}'.format(kpss_test[1])]
+
     # Shapiro-Wilk normality test
     sw_norm_test = shapiro(mdl.fit().resid)
     dct['Shapiro-Wilk normality test'] = ['{:,.4f}'.format(sw_norm_test[0]), '{:,.4f}'.format(sw_norm_test[1])]
@@ -150,6 +154,17 @@ def tests_table_ols(model: "Model | statsmodels.regression.linear_model.OLS | st
     # z-test for a systematic bias in prediction on test period
     z_test = ztest(dt_pred[dt_pred['listed'] == 3]['observed'] - dt_pred[dt_pred['listed'] == 3]['predicted'], x2=None, value=0, alternative='two-sided')
     dct['z-test for a systematic bias in forecast'] = ['{:,.4f}'.format(z_test[0]), '{:,.4f}'.format(z_test[1])]
+
+    # Spearman test
+    if dt_pred[dt_pred['listed'] == 3].shape[0] < 40:
+        spearman = spearmanr(dt_pred[dt_pred['listed'].isin([2, 3])]['observed']
+                            , dt_pred[dt_pred['listed'].isin([2, 3])]['predicted'],
+                            axis=0, nan_policy='propagate', alternative='two-sided')
+    else:
+        spearman = spearmanr(dt_pred[dt_pred['listed'] == 3]['observed']
+                            , dt_pred[dt_pred['listed'] == 3]['predicted'],
+                            axis=0, nan_policy='propagate', alternative='two-sided')
+    dct['Spearman correlation'] = ['{:,.4f}'.format(spearman.statistic), '{:,.4f}'.format(spearman.pvalue)]
 
     # gather
     tbl = pd.DataFrame.from_dict(dct, orient='index', columns=['Statictics', 'P-Value'])
