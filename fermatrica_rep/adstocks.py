@@ -28,7 +28,6 @@ def adstocks_data(model: "Model | list"
     :param model: Model object or list of Model objects
     :param ds: dataset or list of datasets
     :param model_rep: ModelRep object (export settings) or list of ModelRep objects
-    :param model_rep: ModelRep object (export settings) or list of ModelRep objects
     :param superbrand: umbrella brand name
     :param option_dict: budget option / scenario to calculate as dictionary or list of option dictionaries
     :param option_settings: OptionSettings object (option setting: target period etc.) or list of OptionSettings
