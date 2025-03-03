@@ -32,6 +32,7 @@ def _objective_fun_generate(ds: pd.DataFrame | list
                             , option: dict
                             , opt_set: "OptionSettings"
                             , if_exact: bool = False
+                            , if_long: bool | None = None
                             , if_volume: bool = True
                             , error_score: float = 1e+12
                             , verbose: bool = True):
@@ -48,6 +49,7 @@ def _objective_fun_generate(ds: pd.DataFrame | list
         in this option when optimizing and later export
     :param opt_set: OptionSettings object (option setting: target period etc.)
     :param if_exact: apply only to the specific time period, without next years
+    :param if_long: optimize long or short KPI. If `None`, `if_exact` is used
     :param if_volume: optimize volume or value KPI
     :param error_score: extremely big (or small) value to be used as score if fit_predict returns None (error)
     :param verbose: print diagnostic / progress info
@@ -80,9 +82,13 @@ def _objective_fun_generate(ds: pd.DataFrame | list
         nonlocal iter_idx
         nonlocal borders
         nonlocal if_exact
+        nonlocal if_long
         nonlocal if_volume
 
         model = copy.deepcopy(model)
+
+        if if_long is None:
+            if_long = not if_exact
 
         # apply current values (from algo) to params frame (for option_report function)
         if np.isnan(params_cur).any():
@@ -100,16 +106,16 @@ def _objective_fun_generate(ds: pd.DataFrame | list
         if isinstance(model_rep, list):
             opt_sum = opt_sum[-1]
 
-        if if_exact:
-            if if_volume:
-                score = opt_sum["pred_exact_0"]["pred_exact_vol"]
-            else:
-                score = opt_sum["pred_exact_0"]["pred_exact_val"]
-        else:
+        if if_long:
             if if_volume:
                 score = opt_sum["pred_long_vol"]
             else:
                 score = opt_sum["pred_long_val"]
+        else:
+            if if_volume:
+                score = opt_sum["pred_exact_0"]["pred_exact_vol"]
+            else:
+                score = opt_sum["pred_exact_0"]["pred_exact_val"]
 
         if (score is None) or (math.isinf(score)):
             score = error_score
@@ -137,6 +143,7 @@ def _constraint_fun_generate_target(ds: pd.DataFrame | list
                                     , opt_set: "OptionSettings"
                                     , trg: float = 100
                                     , if_exact: bool = False
+                                    , if_long: bool | None = None
                                     , if_volume: bool = True
                                     , error_score: float = 1e+12
                                     , verbose: bool = True
@@ -158,6 +165,7 @@ def _constraint_fun_generate_target(ds: pd.DataFrame | list
     :param opt_set: OptionSettings object (option setting: target period etc.)
     :param trg: target KPI value
     :param if_exact: apply only to the specific time period, without next years
+    :param if_long: optimize long or short KPI. If `None`, `if_exact` is used
     :param if_volume: optimize volume or value KPI
     :param error_score: extremely big (or small) value to be used as score if fit_predict returns None (error)
     :param verbose: print diagnostic / progress info
@@ -191,9 +199,13 @@ def _constraint_fun_generate_target(ds: pd.DataFrame | list
         nonlocal iter_idx
         nonlocal borders
         nonlocal if_exact
+        nonlocal if_long
         nonlocal if_volume
 
         model = copy.deepcopy(model)
+
+        if if_long is None:
+            if_long = not if_exact
 
         # apply current values (from algo) to params frame (for option_report function)
         if np.isnan(params_cur).any():
@@ -213,16 +225,16 @@ def _constraint_fun_generate_target(ds: pd.DataFrame | list
         if isinstance(model_rep, list):
             opt_sum = opt_sum[-1]
 
-        if if_exact:
-            if if_volume:
-                score = opt_sum["pred_exact_0"]["pred_exact_vol"]
-            else:
-                score = opt_sum["pred_exact_0"]["pred_exact_val"]
-        else:
+        if if_long:
             if if_volume:
                 score = opt_sum["pred_long_vol"]
             else:
                 score = opt_sum["pred_long_val"]
+        else:
+            if if_volume:
+                score = opt_sum["pred_exact_0"]["pred_exact_vol"]
+            else:
+                score = opt_sum["pred_exact_0"]["pred_exact_val"]
 
         if (score is None) or (math.isinf(score)):
             score = error_score
@@ -249,6 +261,7 @@ def optimize_budget_local_cobyla(ds: pd.DataFrame | list
                                  , opt_set: "OptionSettings"
                                  , bdg_size: float = 100
                                  , if_exact: bool = False
+                                 , if_long: bool | None = None
                                  , if_volume: bool = True
                                  , epochs: int = 3
                                  , iters_epoch: int = 300
@@ -282,6 +295,7 @@ def optimize_budget_local_cobyla(ds: pd.DataFrame | list
     :param opt_set: OptionSettings object (option setting: target period etc.)
     :param bdg_size: fixed budget size (we change budget split, but not budget size)
     :param if_exact: apply only to the specific time period, without next years
+    :param if_long: optimize long or short KPI. If `None`, `if_exact` is used
     :param if_volume: optimize volume or value KPI
     :param epochs: number of epochs
     :param iters_epoch: number of objective function calculations per epoch
@@ -291,6 +305,9 @@ def optimize_budget_local_cobyla(ds: pd.DataFrame | list
     :param verbose: print diagnostic or progress information
     :return: optimal option as dict
     """
+
+    if if_long is None:
+        if_long = not if_exact
 
     option = copy.deepcopy(option)
     borders = pd.DataFrame(borders_dict)
@@ -319,6 +336,7 @@ def optimize_budget_local_cobyla(ds: pd.DataFrame | list
                                                 , option=option
                                                 , opt_set=opt_set
                                                 , if_exact=if_exact
+                                                , if_long=if_long
                                                 , if_volume=if_volume
                                                 , verbose=verbose
                                                 , error_score=error_score
@@ -375,6 +393,7 @@ def optimize_target_local_cobyla(ds: pd.DataFrame | list
                                  , trg: float = 100
                                  , trg_tol_ratio: float = 0.0001
                                  , if_exact: bool = False
+                                 , if_long: bool | None = None
                                  , if_volume: bool = True
                                  , epochs: int = 3
                                  , iters_epoch: int = 300
@@ -408,6 +427,7 @@ def optimize_target_local_cobyla(ds: pd.DataFrame | list
     :param trg: target (KPI) value to achieve with minimum budget
     :param trg_tol_ratio: tolerance ratio for target (KPI) value: how small difference consider as nearly equal
     :param if_exact: apply only to the specific time period, without next years
+    :param if_long: optimize long or short KPI. If `None`, `if_exact` is used
     :param if_volume: optimize volume or value KPI
     :param epochs: number of epochs
     :param iters_epoch: number of objective function calculations per epoch
@@ -417,6 +437,9 @@ def optimize_target_local_cobyla(ds: pd.DataFrame | list
     :param verbose: print diagnostic or progress information
     :return: optimal option as dict
     """
+
+    if if_long is None:
+        if_long = not if_exact
 
     borders = pd.DataFrame(borders_dict)
     option = copy.deepcopy(option)
@@ -438,6 +461,7 @@ def optimize_target_local_cobyla(ds: pd.DataFrame | list
                                                          , option=option
                                                          , opt_set=opt_set
                                                          , if_exact=if_exact
+                                                         , if_long=if_long
                                                          , if_volume=if_volume
                                                          , error_score=error_score
                                                          , verbose=verbose

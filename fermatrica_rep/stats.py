@@ -291,19 +291,22 @@ def stats_compare(model_init: "Model"
         pass
 
 
-def vif_table(model_cur: statsmodels.regression.linear_model.OLS | statsmodels.regression.linear_model.OLSResults
+def vif_table(model_cur: statsmodels.regression.linear_model.OLS | statsmodels.regression.linear_model.OLSResults,
+              if_names_truncated: bool = True
               ) -> pd.DataFrame:
     """
     Calculate VIFs for OLS model.
 
     :param model_cur: statsmodels OLS object
+    :if_names_truncated: truncate 'Variable' column to 45 characters
     :return: VIF table
     """
 
     ds = mtr.vif(model_cur)
     ds = pd.DataFrame({'Variable': ds.index, 'VIF': ds.values}, index=range(0, len(ds)))
 
-    ds['Variable'] = ds['Variable'].map('{:.45}'.format)
+    if if_names_truncated:
+        ds['Variable'] = ds['Variable'].map('{:.45}'.format)
     ds['VIF'] = ds['VIF'].map('{:.3f}'.format)
 
     return ds

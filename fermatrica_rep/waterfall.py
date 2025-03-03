@@ -9,6 +9,8 @@ Data preparation (`split_m_m`) is also defined in `fermatrica_rep.decomposition`
 import copy
 import pandas as pd
 
+from line_profiler_pycharm import profile
+
 import plotly.express as px
 import plotly.graph_objects as go
 import plotly.io as pio
@@ -20,6 +22,7 @@ from fermatrica_rep.meta_model.model_rep import ModelRep
 pio.templates.default = 'ggplot2'
 
 
+@profile
 def waterfall_plot(split_m_m: pd.DataFrame | list
                    , brands: list
                    , model_rep: ModelRep | list
@@ -51,6 +54,7 @@ def waterfall_plot(split_m_m: pd.DataFrame | list
     return fig
 
 
+@profile
 def _waterfall_plot_worker(split_m_m: pd.DataFrame
                            , brands: list
                            , model_rep: ModelRep
@@ -90,6 +94,7 @@ def _waterfall_plot_worker(split_m_m: pd.DataFrame
     return fig
 
 
+@profile
 def waterfall_data(split_m_m: pd.DataFrame | list
                    , brands: list
                    , date_start: str = '2020-01-01'
@@ -117,6 +122,7 @@ def waterfall_data(split_m_m: pd.DataFrame | list
     return split
 
 
+@profile
 def _waterfall_data_worker(split_m_m: pd.DataFrame
                            , brands: list
                            , date_start: str = '2020-01-01'
@@ -134,11 +140,10 @@ def _waterfall_data_worker(split_m_m: pd.DataFrame
     :return:
     """
 
-    split = copy.deepcopy(split_m_m)
-    mask = (split['date'] >= pd.to_datetime(date_start)) & (split['date'] <= pd.to_datetime(date_end)) & split[
+    mask = (split_m_m['date'] >= pd.to_datetime(date_start)) & (split_m_m['date'] <= pd.to_datetime(date_end)) & split_m_m[
         'superbrand'].isin(brands)
 
-    split = groupby_eff(split, ['variable'], ['value'], mask, sort=False)['value'] \
+    split = groupby_eff(split_m_m, ['variable'], ['value'], mask, sort=False)['value'] \
         .sum() \
         .reset_index()
 
@@ -158,6 +163,7 @@ def _waterfall_data_worker(split_m_m: pd.DataFrame
     return split
 
 
+@profile
 def waterfall_plot_native(split_m_m: pd.DataFrame
                           , brands: list
                           , model_rep: ModelRep
@@ -212,6 +218,7 @@ def waterfall_plot_native(split_m_m: pd.DataFrame
     return fig
 
 
+@profile
 def waterfall_plot_bar(split_m_m: pd.DataFrame
                        , brands: list
                        , model_rep: ModelRep
@@ -251,7 +258,6 @@ def waterfall_plot_bar(split_m_m: pd.DataFrame
                  , labels=
                  {"color": model_rep.vis_dict.loc[(model_rep.vis_dict['section'] == "plot_efficiency") &
                                                   (model_rep.vis_dict['variable'] == "factor"), language].iloc[0]}
-                 # , text_auto='.2s'
                  , height=700
                  )
 
@@ -270,10 +276,8 @@ def waterfall_plot_bar(split_m_m: pd.DataFrame
 
     )
 
-    fig.update_traces(textfont_size=12, textangle=0, textposition="outside", cliponaxis=False)
-
-    fig.update_traces(marker_line_color='black',
-                      marker_line_width=0.8, opacity=1)
+    fig.update_traces(textfont_size=12, textangle=0, textposition="outside", cliponaxis=False,
+                      marker_line_color='black', marker_line_width=0.8, opacity=1)
 
     fig.add_hline(y=100, line_width=2, line_dash="dash", line_color="red", opacity=0.4)
 

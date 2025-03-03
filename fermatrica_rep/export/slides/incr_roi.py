@@ -28,7 +28,7 @@ def create(prs: Presentation,
            model_rep: "ModelRep | list",
            ds: pd.DataFrame | list,
            opt_set_crv,
-           translation: dict | None = None,
+           translation: dict | pd.DataFrame | None = None,
            budget_step: int | float = 5,
            bdg_max: int | float = 301,
            fixed_vars: dict | None = {'price': 1},
@@ -62,6 +62,9 @@ def create(prs: Presentation,
     else:
         model_rep_main = model_rep
         date_max = ds['date'].dt.year.max()
+
+    if isinstance(translation, dict):
+        translation = pd.DataFrame(translation)
 
     language = model_rep_main.language
     slide_width = model_rep_main.pptx_cnf['slide_width']

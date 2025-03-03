@@ -18,12 +18,11 @@ import copy
 import inspect
 import itertools
 import logging
+import numpy as np
 import multiprocessing
 
 from fermatrica_utils import import_module_from_string
-from fermatrica.model.model import Model, ModelConf
-from fermatrica.model.predict import predict_ext
-from fermatrica.model.transform import transform
+from fermatrica import fermatrica_error, Model, ModelConf, predict_ext, transform
 
 from fermatrica_rep.options.define import OptionSettings
 from fermatrica_rep.options.translators import *
@@ -167,16 +166,31 @@ def option_translate_long(model_conf: "ModelConf"
 Predict & summaries
 """
 
+def _align_option_settings(option_settings: "OptionSettings"):
+    """
+    Align OptionSettings object to regular format, such as `[[target]]` etc.
+
+    :param option_settings: OptionSettings object (option setting: target period etc.)
+    :return: OptionSettings object (option setting: target period etc.)
+    """
+
+    if isinstance(option_settings.target, str):
+        option_settings.target = [[option_settings.target]]
+
+    if isinstance(option_settings.target, list) and isinstance(option_settings.target[0], str):
+        option_settings.target = [option_settings.target]
+
+    return option_settings
+
 
 def _option_report_worker(model: "Model"
                           , ds: pd.DataFrame
                           , model_rep  #: "ModelRep"
-                          , option_dict: dict
-                          , option_settings: "OptionSettings"
+                          , option_dict: dict | list[dict]
+                          , option_settings: "OptionSettings | list[OptionSettings]"
                           , targets_new: dict | None = None
                           , allow_past: bool = False
-                          , if_exact: bool = False
-                          , if_multi: bool = False) -> tuple:
+                          , if_exact: bool = False) -> tuple:
 
     """
     Worker function to calculate and report specific option (one model in chain only):
@@ -195,26 +209,28 @@ def _option_report_worker(model: "Model"
         {'targets_new': [], 'apply_vars_new': []}
     :param allow_past: allow translation to the past (filled with observed data) periods
     :param if_exact: apply only to the specific time period, without next years
-    :param if_multi: return only summary, without data and prediction (use if a lot of options are calculated
-        and only summaries are actually necessary)
-    :return: (1, summary) or (dataset, prediction data, summary). 1 is required for technical reasons
+    :return: dataset, prediction data, summary
     """
+
+    # prepare
 
     model_conf = model.conf
 
+    if isinstance(option_settings, list):
+        for i, o in enumerate(option_settings):
+            option_settings[i] = _align_option_settings(o)
+    else:
+        option_settings = _align_option_settings(option_settings)
+
     # translate budgets into ds
 
-    if isinstance(option_settings.target, str):
-        option_settings.target = [[option_settings.target]]
-
-    if isinstance(option_settings.target, list) and isinstance(option_settings.target[0], str):
-        option_settings.target = [option_settings.target]
-
-    #
-
     if if_exact:
-        ds = _option_translate_exact(model_conf, ds, model_rep, option_dict, option_settings, allow_past)
+        if isinstance(option_settings, list):
+            ds = _option_translate_list(model_conf, ds, model_rep, option_dict, option_settings, allow_past)
+        else:
+            ds = _option_translate_exact(model_conf, ds, model_rep, option_dict, option_settings, allow_past)
     else:
+        # `option_dict` and `option_setting` could be of type `list` only if `exact=False`, so skip the check
         ds = model_rep.option_translate_long(model_conf, ds, model_rep, option_dict, option_settings, allow_past)
 
     # run transformations and get prediction
@@ -238,8 +254,8 @@ def _option_report_worker(model: "Model"
 def option_report(model: "Model | list"
                   , ds: pd.DataFrame | list
                   , model_rep  #: "ModelRep"
-                  , option_dict: dict | list
-                  , option_settings: "OptionSettings"
+                  , option_dict: dict | list[dict]
+                  , option_settings: "OptionSettings | list[OptionSettings]"
                   , targets_new: dict | None = None
                   , allow_past: bool = False
                   , if_exact: bool = False
@@ -257,8 +273,10 @@ def option_report(model: "Model | list"
     :param model: Model object or list of Model objects
     :param ds: dataset or list of datasets
     :param model_rep: ModelRep object (export settings) of list of ModelRep objects
-    :param option_dict: budget option / scenario to calculate as dictionary or list of option dictionaries
-    :param option_settings: OptionSettings object (option setting: target period etc.) or list of OptionSettings
+    :param option_dict: budget option / scenario to calculate as dictionary or list of option dictionaries.
+        Use list if `if_exact=True` only
+    :param option_settings: OptionSettings object (option setting: target period etc.) or list of OptionSettings.
+        Use list if `if_exact=True` only
     :param targets_new: apply option to one entity, summarize another (useful for cross-elasticity). If not None:
         {'targets_new': [], 'apply_vars_new': []}
     :param allow_past: allow translation to the past (filled with observed data) periods
@@ -267,6 +285,22 @@ def option_report(model: "Model | list"
         and only summaries are actually necessary)
     :return: (1, summary) or (dataset, prediction data, summary). 1 is required for technical reasons
     """
+
+    # strategies / policies
+
+    if (isinstance(option_dict, list) and not isinstance(option_settings, list)) or\
+        (not isinstance(option_dict, list) and isinstance(option_settings, list)):
+
+        fermatrica_error('Option could not be calculated. If you try to calculate complex option ' +
+                         'with different splits for different periods, both `option_dict` and ' +
+                         '`option_settings` should be `list`. As for one of them is not')
+
+    if isinstance(option_dict, list) and not if_exact:
+
+        fermatrica_error('Complex option with different splits for different periods could be ' +
+                         "calculated only if `if_exact=True`. Otherwise it doesn't make sense")
+
+    # main part
 
     if isinstance(model_rep, list):
 
@@ -304,8 +338,7 @@ def option_report(model: "Model | list"
                                                                          , option_settings=option_settings
                                                                          , targets_new=targets_new
                                                                          , allow_past=allow_past
-                                                                         , if_exact=if_exact
-                                                                         , if_multi=if_multi)
+                                                                         , if_exact=if_exact)
 
     else:
         ds, dt_pred, option_summary = _option_report_worker(model=model
@@ -315,8 +348,7 @@ def option_report(model: "Model | list"
                                      , option_settings=option_settings
                                      , targets_new=targets_new
                                      , allow_past=allow_past
-                                     , if_exact=if_exact
-                                     , if_multi=if_multi)
+                                     , if_exact=if_exact)
 
 
     if if_multi:
@@ -350,9 +382,15 @@ def option_summarize_exact(model_conf: "ModelConf"
 
     if summary_type == 'fin':
 
+        date_end = dt_pred.loc[dt_pred['listed'].isin([2, 3, 4]), 'date'].unique()
+
+        dlt = np.absolute(date_end - option_settings.date_end)
+        ind = np.argmin(dlt)
+        date_end = date_end[ind]
+
         dt_mask = True
         for i, (apply_var, trgt) in enumerate(zip(option_settings.apply_vars, option_settings.target)):
-            dt_mask = dt_mask * ((dt_pred['listed'].isin([2, 3, 4])) & (dt_pred['date'] == option_settings.date_end) & (
+            dt_mask = dt_mask * ((dt_pred['listed'].isin([2, 3, 4])) & (dt_pred['date'] == date_end) & (
                 dt_pred[apply_var].isin(trgt)))
 
         option_summary['pred_exact_vol'] = dt_pred.loc[dt_mask, 'predicted'].sum()
@@ -364,9 +402,15 @@ def option_summarize_exact(model_conf: "ModelConf"
 
     elif summary_type == 'mean_fin':
 
+        date_end = dt_pred.loc[dt_pred['listed'].isin([2, 3, 4]), 'date'].unique()
+
+        dlt = np.absolute(date_end - option_settings.date_end)
+        ind = np.argmin(dlt)
+        date_end = date_end[ind]
+
         dt_mask = True
         for i, (apply_var, trgt) in enumerate(zip(option_settings.apply_vars, option_settings.target)):
-            dt_mask = dt_mask * ((dt_pred['listed'].isin([2, 3, 4])) & (dt_pred['date'] == option_settings.date_end) & (
+            dt_mask = dt_mask * ((dt_pred['listed'].isin([2, 3, 4])) & (dt_pred['date'] == date_end) & (
                 dt_pred[apply_var].isin(trgt)))
 
         option_summary['pred_exact_vol'] = dt_pred.loc[dt_mask, 'predicted'].mean()
@@ -395,8 +439,8 @@ def option_summarize_exact(model_conf: "ModelConf"
 
 def option_summarize(model_conf: "ModelConf"
                      , model_rep
-                     , option_dict: dict | list
-                     , option_settings: "OptionSettings"
+                     , option_dict: dict | list[dict]
+                     , option_settings: "OptionSettings | list[OptionSettings]"
                      , dt_pred: pd.DataFrame
                      , targets_new: dict | None = None) -> dict:
     """
@@ -433,9 +477,9 @@ def option_summarize(model_conf: "ModelConf"
 
     # exact period
 
-    for k, val in enumerate(option_settings_copy):
+    for k, opt in enumerate(option_settings_copy):
         option_summary['pred_exact_' + str(k)] = \
-            option_summarize_exact(model_conf, val, dt_pred)
+            option_summarize_exact(model_conf, opt, dt_pred)
 
     # long period
 
@@ -447,7 +491,7 @@ def option_summarize(model_conf: "ModelConf"
             for i, (apply_var, trgt) in enumerate(
                     zip(option_settings_copy[0].apply_vars, option_settings_copy[0].target)):
                 dt_mask = dt_mask * (
-                        (dt_pred['listed'].isin([2, 3, 4])) & (dt_pred['date'] == option_settings_copy[0].date_max) & (
+                        (dt_pred['listed'].isin([2, 3, 4])) & (dt_pred['date'] == date_max) & (
                     dt_pred[apply_var].isin(trgt)))
 
             option_summary['pred_long_vol'] = dt_pred.loc[dt_mask, 'predicted'].sum()
@@ -488,6 +532,10 @@ def option_summarize(model_conf: "ModelConf"
                 option_summary['pred_long_val'] = dt_pred.loc[dt_mask, 'predicted'] * dt_pred.loc[
                     dt_mask, model_conf.price_var]
                 option_summary['pred_long_val'] = option_summary['pred_long_val'].sum()
+
+    else:
+        option_summary['pred_long_vol'] = option_summary['pred_exact_0']['pred_exact_vol']
+        option_summary['pred_long_val'] = option_summary['pred_exact_0']['pred_exact_val']
 
     # previous / reference period
     dt_mask = True

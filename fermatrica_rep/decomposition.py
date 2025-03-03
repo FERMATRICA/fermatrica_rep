@@ -5,8 +5,9 @@ This module describes dynamic decomposition, for waterfall decomposition see `fe
 """
 
 
-import copy
 import re
+
+from line_profiler_pycharm import profile
 
 import patsy
 import statsmodels.regression.linear_model
@@ -17,9 +18,7 @@ import plotly.graph_objs as go
 
 from fermatrica_utils import groupby_eff
 
-from fermatrica.basics.basics import params_to_dict, fermatrica_error
-from fermatrica.model.model import Model
-from fermatrica.model.model_conf import ModelConf
+from fermatrica import params_to_dict, fermatrica_error, Model, ModelConf
 from fermatrica.model.lhs_fun import *  # to run LHS
 from fermatrica_rep.meta_model.model_rep import ModelRep
 
@@ -30,6 +29,7 @@ pio.templates.default = 'ggplot2'
 Extract RHS effects from specific model types
 """
 
+@profile
 def decompose_basic(model_cur: statsmodels.regression.linear_model.OLS | statsmodels.regression.linear_model.OLSResults | list
                     , ds: pd.DataFrame | list):
     """
@@ -50,6 +50,7 @@ def decompose_basic(model_cur: statsmodels.regression.linear_model.OLS | statsmo
     return ret
 
 
+@profile
 def _decompose_basic_worker(model_cur: statsmodels.regression.linear_model.OLS | statsmodels.regression.linear_model.OLSResults
                             , ds: pd.DataFrame):
     """
@@ -67,6 +68,7 @@ def _decompose_basic_worker(model_cur: statsmodels.regression.linear_model.OLS |
     return X.dot(pd.DataFrame(np.diag(coefs), index=coefs.index, columns=coefs.index))
 
 
+@profile
 def _rhs_effects_lme(model_conf: "ModelConf"
                      , model_cur
                      , ds: pd.DataFrame
@@ -104,7 +106,7 @@ def _rhs_effects_lme(model_conf: "ModelConf"
 
     random = model_cur.random_effects
 
-    ds = copy.deepcopy(ds)
+    ds = ds.copy()
     ds['intercept'] = 1
 
     split_m = select_eff(ds, id_vars)
@@ -113,6 +115,9 @@ def _rhs_effects_lme(model_conf: "ModelConf"
 
         cols = j['index'].replace(':', '*').replace('I(', '(')
         if if_detail:
+            # not universal (!!!) unbracketing, so check if while loop doesn't run forever
+
+            itr = 0
             while ")" in cols:
                 stack = []
                 for i, c in enumerate(cols):
@@ -142,11 +147,33 @@ def _rhs_effects_lme(model_conf: "ModelConf"
                             cols = cols.replace("(", "").replace(")", "")
 
                         break
-            cols = cols.split("+")
-            for i in cols:
-                split_m[i] = ds.eval(i) * j['value']
+                itr = itr + 1  # += not working as expected
+                if itr > 10:
+                    break
+
+            # check if unbracketing was successfull
+            if ")" not in cols:
+                cols = cols.split("+")
+            else:
+                cols = [cols]
+
+            for cl in cols:
+                if re.search(r'[*( \-+:]', cl):
+                    split_m[cl] = ds.eval(cl) * j['value']
+                else:
+                    split_m[cl] = ds[cl] * j['value']
         else:
-            split_m[j['index']] = ds.eval(cols) * j['value']
+
+            if re.search(r'[*( \-+:]', cols):
+                cols_all = ds.columns.to_list()
+
+                cols_splt = re.split(r' *[*() \-+:] *', cols)
+                cols_splt = [x for x in cols_splt if x in cols_all]
+
+                split_m[j['index']] = select_eff(ds, cols_splt).eval(cols) * j['value']
+
+            else:
+                split_m[j['index']] = ds[cols] * j['value']
 
     ft = model_conf.fixed_effect_var
 
@@ -164,6 +191,7 @@ def _rhs_effects_lme(model_conf: "ModelConf"
     return split_m
 
 
+@profile
 def _rhs_effects_ols(model_cur: statsmodels.regression.linear_model.OLS | statsmodels.regression.linear_model.OLSResults
                      , ds: pd.DataFrame
                      , id_vars
@@ -197,7 +225,7 @@ def _rhs_effects_ols(model_cur: statsmodels.regression.linear_model.OLS | statsm
     params = model_cur.params
     params.rename(index={'Intercept': 'intercept'}, inplace=True)
 
-    ds = copy.deepcopy(ds)
+    ds = ds.copy()
     ds['intercept'] = 1
 
     split_m = select_eff(ds, id_vars)
@@ -250,6 +278,7 @@ def _rhs_effects_ols(model_cur: statsmodels.regression.linear_model.OLS | statsm
     return split_m
 
 
+@profile
 def rhs_effects(model_conf: "ModelConf"
                 , model_cur
                 , ds: pd.DataFrame
@@ -284,6 +313,7 @@ Extract all effects
 """
 
 
+@profile
 def extract_effect(model: "Model | list"
                    , ds: pd.DataFrame | list
                    , model_rep: "ModelRep | list"
@@ -309,6 +339,7 @@ def extract_effect(model: "Model | list"
     return split_m_m
 
 
+@profile
 def _extract_effect_worker(model: "Model"
                            , ds: pd.DataFrame
                            , model_rep: "ModelRep"
@@ -461,13 +492,12 @@ def _extract_effect_worker(model: "Model"
 
     cln_sort = [x for x in cln_id if x in ['superbrand', 'bs_key', 'master', 'date']]
 
-    split_m_m = split_m.melt(id_vars=cln_id) \
-        .sort_values(cln_sort, axis=0) \
-        .sort_values(['variable'], axis=0, ascending=False)
-
+    split_m_m = split_m.melt(id_vars=cln_id)
     split_m_m = split_m_m[~split_m_m['value'].isna()]
 
-    split_m_m = split_m_m.groupby(cln_id + ['variable']).value.sum().reset_index()
+    split_m_m = split_m_m.groupby(cln_id + ['variable'])['value'].\
+        sum().\
+        reset_index()
 
     split_m_m['value_rub'] = split_m_m['value'] * split_m_m[model_conf.price_var]
 
@@ -475,14 +505,16 @@ def _extract_effect_worker(model: "Model"
 
     if not model_rep.vis_dict.empty:
 
+        rename_dict = {}
+
         for name in split_m_m.variable.unique():
 
             if 'ntercept' in name:
-                split_m_m.loc[split_m_m['variable'] == name, 'variable'] = '01_' +\
+                rename_dict[name] = '01_' +\
                     model_rep.vis_dict.loc[(model_rep.vis_dict['variable'] == 'base') &
                                  (model_rep.vis_dict['section'].isin(['factor_decomposition', 'costs_type'])), language].iloc[0]
 
-            if model_conf.model_lhs is not None and name in model_conf.model_lhs.name.values:
+            elif model_conf.model_lhs is not None and name in model_conf.model_lhs.name.values:
 
                 disp_name = model_conf.model_lhs.loc[model_conf.model_lhs['name'] == name, 'display_var'].iloc[0]
 
@@ -493,12 +525,12 @@ def _extract_effect_worker(model: "Model"
 
                 if pattern.sub('', disp_name) in model_rep.vis_dict.loc[model_rep.vis_dict['section'].isin(['factor_decomposition', 'costs_type']), 'variable'].array:
 
-                    split_m_m.loc[split_m_m['variable'] == name, 'variable'] = ptrn + \
+                    rename_dict[name] = ptrn + \
                         model_rep.vis_dict.loc[(model_rep.vis_dict['variable'] == pattern.sub('', disp_name)) &
                         (model_rep.vis_dict['section'].isin(['factor_decomposition', 'costs_type'])), language].iloc[0]
 
                 else:
-                    split_m_m.loc[split_m_m['variable'] == name, 'variable'] = ptrn + pattern.sub('', disp_name)
+                    rename_dict[name] = ptrn + pattern.sub('', disp_name)
 
             elif name.replace(' ', '') in model_conf.model_rhs.token.str.replace(' ', '').values:
 
@@ -511,22 +543,24 @@ def _extract_effect_worker(model: "Model"
 
                 if pattern.sub('', disp_name) in model_rep.vis_dict.loc[model_rep.vis_dict['section'].isin(['factor_decomposition', 'costs_type']), 'variable'].array:
 
-                    split_m_m.loc[split_m_m['variable'] == name, 'variable'] = ptrn + \
+                    rename_dict[name] = ptrn + \
                         model_rep.vis_dict.loc[(model_rep.vis_dict['variable'] == pattern.sub('', disp_name)) &
                         (model_rep.vis_dict['section'].isin(['factor_decomposition', 'costs_type'])), language].iloc[0]
 
                 else:
-                    split_m_m.loc[split_m_m['variable'] == name, 'variable'] = ptrn + pattern.sub('', disp_name)
+                    rename_dict[name] = ptrn + pattern.sub('', disp_name)
+
+        split_m_m['variable'].replace(rename_dict, inplace=True)
 
         mask = split_m_m['listed'].isin([2, 3, 4])
 
         split_m_m = groupby_eff(split_m_m, cln_id + ['variable'], ['value', 'value_rub'], mask) \
             .agg({'value': 'sum', 'value_rub': 'sum'}) \
-            .reset_index() \
-            .sort_values('variable', ascending=True)
+            .reset_index()
 
         split_m_m['variable'] = split_m_m['variable'].astype('category')
 
+    split_m_m = split_m_m.sort_values(['variable'] + cln_sort, axis=0, ascending=True)
     split_m_m['variable'] = split_m_m['variable'].str.replace(pattern, '', regex=True)
 
     # update palettes
@@ -539,6 +573,7 @@ def _extract_effect_worker(model: "Model"
     return split_m_m
 
 
+@profile
 def decompose_main_plot(split_m_m: pd.DataFrame | list
                         , brands: list | None
                         , model_rep: "ModelRep | list"
@@ -572,6 +607,7 @@ def decompose_main_plot(split_m_m: pd.DataFrame | list
     return fig
 
 
+@profile
 def _decompose_main_plot_worker(split_m_m: pd.DataFrame
                                 , brands: list | None
                                 , model_rep: "ModelRep"
@@ -601,7 +637,7 @@ def _decompose_main_plot_worker(split_m_m: pd.DataFrame
     elif show_future == 'False':
         show_future = False
 
-    split = copy.deepcopy(split_m_m)
+    split = split_m_m.copy()
 
     if period in ['day', 'd', 'D']:
         split['date'] = split['date'].dt.floor(freq='D')
@@ -663,12 +699,38 @@ def _decompose_main_plot_worker(split_m_m: pd.DataFrame
     dtick = "M3"
     tickmode = 'linear'
 
+    y_min = tmp.loc[tmp['value'] < 0, :].groupby('date')['value'].sum().min() * 1.05
+    y_max = tmp.loc[tmp['value'] > 0, :].groupby('date')['value'].sum().max() * 1.05
+    if pd.isna(y_min) or y_min > .0:
+        y_min = 0
+
     for i in tmp['date'].dt.year.unique():
-        fig.add_vline(x=str(i) + '-01', line_width=1.3, line_color="black")
+        fig.add_trace(go.Scatter(
+            x=[str(i) + '-01'] * 2
+            , y=[y_min, y_max]
+            , line_color='grey'
+            , mode='lines'
+            , line_width=1.3
+            , name=''
+            , showlegend=False
+            , hoverinfo='skip'
+        ))
 
     if show_future and split.loc[split['listed'].isin([4]), 'date'].shape[0] > 0:
+
         date_end = split.loc[split['listed'].isin([4]), 'date'].sort_values().iloc[0]
-        fig.add_vline(x=date_end, line_width=2, line_color="red", line_dash="dash", opacity=0.7, )
+        fig.add_trace(go.Scatter(
+            x=[date_end] * 2
+            , y=[y_min, y_max]
+            , line_color='red'
+            , mode='lines'
+            , line_dash='dash'
+            , opacity=.7
+            , line_width=2
+            , name=''
+            , showlegend=False
+            , hoverinfo='skip'
+        ))
 
     fig.update_xaxes(tick0="2000-01-01"
                      , dtick=dtick
@@ -686,8 +748,9 @@ def _decompose_main_plot_worker(split_m_m: pd.DataFrame
                      , matches=None
                      )
     fig.update_layout(
-        bargap=0  # gap between bars of adjacent location coordinates.
-        , bargroupgap=0  # gap between bars of the same location coordinate.
+        bargap=0  # gap between bars of adjacent location coordinates
+        , bargroupgap=0  # gap between bars of the same location coordinate
+        , yaxis_range=[y_min, y_max]
     )
 
     if contour_line:
@@ -697,6 +760,7 @@ def _decompose_main_plot_worker(split_m_m: pd.DataFrame
     return fig
 
 
+@profile
 def decompose_sub_plot(split_m_m: pd.DataFrame
                        , brands: list | None
                        , model_rep: "ModelRep"
@@ -733,6 +797,7 @@ def decompose_sub_plot(split_m_m: pd.DataFrame
     return fig
 
 
+@profile
 def _decompose_sub_plot_worker(split_m_m: pd.DataFrame
                                , brands: list | None
                                , model_rep: "ModelRep"
@@ -764,7 +829,7 @@ def _decompose_sub_plot_worker(split_m_m: pd.DataFrame
     elif show_future == 'False':
         show_future = False
 
-    split = copy.deepcopy(split_m_m)
+    split = split_m_m.copy()
 
     if period in ['day', 'd', 'D']:
         split['date'] = split['date'].dt.floor(freq='D')

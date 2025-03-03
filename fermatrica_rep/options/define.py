@@ -134,7 +134,8 @@ def budget_dict_create(dct: dict | pd.DataFrame | None = None
 def media_ssn_apply(ds: pd.DataFrame
                     , dt_ssn: pd.DataFrame | None = None
                     , path: str | None = None
-                    , sheet: str | None = 'data') -> pd.DataFrame:
+                    , sheet: str | None = 'data'
+                    , fix_53w: bool = False) -> pd.DataFrame:
     """
     Apply media seasonality to main dataset. Media seasonality is here for distribution of
     yearly budget by specific periods (months, weeks) within year.
@@ -147,6 +148,7 @@ def media_ssn_apply(ds: pd.DataFrame
     :param path: path to XLSX file like "seasonality.xlsx" with `sheet` sheet
     :param sheet: name of the sheet with option data (only if `path` is set), defaults to
         "data"
+    :param fix_53w: if False, last weeik in the year starting 29-31 Dec is counted as 1st week of the next year
     :return: `ds` main dataset
     """
 
@@ -189,12 +191,16 @@ def media_ssn_apply(ds: pd.DataFrame
     if period_var == 'month':
         dt_ssn[period_var] = pd.to_numeric(dt_ssn.loc[:, period_var])
         ds[period_var] = ds.loc[:, 'date'].dt.month
+
     elif period_var == 'week_number':
         dt_ssn[period_var] = pd.to_numeric(dt_ssn.loc[:, period_var])
         ds[period_var] = ds.loc[:, 'date'].dt.isocalendar().week
+        if fix_53w:
+            ds.loc[(ds[period_var] == 1) & (ds['date'].dt.year != ds['date'].dt.isocalendar().year), period_var] = 53
+
     elif period_var == 'day':
-        dt_ssn[period_var] = pd.to_datetime(dt_ssn.loc[:, period_var], format="%Y-%m-%d")
-        ds[period_var] = ds.loc[:, 'day']
+        dt_ssn[period_var] = pd.to_numeric(dt_ssn.loc[:, period_var])
+        ds[period_var] = ds.loc[:, 'date'].dt.dayofyear
 
     # merge with data
 

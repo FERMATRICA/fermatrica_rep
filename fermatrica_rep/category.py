@@ -5,18 +5,22 @@ For the fit and predict of the category model see `fermatrica_rep.fit`
 """
 
 
+import numpy as np
 import pandas as pd
+
+from line_profiler_pycharm import profile
 
 import plotly.io as pio
 import plotly.graph_objs as go
 from plotly.subplots import make_subplots
 
 from fermatrica_utils import groupby_eff, select_eff
-from fermatrica.model.model import Model
+from fermatrica import Model
 
 pio.templates.default = 'ggplot2'
 
 
+@profile
 def category_data(model: "Model"
                   , ds: pd.DataFrame
                   , period: str = 'day'  # 'day', 'week', 'month', 'quarter', 'year'
@@ -71,6 +75,7 @@ def category_data(model: "Model"
     return tmp
 
 
+@profile
 def category_main_plot(ds: pd.DataFrame
                        , fig: go.Figure
                        , row_n: int = 1
@@ -116,6 +121,7 @@ def category_main_plot(ds: pd.DataFrame
     return fig
 
 
+@profile
 def category_err_plot(ds: pd.DataFrame
                       , fig: go.Figure
                       , err_int: float = .1
@@ -134,15 +140,38 @@ def category_err_plot(ds: pd.DataFrame
 
     ds['error'] = (ds['observed'] - ds['predicted']) / ds['observed']
 
+    # horizontal lines - much faster, than add_hline
+
+    y_line = np.full(ds['date'].shape, err_int)
+    fig.add_trace(go.Scatter(
+        x=ds['date']
+        , y=y_line
+        , line_color='lightgrey'
+        , line_width=3, line_dash="dash"
+        , name=''
+        , showlegend=False
+        , hoverinfo='skip'
+    ), row=row_n, col=col_n)
+
+    y_line = np.full(ds['date'].shape, -err_int)
+    fig.add_trace(go.Scatter(
+        x=ds['date']
+        , y=y_line
+        , line_color='lightgrey'
+        , line_width=3, line_dash="dash"
+        , name=''
+        , showlegend=False
+        , hoverinfo='skip'
+    ), row=row_n, col=col_n)
+
+    # main plot
+
     fig.add_trace(go.Scatter(
         x=ds['date']
         , y=ds['error']
         , line_color='slateblue'
         , name='Prediction Error'
     ), row=row_n, col=col_n)
-
-    fig.add_hline(y=err_int, line_width=3, line_dash="dash", line_color="slategrey", row=row_n, col=col_n)
-    fig.add_hline(y=-err_int, line_width=3, line_dash="dash", line_color="slategrey", row=row_n, col=col_n)
 
     # format
 
@@ -151,6 +180,7 @@ def category_err_plot(ds: pd.DataFrame
     return fig
 
 
+@profile
 def category_plot(model: "Model"
                   , ds: pd.DataFrame
                   , period: str

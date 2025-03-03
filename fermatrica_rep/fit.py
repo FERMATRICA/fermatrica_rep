@@ -22,7 +22,7 @@ import plotly.express as px
 
 from fermatrica_utils import date_to_period
 
-from fermatrica.model.model import Model
+from fermatrica import Model
 from fermatrica_rep.meta_model.model_rep import ModelRep
 
 
@@ -31,13 +31,13 @@ Main / basic functions
 """
 
 
-
 @profile
 def fit_main_data(model: "Model"
                   , dt_pred: pd.DataFrame
                   , period: str = 'day'
                   , err_int: float = .1
-                  , show_future: bool = False) -> (pd.DataFrame, pd.DataFrame):
+                  , show_future: bool = False
+                  , if_split_listed: bool = True) -> (pd.DataFrame, pd.DataFrame):
     """
     Prepare data describing main model to plot or use as is. Data is grouped by superbrand
     (umbrella brand), no other option is allowed by now.
@@ -47,6 +47,7 @@ def fit_main_data(model: "Model"
     :param period: time period / interval to group by: 'day', 'week', 'month', 'quarter', 'year'
     :param err_int: error interval in decimal (typically .1, .05, .2 etc.)
     :param show_future: show future periods or not
+    :param if_split_listed: split data by `listed` or not
     :return: tuple of wide and long dataframes
     """
 
@@ -77,7 +78,11 @@ def fit_main_data(model: "Model"
 
     ds['date'] = date_to_period(ds['date'], period)
 
-    group_id = ['date', 'listed']
+    if if_split_listed:
+        group_id = ['date', 'listed']
+    else:
+        group_id = ['date']
+
     if 'superbrand' in ds.columns:
         group_id.append('superbrand')
 
@@ -155,6 +160,38 @@ def _fit_main_plot_main_inner(ds: pd.DataFrame
         var_upper = re.sub('^observed', 'observed_' + str(conv_step), var_upper)
         var_lower = re.sub('^observed', 'observed_' + str(conv_step), var_lower)
 
+    # last train and test date
+
+    train_end = ds[ds['listed'] == 2]['date'].max()
+    test_end = ds[ds['listed'].isin([2, 3])]['date'].max()
+
+    y_min = ds.loc[~ds[var_pred].isin([np.inf, -np.inf]), var_pred].min()
+    y_max = ds.loc[~ds[var_pred].isin([np.inf, -np.inf]), var_pred].max() * 1.1
+    if y_min > .0:
+        y_min = 0
+
+    fig.add_trace(go.Scatter(
+        x=[train_end] * 2
+        , y=[y_min, y_max]
+        , line_color='lightgrey'
+        , line_width=3, line_dash="dash"
+        , name=''
+        , showlegend=False
+        , hoverinfo='skip'
+    ), row=row_n, col=col_n)
+
+    fig.add_trace(go.Scatter(
+        x=[test_end] * 2
+        , y=[y_min, y_max]
+        , line_color='lightgrey'
+        , line_width=3, line_dash="dash"
+        , name=''
+        , showlegend=False
+        , hoverinfo='skip'
+    ), row=row_n, col=col_n)
+
+    # main plot
+
     if var_upper in ds.columns and var_pred in ds.columns:
         fig.add_trace(go.Scatter(
             x=pd.concat([ds['date'], ds['date'][::-1]], axis=0, ignore_index=True)
@@ -181,14 +218,6 @@ def _fit_main_plot_main_inner(ds: pd.DataFrame
             , line_color='#d62728'
             , name=pred_name
         ), row=row_n, col=col_n)
-
-    # last train and test date
-
-    train_end = ds[ds['listed'] == 2]['date'].max()
-    test_end = ds[ds['listed'].isin([2, 3])]['date'].max()
-
-    fig.add_vline(x=train_end, line_width=3, line_dash="dash", line_color="darkgrey", row=row_n, col=col_n)
-    fig.add_vline(x=test_end, line_width=3, line_dash="dash", line_color="darkgrey", row=row_n, col=col_n)
 
     # format
 
@@ -241,6 +270,58 @@ def _fit_main_plot_err_inner(ds: pd.DataFrame
     ds = ds.copy()
     ds['error'] = (ds[var_obs] - ds[var_pred]) / ds[var_obs]
 
+    # horizontal lines - much faster, than add_hline
+
+    y_line = np.full(ds['date'].shape, err_int)
+    fig.add_trace(go.Scatter(
+        x=ds['date']
+        , y=y_line
+        , line_color='lightgrey'
+        , line_width=3, line_dash="dash"
+        , name=''
+        , showlegend=False
+        , hoverinfo='skip'
+    ), row=row_n, col=col_n)
+
+    y_line = np.full(ds['date'].shape, -err_int)
+    fig.add_trace(go.Scatter(
+        x=ds['date']
+        , y=y_line
+        , line_color='lightgrey'
+        , line_width=3, line_dash="dash"
+        , name=''
+        , showlegend=False
+        , hoverinfo='skip'
+    ), row=row_n, col=col_n)
+
+    # last train and test date
+
+    train_end = ds[ds['listed'] == 2]['date'].max()
+    test_end = ds[ds['listed'].isin([2, 3])]['date'].max()
+
+    y_min = ds.loc[~ds['error'].isin([np.inf, -np.inf]), 'error'].min()
+    y_max = ds.loc[~ds['error'].isin([np.inf, -np.inf]), 'error'].max()
+
+    fig.add_trace(go.Scatter(
+        x=[train_end] * 2
+        , y=[y_min, y_max]
+        , line_color='lightgrey'
+        , line_width=3, line_dash="dash"
+        , name=''
+        , showlegend=False
+        , hoverinfo='skip'
+    ), row=row_n, col=col_n)
+
+    fig.add_trace(go.Scatter(
+        x=[test_end] * 2
+        , y=[y_min, y_max]
+        , line_color='lightgrey'
+        , line_width=3, line_dash="dash"
+        , name=''
+        , showlegend=False
+        , hoverinfo='skip'
+    ), row=row_n, col=col_n)
+
     # create plot
 
     fig.add_trace(go.Scatter(
@@ -249,17 +330,6 @@ def _fit_main_plot_err_inner(ds: pd.DataFrame
         , line_color='slateblue'
         , name=err_name
     ), row=row_n, col=col_n)
-
-    fig.add_hline(y=err_int, line_width=3, line_dash="dash", line_color="slategrey", row=row_n, col=col_n)
-    fig.add_hline(y=-err_int, line_width=3, line_dash="dash", line_color="slategrey", row=row_n, col=col_n)
-
-    # last train and test date
-
-    train_end = ds[ds['listed'] == 2]['date'].max()
-    test_end = ds[ds['listed'].isin([2, 3])]['date'].max()
-
-    fig.add_vline(x=train_end, line_width=3, line_dash="dash", line_color="darkgrey", row=row_n, col=col_n)
-    fig.add_vline(x=test_end, line_width=3, line_dash="dash", line_color="darkgrey", row=row_n, col=col_n)
 
     # format
 
@@ -675,7 +745,8 @@ def _fit_mult_plot_inner(model: "Model"
         margin={'l': 20, 'r': 20, 't': 50, 'b': 20},
         legend_title='',
         xaxis_title='',
-        yaxis_title=''
+        yaxis_title='',
+        # yaxis_range=[y_min, y_max]
     )
 
     return fig
