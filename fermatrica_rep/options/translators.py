@@ -217,11 +217,13 @@ def tv_complex(md: "ModelConf"
     cln_tv_raw = ds.columns.tolist()
 
     cln_tv = [re.sub(r'^(' + sku_prefix + media_prefix_base + r')', sku_prefix + media_prefix, x) for x in cln_tv_raw
-              if re.search(r'^' + sku_prefix + media_prefix_base + r'_(f|m|all).*' + tv_type, x) and not re.search(r'infl|softmax|gompert|trans|adst|\\binv|kids', x)]
+              if re.search(r'^' + sku_prefix + media_prefix_base + r'_(f|m|all).*' + tv_type, x) and not
+              re.search(r'infl|softmax|gompert|trans|adst|\binv', x)]
 
     if len(cln_tv) == 0:
         cln_tv = [x for x in cln_tv_raw
-                  if re.search(r'^' + sku_prefix + media_prefix + r'_(f|m|all).*' + tv_type, x) and not re.search(r'infl|softmax|gompert|trans|adst|\\binv|kids', x)]
+                  if re.search(r'^' + sku_prefix + media_prefix + r'_(f|m|all).*' + tv_type, x) and not
+                  re.search(r'infl|softmax|gompert|trans|adst|\binv', x)]
 
     cln_tv.sort()
 

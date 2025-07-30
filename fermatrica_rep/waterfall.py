@@ -29,7 +29,8 @@ def waterfall_plot(split_m_m: pd.DataFrame | list
                    , date_start: str = '2020-01-01'
                    , date_end: str = '2021-01-01'
                    , absolute_sort: bool | str = False
-                   , pos_neg: bool = False):
+                   , pos_neg: bool = False
+                   , show_pretrain: bool = False):
     """
         Wrapper
         Plot decomposition for specific period from `date_start` to `date_end` as waterfall.
@@ -41,15 +42,30 @@ def waterfall_plot(split_m_m: pd.DataFrame | list
         :param date_end: end of the period
         :param absolute_sort: sort by absolute or signed values
         :param pos_neg: colorize by brand or by positive/negative impacts
+        :param show_pretrain: show pretrain periods or not
         :return:
         """
 
     if isinstance(split_m_m, list):
         fig = [None] * len(split_m_m)
         for i in range(len(split_m_m)):
-            fig[i] = _waterfall_plot_worker(split_m_m[i], brands, model_rep[i], date_start, date_end, absolute_sort, pos_neg)
+            fig[i] = _waterfall_plot_worker(split_m_m=split_m_m[i],
+                                            brands=brands,
+                                            model_rep=model_rep[i],
+                                            date_start=date_start,
+                                            date_end=date_end,
+                                            absolute_sort=absolute_sort,
+                                            pos_neg=pos_neg,
+                                            show_pretrain=show_pretrain)
     else:
-        fig = _waterfall_plot_worker(split_m_m, brands, model_rep, date_start, date_end, absolute_sort, pos_neg)
+        fig = _waterfall_plot_worker(split_m_m=split_m_m,
+                                     brands=brands,
+                                     model_rep=model_rep,
+                                     date_start=date_start,
+                                     date_end=date_end,
+                                     absolute_sort=absolute_sort,
+                                     pos_neg=pos_neg,
+                                     show_pretrain=show_pretrain)
 
     return fig
 
@@ -61,7 +77,8 @@ def _waterfall_plot_worker(split_m_m: pd.DataFrame
                            , date_start: str = '2020-01-01'
                            , date_end: str = '2021-01-01'
                            , absolute_sort: bool | str = False
-                           , pos_neg: bool = False):
+                           , pos_neg: bool = False
+                           , show_pretrain: bool = False):
     """
     Worker
     Plot decomposition for specific period from `date_start` to `date_end` as waterfall.
@@ -73,6 +90,7 @@ def _waterfall_plot_worker(split_m_m: pd.DataFrame
     :param date_end: end of the period
     :param absolute_sort: sort by absolute or signed values
     :param pos_neg: colorize by brand or by positive/negative impacts
+    :param show_pretrain: show pretrain periods or not
     :return:
     """
 
@@ -82,14 +100,16 @@ def _waterfall_plot_worker(split_m_m: pd.DataFrame
                                     , model_rep
                                     , date_start
                                     , date_end
-                                    , absolute_sort)
+                                    , absolute_sort
+                                    , show_pretrain)
     else:
         fig = waterfall_plot_bar(split_m_m
                                  , brands
                                  , model_rep
                                  , date_start
                                  , date_end
-                                 , absolute_sort)
+                                 , absolute_sort
+                                 , show_pretrain)
 
     return fig
 
@@ -99,7 +119,8 @@ def waterfall_data(split_m_m: pd.DataFrame | list
                    , brands: list
                    , date_start: str = '2020-01-01'
                    , date_end: str = '2021-01-01'
-                   , absolute_sort: bool | str = False) -> pd.DataFrame | list:
+                   , absolute_sort: bool | str = False
+                   , show_pretrain: bool = False) -> pd.DataFrame | list:
     """
         Wrapper
         Prepare data of the ratio of the influence of the factor. Including for waterfall plots.
@@ -109,15 +130,26 @@ def waterfall_data(split_m_m: pd.DataFrame | list
         :param date_start: start of the period
         :param date_end: end of the period
         :param absolute_sort: sort by absolute or signed values
+        :param show_pretrain: show pretrain periods or not
         :return:
         """
 
     if isinstance(split_m_m, list):
         split = [None] * len(split_m_m)
         for i in range(len(split_m_m)):
-            split[i] = _waterfall_data_worker(split_m_m[i], brands, date_start, date_end, absolute_sort)
+            split[i] = _waterfall_data_worker(split_m_m=split_m_m[i],
+                                              brands=brands,
+                                              date_start=date_start,
+                                              date_end=date_end,
+                                              absolute_sort=absolute_sort,
+                                              show_pretrain=show_pretrain)
     else:
-        split = _waterfall_data_worker(split_m_m, brands, date_start, date_end, absolute_sort)
+        split = _waterfall_data_worker(split_m_m=split_m_m,
+                                       brands=brands,
+                                       date_start=date_start,
+                                       date_end=date_end,
+                                       absolute_sort=absolute_sort,
+                                       show_pretrain=show_pretrain)
 
     return split
 
@@ -127,7 +159,8 @@ def _waterfall_data_worker(split_m_m: pd.DataFrame
                            , brands: list
                            , date_start: str = '2020-01-01'
                            , date_end: str = '2021-01-01'
-                           , absolute_sort: bool | str = False) -> pd.DataFrame:
+                           , absolute_sort: bool | str = False
+                           , show_pretrain: bool = False) -> pd.DataFrame:
     """
     Worker
     Prepare data of the ratio of the influence of the factor. Including for waterfall plots.
@@ -137,11 +170,15 @@ def _waterfall_data_worker(split_m_m: pd.DataFrame
     :param date_start: start of the period
     :param date_end: end of the period
     :param absolute_sort: sort by absolute or signed values
+    :param show_pretrain: show pretrain periods or not
     :return:
     """
 
     mask = (split_m_m['date'] >= pd.to_datetime(date_start)) & (split_m_m['date'] <= pd.to_datetime(date_end)) & split_m_m[
         'superbrand'].isin(brands)
+
+    if not show_pretrain:
+        mask = mask & ~split_m_m['listed'].isin([1])
 
     split = groupby_eff(split_m_m, ['variable'], ['value'], mask, sort=False)['value'] \
         .sum() \
@@ -169,7 +206,8 @@ def waterfall_plot_native(split_m_m: pd.DataFrame
                           , model_rep: ModelRep
                           , date_start: str = '2020-01-01'
                           , date_end: str = '2021-01-01'
-                          , absolute_sort: bool | str = False) -> go.Figure:
+                          , absolute_sort: bool | str = False
+                          , show_pretrain: bool = False) -> go.Figure:
     """
     Plot native waterfall - with positive and negative coloration.
 
@@ -179,6 +217,7 @@ def waterfall_plot_native(split_m_m: pd.DataFrame
     :param date_start: start of the period
     :param date_end: end of the period
     :param absolute_sort: sort by absolute or signed values
+    :param show_pretrain: show pretrain periods or not
     :return:
     """
 
@@ -189,7 +228,12 @@ def waterfall_plot_native(split_m_m: pd.DataFrame
     elif absolute_sort == 'False':
         absolute_sort = False
 
-    split = waterfall_data(split_m_m, brands, date_start, date_end, absolute_sort)
+    split = waterfall_data(split_m_m=split_m_m,
+                           brands=brands,
+                           date_start=date_start,
+                           date_end=date_end,
+                           absolute_sort=absolute_sort,
+                           show_pretrain=show_pretrain)
 
     split['measure'] = 'relative'
 
@@ -224,7 +268,8 @@ def waterfall_plot_bar(split_m_m: pd.DataFrame
                        , model_rep: ModelRep
                        , date_start: str = '2020-01-01'
                        , date_end: str = '2021-01-01'
-                       , absolute_sort: bool | str = False) -> go.Figure:
+                       , absolute_sort: bool | str = False
+                       , show_pretrain: bool = False) -> go.Figure:
     """
     Plot waterfall based on barplot to get by brand coloration.
 
@@ -234,6 +279,7 @@ def waterfall_plot_bar(split_m_m: pd.DataFrame
     :param date_start: start of the period
     :param date_end: end of the period
     :param absolute_sort: sort by absolute or signed values
+    :param show_pretrain: show pretrain periods or not
     :return:
     """
 
@@ -247,7 +293,12 @@ def waterfall_plot_bar(split_m_m: pd.DataFrame
     elif absolute_sort == 'False':
         absolute_sort = False
 
-    split = waterfall_data(split_m_m, brands, date_start, date_end, absolute_sort)
+    split = waterfall_data(split_m_m=split_m_m,
+                           brands=brands,
+                           date_start=date_start,
+                           date_end=date_end,
+                           absolute_sort=absolute_sort,
+                           show_pretrain=show_pretrain)
 
     fig = px.bar(x=split['variable']
                  , y=split['ratio']

@@ -33,7 +33,8 @@ def create(prs: Presentation,
            absolute_sort: str | bool = False,
            plot_type: str = 'brand',
            bs_key_filter: list | tuple | None = None,
-           if_volume: bool = True
+           if_volume: bool = True,
+           show_pretrain: bool = False
            ):
     """
     Create  waterfall (static decomposition) slide and add to `prs` PPTX presentation.
@@ -53,6 +54,7 @@ def create(prs: Presentation,
     :param bs_key_filter: list or tuple of 'bs_key' values to preserve
     :param if_volume: optimize volume or value KPI
     :return: Presentation object from python_pptx package
+    :param show_pretrain: show pretrain periods or not
     """
 
     language = model_rep.language
@@ -128,7 +130,8 @@ def create(prs: Presentation,
                                            date_start=date_start,
                                            date_end=date_end,
                                            absolute_sort=absolute_sort,
-                                           if_volume=if_volume)
+                                           if_volume=if_volume,
+                                           show_pretrain=show_pretrain)
 
     if len(waterfall_data) == 0:
         return prs
@@ -208,7 +211,8 @@ def _waterfall_chart_data(split: pd.DataFrame,
                           date_start: str,
                           date_end: str,
                           absolute_sort: str | bool = False,
-                          if_volume: bool = True):
+                          if_volume: bool = True,
+                          show_pretrain: bool = False):
     """
 
     Convert 'common' decomposed dataset to dataset prepared to be plotted.
@@ -219,6 +223,7 @@ def _waterfall_chart_data(split: pd.DataFrame,
     :param date_end: end of the period
     :param absolute_sort: sort by absolute values or take into account sign
     :param if_volume: optimize volume or value KPI
+    :param show_pretrain: show pretrain periods or not
     :return: pandas DataFrame prepared to be plotted
     """
 
@@ -233,6 +238,9 @@ def _waterfall_chart_data(split: pd.DataFrame,
     mask = (split['date'] >= pd.to_datetime(date_start)) & \
            (split['date'] <= pd.to_datetime(date_end)) & \
            (split['superbrand'].isin(brands))
+
+    if not show_pretrain:
+        mask = mask & ~split['listed'].isin([1])
 
     if if_volume is False:
         split['value'] = split['value_rub']

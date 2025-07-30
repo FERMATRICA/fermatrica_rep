@@ -337,7 +337,8 @@ def export_option_detail(prs,
                          if_sku_fit_predict: bool = True,
                          if_sku_decompose: bool = True,
                          if_sku_waterfall: bool = True,
-                         custom_extract_effect=None
+                         custom_extract_effect=None,
+                         show_pretrain: bool = False
                          ):
     """
     Export detailing report per every option in `options_m` dictionary.
@@ -361,6 +362,7 @@ def export_option_detail(prs,
     :param if_sku_decompose: include decomposition per SKU
     :param if_sku_waterfall: include waterfall per SKU
     :param custom_extract_effect: custom function to extract effect for decomposition and waterfall
+    :param show_pretrain: show pretrain periods or not
     :return: Presentation object from python_pptx package
     """
 
@@ -407,7 +409,10 @@ def export_option_detail(prs,
             model_rep = model_rep_start[-1]
 
         if custom_extract_effect is None:
-            split_m_m = extract_effect(model, ds, model_rep)
+            listed_filter = (2, 3, 4)
+            if show_pretrain:
+                listed_filter = (1, 2, 3, 4)
+            split_m_m = extract_effect(model, ds, model_rep, listed_filter=listed_filter)
         else:
             split_m_m = custom_extract_effect(model, ds, model_rep)
 
@@ -423,6 +428,7 @@ def export_option_detail(prs,
                                      opt_set=opt_set,
                                      period=period,
                                      show_future=True,
+                                     show_pretrain=show_pretrain,
                                      group_var=group_var,
                                      plot_type='brand' + if_retro * '_retro',
                                      bs_key_filter=dt_pred.loc[
@@ -437,6 +443,7 @@ def export_option_detail(prs,
                                        split_m_m=split_m_m,
                                        period=period,
                                        show_future=True,
+                                       show_pretrain=show_pretrain,
                                        group_var=group_var,
                                        plot_type='brand' + if_retro * '_retro',
                                        if_volume=if_volume,
@@ -455,6 +462,7 @@ def export_option_detail(prs,
                                    split_m_m=split_m_m,
                                    plot_type='brand' + if_retro * '_retro',
                                    if_volume=if_volume,
+                                   show_pretrain=show_pretrain,
                                    bs_key_filter=split_m_m.loc[
                                        (split_m_m['superbrand'] == superbrand), 'bs_key'].unique())
 
@@ -480,6 +488,7 @@ def export_option_detail(prs,
                                              opt_set=opt_set,
                                              period=period,
                                              show_future=True,
+                                             show_pretrain=show_pretrain,
                                              group_var=sku_var,
                                              plot_type='sku' + if_retro * '_retro',
                                              bs_key_filter=bs_keys)
@@ -493,6 +502,7 @@ def export_option_detail(prs,
                                                split_m_m=split_m_m,
                                                period=period,
                                                show_future=True,
+                                               show_pretrain=show_pretrain,
                                                group_var=sku_var,
                                                plot_type='sku' + if_retro * '_retro',
                                                if_volume=if_volume,
@@ -510,6 +520,7 @@ def export_option_detail(prs,
                                            absolute_sort=False,
                                            plot_type='sku' + if_retro * '_retro',
                                            if_volume=if_volume,
+                                           show_pretrain=show_pretrain,
                                            bs_key_filter=bs_keys)
 
     return prs
@@ -631,7 +642,7 @@ def set_config(model_rep: "ModelRep",
         rsrc = pkgutil.get_data(f"fermatrica_rep", f"/res/templates/{template_name}.pptx")
         pptxio = io.BytesIO(rsrc)
         template_path = os.path.join(os.path.dirname(sys.modules['fermatrica_rep'].__file__),
-                                     f"res\\templates\\{template_name}.pptx")
+                                     "res", "templates", template_name + ".pptx")
     except:
         pptxio = template_name
 

@@ -33,6 +33,7 @@ def create(prs: Presentation,
            bs_key_filter: list | tuple | None = None,
            if_volume: bool = True,
            show_future: bool | str = True,
+           show_pretrain: bool = False,
            contour_line: bool = True
            ):
     """
@@ -50,6 +51,7 @@ def create(prs: Presentation,
     :param bs_key_filter: list or tuple of 'bs_key' values to preserve
     :param if_volume: optimize volume or value KPI
     :param show_future: show future periods or not
+    :param show_pretrain: show pretrain periods or not
     :param contour_line: add contours or not
     :return: Presentation object from python_pptx package
     """
@@ -109,6 +111,7 @@ def create(prs: Presentation,
     df_decompose, sku = _decompose_chart_data(split,
                                               brands=brands,
                                               show_future=show_future,
+                                              show_pretrain=show_pretrain,
                                               period=period,
                                               group_var=group_var,
                                               if_volume=if_volume)
@@ -177,6 +180,7 @@ def create(prs: Presentation,
 def _decompose_chart_data(split: pd.DataFrame,
                           brands: list,
                           show_future: bool | str = True,
+                          show_pretrain: bool = False,
                           period: str = 'day',
                           group_var: list | tuple = ('superbrand', 'market'),
                           if_volume: bool = True) -> tuple:
@@ -189,6 +193,7 @@ def _decompose_chart_data(split: pd.DataFrame,
     :param group_var: group entities by variables (list or tuple of strings)
     :param if_volume: optimize volume or value KPI
     :param show_future: show future periods or not
+    :param show_pretrain: show pretrain periods or not
     :return: tuple of pandas DataFrame and sku name as string
     """
 
@@ -211,10 +216,12 @@ def _decompose_chart_data(split: pd.DataFrame,
     elif period in ['year', 'y', 'Y']:
         split['date'] = split['date'].dt.to_period('Y').dt.start_time
 
-    if show_future:
-        mask = split['superbrand'].isin(brands) & split['listed'].isin([2, 3, 4])
-    else:
-        mask = split['superbrand'].isin(brands) & split['listed'].isin([2, 3])
+    mask = split['superbrand'].isin(brands) & split['listed'].isin([1, 2, 3, 4])
+
+    if not show_future:
+        mask = mask & ~split['listed'].isin([4])
+    if not show_pretrain:
+        mask = mask & ~split['listed'].isin([1])
 
     if if_volume is False:
         split['value'] = split['value_rub']

@@ -1,0 +1,32 @@
+# pyproject.toml
+
+[build-system]
+requires = ["setuptools>=42.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fermatrica-rep"
+version = "0.3"
+description = "FERMATRICA Flexible Econometrics Regression Models and Tools: Reporting"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache 2.0" }
+authors = [
+    { name = "OKKAM CS: AMeshkov, Ivan Kocherov, Grigoriy Selyavin, Anton Sevastianov, Anna Gladysheva, Nargiz Bagirova, Kirill Prilipko" }
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+
+dependencies = [
+]
+
+urls = {"Homepage" = "https://gitlab.mitcoms.ru/Econometrics/fermatrica/fermatrica_rep"}
+
+[tool.setuptools.packages.find]
+where = ["."]
+exclude = ["samples*", "build*", "docs*", "tests*"]
+
+[tool.setuptools.package-data]
+"*" = ["*.csv", "*.sql", "*.xlsx", "*.pptx", "*.html", "*.xml", "*.txt"]

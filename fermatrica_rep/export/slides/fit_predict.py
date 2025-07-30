@@ -34,7 +34,8 @@ def create(prs: Presentation,
            group_var: list | tuple = ('superbrand',),
            plot_type: str = 'brand',
            bs_key_filter: list | tuple | None = None,
-           show_future: bool = False
+           show_future: bool = False,
+           show_pretrain: bool = False
            ):
     """
     Create fit-predict slide and add to `prs` PPTX presentation. Fit-predict slide contains multiple objects,
@@ -60,6 +61,7 @@ def create(prs: Presentation,
     :param plot_type: 'retro', 'brand' or 'sku'. Used for naming only
     :param bs_key_filter: list or tuple of 'bs_key' values to preserve
     :param show_future: show future periods or not
+    :param show_pretrain: show future periods or not
     :return: Presentation object from python_pptx package
     """
 
@@ -98,6 +100,7 @@ def create(prs: Presentation,
                                                 , model_rep=model_rep
                                                 , period=period
                                                 , show_future=show_future
+                                                , show_pretrain=show_pretrain
                                                 , group_var=group_var
                                                 , bs_key_filter=bs_key_filter)
 
@@ -528,6 +531,7 @@ def _line_chart_data(model: "Model",
                      group_var: list | tuple = ('superbrand', ),
                      bs_key_filter: list | tuple | None = None,
                      show_future: bool = False,
+                     show_pretrain: bool = True
                      ):
     """
     Convert 'common' prediction dataset to dataset prepared to be plotted as fit-predict.
@@ -539,6 +543,7 @@ def _line_chart_data(model: "Model",
     :param group_var: group entities by variables (list or tuple of strings)
     :param bs_key_filter: list or tuple of 'bs_key' values to preserve
     :param show_future: show future periods or not
+    :param show_pretrain: show pretrain periods or not
     :return:
     """
 
@@ -554,7 +559,8 @@ def _line_chart_data(model: "Model",
                                       , period=period
                                       , group_var=group_var
                                       , bs_key_filter=bs_key_filter
-                                      , show_future=show_future)
+                                      , show_future=show_future
+                                      , show_pretrain=show_pretrain)
 
     # Volume
     ds_melt_vol = ds_melt[(ds_melt['variable'] == 'observed') | (ds_melt['variable'] == 'predicted')]
@@ -581,6 +587,7 @@ def _fit_main_data_melt(model: "Model"
                         , group_var: list | tuple = ('superbrand', )
                         , bs_key_filter: list | tuple | None = None
                         , show_future: bool = False
+                        , show_pretrain: bool = False
                         ) -> (pd.DataFrame, pd.DataFrame):
     """
     Melt prediction data to make it suitable to PPTX charts in fit-predict slide.
@@ -591,15 +598,20 @@ def _fit_main_data_melt(model: "Model"
     :param group_var: group entities by variables (list or tuple of strings)
     :param bs_key_filter: list or tuple of 'bs_key' values to preserve
     :param show_future: show future periods or not
+    :param show_pretrain: show pretrain periods or not
     :return:
     """
 
     # filter
 
-    if show_future:
-        ds = dt_pred[dt_pred['listed'].isin([2, 3, 4])]
-    else:
-        ds = dt_pred[dt_pred['listed'].isin([2, 3])]
+    ds_mask = dt_pred['listed'].isin([1, 2, 3, 4])
+
+    if not show_future:
+        ds_mask = ds_mask & ~dt_pred['listed'].isin([4])
+    if not show_pretrain:
+        ds_mask = ds_mask & ~dt_pred['listed'].isin([1])
+
+    ds = copy.deepcopy(dt_pred[ds_mask])
 
     if bs_key_filter is not None:
         ds = ds[ds['bs_key'].isin(bs_key_filter)]

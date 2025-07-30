@@ -317,7 +317,8 @@ Extract all effects
 def extract_effect(model: "Model | list"
                    , ds: pd.DataFrame | list
                    , model_rep: "ModelRep | list"
-                   , if_detail: bool = False) -> pd.DataFrame | list:
+                   , if_detail: bool = False
+                   , listed_filter: tuple | list = (2, 3, 4)) -> pd.DataFrame | list:
     """
         Wrapper
         Decompose complex model / extract effects (impacts) of all types.
@@ -326,15 +327,24 @@ def extract_effect(model: "Model | list"
         :param ds: dataset or list of datasets
         :param model_rep: ModelRep object (export settings) or list of ModelRep objects
         :param if_detail: expand tokens
+        :param listed_filter: filter listed values to culaculate splits
         :return: table with column per every extracted effect / impact or list of tables with columns per every extracted effect
         """
 
     if isinstance(model, list):
         split_m_m = [None] * len(model)
         for i in range(len(model)):
-            split_m_m[i] = _extract_effect_worker(model[i], ds[i], model_rep[i], if_detail)
+            split_m_m[i] = _extract_effect_worker(model=model[i]
+                                                  , ds=ds[i]
+                                                  , model_rep=model_rep[i]
+                                                  , if_detail=if_detail
+                                                  , listed_filter=listed_filter)
     else:
-        split_m_m = _extract_effect_worker(model, ds, model_rep, if_detail)
+        split_m_m = _extract_effect_worker(model=model
+                                           , ds=ds
+                                           , model_rep=model_rep
+                                           , if_detail=if_detail
+                                           , listed_filter=listed_filter)
 
     return split_m_m
 
@@ -343,7 +353,8 @@ def extract_effect(model: "Model | list"
 def _extract_effect_worker(model: "Model"
                            , ds: pd.DataFrame
                            , model_rep: "ModelRep"
-                           , if_detail: bool = False) -> pd.DataFrame:
+                           , if_detail: bool = False
+                           , listed_filter: tuple | list = (2, 3, 4)) -> pd.DataFrame:
     """
     Worker
     Decompose complex model / extract effects (impacts) of all types.
@@ -352,6 +363,7 @@ def _extract_effect_worker(model: "Model"
     :param ds: dataset
     :param model_rep: ModelRep object (export settings)
     :param if_detail: expand tokens
+    :param listed_filter: filter listed values to culaculate splits
     :return: table with column per every extracted effect / impact
     """
 
@@ -552,7 +564,7 @@ def _extract_effect_worker(model: "Model"
 
         split_m_m['variable'].replace(rename_dict, inplace=True)
 
-        mask = split_m_m['listed'].isin([2, 3, 4])
+        mask = split_m_m['listed'].isin(listed_filter)
 
         split_m_m = groupby_eff(split_m_m, cln_id + ['variable'], ['value', 'value_rub'], mask) \
             .agg({'value': 'sum', 'value_rub': 'sum'}) \
@@ -579,6 +591,7 @@ def decompose_main_plot(split_m_m: pd.DataFrame | list
                         , model_rep: "ModelRep | list"
                         , period: str | list = 'day'
                         , show_future: bool | str = True
+                        , show_pretrain: bool = True
                         , contour_line: bool = True) -> go.Figure:
     """
         Wrapper
@@ -589,6 +602,7 @@ def decompose_main_plot(split_m_m: pd.DataFrame | list
         :param model_rep: ModelRep object (export settings) or list of ModelRep objects
         :param period: time period / interval to group by or list of time periods / intervals to group by
         :param show_future: show future periods or not
+        :param show_pretrain: show pretrain periods or not
         :param contour_line: add contours or not
         :return:
         """
@@ -597,12 +611,30 @@ def decompose_main_plot(split_m_m: pd.DataFrame | list
         fig = [None] * len(split_m_m)
         if isinstance(period, list):
             for i in range(len(split_m_m)):
-                fig[i] = _decompose_main_plot_worker(split_m_m[i], brands, model_rep[i], period[i], show_future, contour_line)
+                fig[i] = _decompose_main_plot_worker(split_m_m=split_m_m[i]
+                                                     , brands=brands
+                                                     , model_rep=model_rep[i]
+                                                     , period=period[i]
+                                                     , show_future=show_future
+                                                     , show_pretrain=show_pretrain
+                                                     , contour_line=contour_line)
         else:
             for i in range(len(split_m_m)):
-                fig[i] = _decompose_main_plot_worker(split_m_m[i], brands, model_rep[i], period, show_future, contour_line)
+                fig[i] = _decompose_main_plot_worker(split_m_m=split_m_m[i]
+                                                     , brands=brands
+                                                     , model_rep=model_rep[i]
+                                                     , period=period
+                                                     , show_future=show_future
+                                                     , show_pretrain=show_pretrain
+                                                     , contour_line=contour_line)
     else:
-        fig = _decompose_main_plot_worker(split_m_m, brands, model_rep, period, show_future, contour_line)
+        fig = _decompose_main_plot_worker(split_m_m=split_m_m
+                                                     , brands=brands
+                                                     , model_rep=model_rep
+                                                     , period=period
+                                                     , show_future=show_future
+                                                     , show_pretrain=show_pretrain
+                                                     , contour_line=contour_line)
 
     return fig
 
@@ -613,6 +645,7 @@ def _decompose_main_plot_worker(split_m_m: pd.DataFrame
                                 , model_rep: "ModelRep"
                                 , period: str = 'day'
                                 , show_future: bool | str = True
+                                , show_pretrain: bool | str = False
                                 , contour_line: bool = True) -> go.Figure:
     """
     Worker
@@ -623,6 +656,7 @@ def _decompose_main_plot_worker(split_m_m: pd.DataFrame
     :param model_rep: ModelRep object (export settings)
     :param period: time period / interval to group by
     :param show_future: show future periods or not
+    :param show_pretrain: show pretrain periods or not
     :param contour_line: add contours or not
     :return:
     """
@@ -650,10 +684,12 @@ def _decompose_main_plot_worker(split_m_m: pd.DataFrame
     elif period in ['year', 'y', 'Y']:
         split['date'] = split['date'].dt.to_period('Y').dt.start_time
 
-    if show_future:
-        mask = split['superbrand'].isin(brands) & split['listed'].isin([2, 3, 4])
-    else:
-        mask = split['superbrand'].isin(brands) & split['listed'].isin([2, 3])
+    mask = (split['superbrand'].isin(brands)) & (split['listed'].isin([1, 2, 3, 4]))
+
+    if not show_future:
+        mask = mask & ~split['listed'].isin([4])
+    if not show_pretrain:
+        mask = mask & ~split['listed'].isin([1])
 
     tmp = groupby_eff(split, ['date', 'variable'], ['value'], mask, sort=False)
     tmp = tmp.value.sum().reset_index()
@@ -767,6 +803,7 @@ def decompose_sub_plot(split_m_m: pd.DataFrame
                        , sku_var: list | tuple = ('superbrand', 'market')
                        , period: str | list = 'day'
                        , show_future: bool | str = True
+                       , show_pretrain: bool | str = True
                        , contour_line: bool = True) -> go.Figure:
     """
         Wrapper
@@ -778,21 +815,42 @@ def decompose_sub_plot(split_m_m: pd.DataFrame
         :param sku_var: list or tuple of variables to group by
         :param period: time period / interval to group by or list of time periods / intervals to group by
         :param show_future: show future periods or not
+        :param show_pretrain: show pretrain periods or not
         :param contour_line: add contours or not
         :return:
         """
+
     if isinstance(split_m_m, list):
         fig = [None] * len(split_m_m)
         if isinstance(period, list):
             for i in range(len(split_m_m)):
-                fig[i] = _decompose_sub_plot_worker(split_m_m[i], brands, model_rep[i], sku_var, period[i], show_future,
-                                                    contour_line)
+                fig[i] = _decompose_sub_plot_worker(split_m_m=split_m_m[i]
+                                                    , brands=brands
+                                                    , model_rep=model_rep[i]
+                                                    , sku_var=sku_var
+                                                    , period=period[i]
+                                                    , show_future=show_future
+                                                    , show_pretrain=show_pretrain
+                                                    , contour_line=contour_line)
         else:
             for i in range(len(split_m_m)):
-                fig[i] = _decompose_sub_plot_worker(split_m_m[i], brands, model_rep[i], sku_var, period, show_future,
-                                                    contour_line)
+                fig[i] = _decompose_sub_plot_worker(split_m_m=split_m_m[i]
+                                                    , brands=brands
+                                                    , model_rep=model_rep[i]
+                                                    , sku_var=sku_var
+                                                    , period=period
+                                                    , show_future=show_future
+                                                    , show_pretrain=show_pretrain
+                                                    , contour_line=contour_line)
     else:
-        fig = _decompose_sub_plot_worker(split_m_m, brands, model_rep, sku_var, period, show_future, contour_line)
+        fig = _decompose_sub_plot_worker(split_m_m=split_m_m
+                                                    , brands=brands
+                                                    , model_rep=model_rep
+                                                    , sku_var=sku_var
+                                                    , period=period
+                                                    , show_future=show_future
+                                                    , show_pretrain=show_pretrain
+                                                    , contour_line=contour_line)
 
     return fig
 
@@ -804,6 +862,7 @@ def _decompose_sub_plot_worker(split_m_m: pd.DataFrame
                                , sku_var: list | tuple = ('superbrand', 'market')
                                , period: str = 'day'
                                , show_future: bool | str = True
+                               , show_pretrain: bool | str = True
                                , contour_line: bool = True) -> go.Figure:
     """
     Worker
@@ -842,10 +901,12 @@ def _decompose_sub_plot_worker(split_m_m: pd.DataFrame
     elif period in ['year', 'y', 'Y']:
         split['date'] = split['date'].dt.to_period('Y').dt.start_time
 
-    if show_future:
-        mask = split['superbrand'].isin(brands) & split['listed'].isin([2, 3, 4])
-    else:
-        mask = split['superbrand'].isin(brands) & split['listed'].isin([2, 3])
+    mask = (split['superbrand'].isin(brands)) & (split['listed'].isin([1, 2, 3, 4]))
+
+    if not show_future:
+        mask = mask & ~split['listed'].isin([4])
+    if not show_pretrain:
+        mask = mask & ~split['listed'].isin([1])
 
     # cleanse sku_var from non-existing variables
     sku_var = [x for x in sku_var if x in split.columns]

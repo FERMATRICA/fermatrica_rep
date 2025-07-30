@@ -37,6 +37,7 @@ def fit_main_data(model: "Model"
                   , period: str = 'day'
                   , err_int: float = .1
                   , show_future: bool = False
+                  , show_pretrain: bool = False
                   , if_split_listed: bool = True) -> (pd.DataFrame, pd.DataFrame):
     """
     Prepare data describing main model to plot or use as is. Data is grouped by superbrand
@@ -47,6 +48,7 @@ def fit_main_data(model: "Model"
     :param period: time period / interval to group by: 'day', 'week', 'month', 'quarter', 'year'
     :param err_int: error interval in decimal (typically .1, .05, .2 etc.)
     :param show_future: show future periods or not
+    :param show_pretrain: show pretrain periods or not
     :param if_split_listed: split data by `listed` or not
     :return: tuple of wide and long dataframes
     """
@@ -58,12 +60,14 @@ def fit_main_data(model: "Model"
 
     # filter listed period
 
-    if show_future:
-        ds = dt_pred[dt_pred['listed'].isin([2, 3, 4])]
-    else:
-        ds = dt_pred[dt_pred['listed'].isin([2, 3])]
+    ds_mask = dt_pred['listed'].isin([1, 2, 3, 4])
 
-    ds = copy.deepcopy(ds)
+    if not show_future:
+        ds_mask = ds_mask & ~dt_pred['listed'].isin([4])
+    if not show_pretrain:
+        ds_mask = ds_mask & ~dt_pred['listed'].isin([1])
+
+    ds = copy.deepcopy(dt_pred[ds_mask])
 
     # get values
 
@@ -80,16 +84,22 @@ def fit_main_data(model: "Model"
 
     if if_split_listed:
         group_id = ['date', 'listed']
+        cols = copy.deepcopy(group_id)
+        agg_dict = {}
     else:
         group_id = ['date']
+        cols = copy.deepcopy(group_id + ['listed'])
+        agg_dict = {'listed': 'max'}
 
     if 'superbrand' in ds.columns:
         group_id.append('superbrand')
+        cols.append('superbrand')
 
-    cols = copy.deepcopy(group_id)
-    cols.extend([x for x in ds.columns if re.match(r'(observed|predicted)', x)])
+    sum_cols = [x for x in ds.columns if re.match(r'(observed|predicted)', x)]
+    cols.extend(sum_cols)
+    agg_dict = agg_dict | {col: 'sum' for col in sum_cols}
 
-    ds = ds[cols].groupby(group_id).sum().reset_index()
+    ds = ds[cols].groupby(group_id).agg(agg_dict).reset_index()
 
     # get error intervals
 
@@ -350,6 +360,7 @@ def fit_main_plot_vol(model: "Model | list"
                       , period: str | list = 'day'  # 'day', 'week', 'month', 'quarter', 'year'
                       , err_int: float = .1
                       , show_future: bool = False
+                      , show_pretrain: bool = False
                       , target_superbrand: str | None = None):
     """
         Wrapper
@@ -362,6 +373,7 @@ def fit_main_plot_vol(model: "Model | list"
         :param period: time period / interval to group by: 'day', 'week', 'month', 'quarter', 'year': or list of time periods | intervals
         :param err_int: error interval in decimal (typically .1, .05, .2 etc.)
         :param show_future: show future periods or not
+        :param show_pretrain: show pretrain periods or not
         :param target_superbrand: umbrella brand to be plotted
         :return:
         """
@@ -372,13 +384,34 @@ def fit_main_plot_vol(model: "Model | list"
 
         if isinstance(period, list):
             for i in range(len(model)):
-                fig[i] = _fit_main_plot_vol_worker(model[i], dt_pred[i], model_rep[i], period[i], err_int, show_future, target_superbrand)
+                fig[i] = _fit_main_plot_vol_worker(model=model[i],
+                                                   dt_pred=dt_pred[i],
+                                                   model_rep=model_rep[i],
+                                                   period=period[i],
+                                                   err_int=err_int,
+                                                   show_future=show_future,
+                                                   show_pretrain=show_pretrain,
+                                                   target_superbrand=target_superbrand)
         else:
             for i in range(len(model)):
-                fig[i] = _fit_main_plot_vol_worker(model[i], dt_pred[i], model_rep[i], period, err_int, show_future, target_superbrand)
+                fig[i] = _fit_main_plot_vol_worker(model=model[i],
+                                                   dt_pred=dt_pred[i],
+                                                   model_rep=model_rep[i],
+                                                   period=period,
+                                                   err_int=err_int,
+                                                   show_future=show_future,
+                                                   show_pretrain=show_pretrain,
+                                                   target_superbrand=target_superbrand)
 
     else:
-        fig = _fit_main_plot_vol_worker(model, dt_pred, model_rep, period, err_int, show_future, target_superbrand)
+        fig = _fit_main_plot_vol_worker(model=model,
+                                        dt_pred=dt_pred,
+                                        model_rep=model_rep,
+                                        period=period,
+                                        err_int=err_int,
+                                        show_future=show_future,
+                                        show_pretrain=show_pretrain,
+                                        target_superbrand=target_superbrand)
 
     return fig
 
@@ -390,6 +423,7 @@ def _fit_main_plot_vol_worker(model: "Model"
                               , period: str = 'day'  # 'day', 'week', 'month', 'quarter', 'year'
                               , err_int: float = .1
                               , show_future: bool = False
+                              , show_pretrain: bool = False
                               , target_superbrand: str | None = None):
     """
     Worker
@@ -402,13 +436,20 @@ def _fit_main_plot_vol_worker(model: "Model"
     :param period: time period / interval to group by: 'day', 'week', 'month', 'quarter', 'year'
     :param err_int: error interval in decimal (typically .1, .05, .2 etc.)
     :param show_future: show future periods or not
+    :param show_pretrain: show pretrain periods or not
     :param target_superbrand: umbrella brand to be plotted
     :return:
     """
 
     # load data
 
-    ds, ds_melt = fit_main_data(model, dt_pred, period, err_int, show_future)
+    ds, ds_melt = fit_main_data(model=model,
+                                dt_pred=dt_pred,
+                                period=period,
+                                err_int=err_int,
+                                show_future=show_future,
+                                show_pretrain=show_pretrain,
+                                if_split_listed=False)
 
     if target_superbrand is not None and 'superbrand' in ds.columns:
         ds = ds[ds['superbrand'] == target_superbrand]
@@ -474,6 +515,7 @@ def fit_main_plot_val(model: "Model | list"
                       , period: str | list = 'day'  # 'day', 'week', 'month', 'quarter', 'year'
                       , err_int: float = .1
                       , show_future: bool = False
+                      , show_pretrain: bool = False
                       , target_superbrand: str | None = None):
     """
             Wrapper
@@ -486,6 +528,7 @@ def fit_main_plot_val(model: "Model | list"
             :param period: time period / interval to group by: 'day', 'week', 'month', 'quarter', 'year': or list of time periods | intervals
             :param err_int: error interval in decimal (typically .1, .05, .2 etc.)
             :param show_future: show future periods or not
+            :param show_pretrain: show pretrain periods or not
             :param target_superbrand: umbrella brand to be plotted
             :return:
             """
@@ -495,15 +538,34 @@ def fit_main_plot_val(model: "Model | list"
 
         if isinstance(period, list):
             for i in range(len(model)):
-                fig[i] = _fit_main_plot_val_worker(model[i], dt_pred[i], model_rep[i], period[i], err_int, show_future,
-                                                   target_superbrand)
+                fig[i] = _fit_main_plot_val_worker(model=model[i],
+                                                   dt_pred=dt_pred[i],
+                                                   model_rep=model_rep[i],
+                                                   period=period[i],
+                                                   err_int=err_int,
+                                                   show_future=show_future,
+                                                   show_pretrain=show_pretrain,
+                                                   target_superbrand=target_superbrand)
         else:
             for i in range(len(model)):
-                fig[i] = _fit_main_plot_val_worker(model[i], dt_pred[i], model_rep[i], period, err_int, show_future,
-                                                   target_superbrand)
+                fig[i] = _fit_main_plot_val_worker(model=model[i],
+                                                   dt_pred=dt_pred[i],
+                                                   model_rep=model_rep[i],
+                                                   period=period,
+                                                   err_int=err_int,
+                                                   show_future=show_future,
+                                                   show_pretrain=show_pretrain,
+                                                   target_superbrand=target_superbrand)
 
     else:
-        fig = _fit_main_plot_val_worker(model, dt_pred, model_rep, period, err_int, show_future, target_superbrand)
+        fig = _fit_main_plot_val_worker(model=model,
+                                        dt_pred=dt_pred,
+                                        model_rep=model_rep,
+                                        period=period,
+                                        err_int=err_int,
+                                        show_future=show_future,
+                                        show_pretrain=show_pretrain,
+                                        target_superbrand=target_superbrand)
 
     return fig
 
@@ -515,6 +577,7 @@ def _fit_main_plot_val_worker(model: "Model"
                               , period: str = 'day'  # 'day', 'week', 'month', 'quarter', 'year'
                               , err_int: float = .1
                               , show_future: bool = False
+                              , show_pretrain: bool = False
                               , target_superbrand: str | None = None):
     """
     Worker
@@ -527,13 +590,20 @@ def _fit_main_plot_val_worker(model: "Model"
     :param period: time period / interval to group by: 'day', 'week', 'month', 'quarter', 'year'
     :param err_int: error interval in decimal (typically .1, .05, .2 etc.)
     :param show_future: show future periods or not
+    :param show_pretrain: show pretrain periods or not
     :param target_superbrand: umbrella brand to be plotted
     :return:
     """
 
     # load data
 
-    ds, ds_melt = fit_main_data(model, dt_pred, period, err_int, show_future)
+    ds, ds_melt = fit_main_data(model=model,
+                                dt_pred=dt_pred,
+                                period=period,
+                                err_int=err_int,
+                                show_future=show_future,
+                                show_pretrain=show_pretrain,
+                                if_split_listed=False)
 
     if target_superbrand is not None and 'superbrand' in ds.columns:
         ds = ds[ds['superbrand'] == target_superbrand]
@@ -563,8 +633,10 @@ def fit_mult_data(model: "Model"
                   , period: str = 'day'  # 'day', 'week', 'month', 'quarter', 'year'
                   , err_int: float = .1
                   , show_future: bool = False
+                  , show_pretrain: bool = False
                   , group_var: list | tuple = ('superbrand',)
-                  , bs_key_filter: list | tuple | None = None) -> (pd.DataFrame, pd.DataFrame):
+                  , bs_key_filter: list | tuple | None = None
+                  , if_split_listed: bool = True) -> (pd.DataFrame, pd.DataFrame):
     """
     Get data to plot fit and predict of the model with faceting. This function prepares data
     allowing plot multiple entities, but without error intervals. If error intervals are required
@@ -575,6 +647,7 @@ def fit_mult_data(model: "Model"
     :param period: time period / interval to group by: 'day', 'week', 'month', 'quarter', 'year'
     :param err_int: error interval in decimal (typically .1, .05, .2 etc.)
     :param show_future: show future periods or not
+    :param show_pretrain: show pretrain periods or not
     :param group_var: group entities by variables (list or tuple of strings)
     :param bs_key_filter: list or tuple of 'bs_key' values to preserve
     :return:
@@ -587,10 +660,14 @@ def fit_mult_data(model: "Model"
 
     # filter
 
-    if show_future:
-        ds = dt_pred[dt_pred['listed'].isin([2, 3, 4])]
-    else:
-        ds = dt_pred[dt_pred['listed'].isin([2, 3])]
+    ds_mask = dt_pred['listed'].isin([1, 2, 3, 4])
+
+    if not show_future:
+        ds_mask = ds_mask & ~dt_pred['listed'].isin([4])
+    if not show_pretrain:
+        ds_mask = ds_mask & ~dt_pred['listed'].isin([1])
+
+    ds = dt_pred[ds_mask]
 
     if bs_key_filter is not None:
         ds = ds[ds['bs_key'].isin(bs_key_filter)]
@@ -615,12 +692,21 @@ def fit_mult_data(model: "Model"
 
     group_var_ext = copy.deepcopy(group_var)
 
-    group_var_ext.extend(['date', 'listed'])
+    if if_split_listed:
+        group_var_ext.extend(['date', 'listed'])
+        cols = copy.deepcopy(group_var_ext)
+        agg_dict = {}
+    else:
+        group_var_ext.extend(['date'])
+        cols = copy.deepcopy(group_var_ext + ['listed'])
+        agg_dict = {'listed': 'max'}
 
-    cols = copy.deepcopy(group_var_ext)
-    cols.extend([x for x in ds.columns if re.match(r'(observed|predicted)', x)])
 
-    ds = ds[cols].groupby(group_var_ext).sum().reset_index()
+    sum_cols = [x for x in ds.columns if re.match(r'(observed|predicted)', x)]
+    cols.extend(sum_cols)
+    agg_dict = agg_dict | {col: 'sum' for col in sum_cols}
+
+    ds = ds[cols].groupby(group_var_ext).agg(agg_dict).reset_index()
 
     # get error intervals
 
@@ -658,6 +744,7 @@ def _fit_mult_plot_inner(model: "Model"
                          , model_rep: "ModelRep"
                          , period: str = 'day'  # 'day', 'week', 'month', 'quarter', 'year'
                          , show_future: bool = False
+                         , show_pretrain: bool = False
                          , group_var: list | tuple = ('superbrand',)
                          , bs_key_filter: list | tuple | None = None
                          , plot_type: str = 'vol'
@@ -674,6 +761,7 @@ def _fit_mult_plot_inner(model: "Model"
     :param dt_pred: prediction data
     :param period: time period / interval to group by: 'day', 'week', 'month', 'quarter', 'year'
     :param show_future: show future periods or not
+    :param show_pretrain: show pretrain periods or not
     :param group_var: group entities by variables (list or tuple of strings)
     :param bs_key_filter: list or tuple of 'bs_key' values to preserve
     :param plot_type: 'vol' or 'val' (volume or value)
@@ -695,7 +783,9 @@ def _fit_mult_plot_inner(model: "Model"
 
     # load data
 
-    ds, ds_melt = fit_mult_data(model, dt_pred, period, show_future=show_future, group_var=group_var, bs_key_filter=bs_key_filter)
+    ds, ds_melt = fit_mult_data(model=model, dt_pred=dt_pred, period=period,
+                                show_future=show_future, show_pretrain=show_pretrain,
+                                group_var=group_var, bs_key_filter=bs_key_filter, if_split_listed=False)
 
     ds_melt = ds_melt.loc[ds_melt['variable'].isin([var_pred, var_obs]), :]
 
@@ -758,6 +848,7 @@ def fit_mult_plot_vol(model: "Model | list"
                       , model_rep: "ModelRep | list"
                       , period: str | list = 'day'  # 'day', 'week', 'month', 'quarter', 'year'
                       , show_future: bool = False
+                      , show_pretrain: bool = False
                       , group_var: list | tuple = ('superbrand',)
                       , bs_key_filter: list | tuple | None = None):
     """
@@ -773,6 +864,7 @@ def fit_mult_plot_vol(model: "Model | list"
         :param model_rep: ModelRep object (export settings) or list of ModelRep objects
         :param period: time period / interval to group by: 'day', 'week', 'month', 'quarter', 'year': or list of time periods | intervals
         :param show_future: show future periods or not
+        :param show_pretrain: show pretrain periods or not
         :param group_var: group entities by variables (list or tuple of strings)
         :param bs_key_filter: list or tuple of 'bs_key' values to preserve
         :return: filled figure (graphic object)
@@ -784,13 +876,34 @@ def fit_mult_plot_vol(model: "Model | list"
 
         if isinstance(period, list):
             for i in range(len(model)):
-                fig[i] = _fit_mult_plot_vol_worker(model[i], dt_pred[i], model_rep[i], period[i], show_future, group_var, bs_key_filter)
+                fig[i] = _fit_mult_plot_vol_worker(model=model[i],
+                                                   dt_pred=dt_pred[i],
+                                                   model_rep=model_rep[i],
+                                                   period=period[i],
+                                                   show_future=show_future,
+                                                   show_pretrain=show_pretrain,
+                                                   group_var=group_var,
+                                                   bs_key_filter=bs_key_filter)
         else:
             for i in range(len(model)):
-                fig[i] = _fit_mult_plot_vol_worker(model[i], dt_pred[i], model_rep[i], period, show_future, group_var, bs_key_filter)
+                fig[i] = _fit_mult_plot_vol_worker(model=model[i],
+                                                   dt_pred=dt_pred[i],
+                                                   model_rep=model_rep[i],
+                                                   period=period,
+                                                   show_future=show_future,
+                                                   show_pretrain=show_pretrain,
+                                                   group_var=group_var,
+                                                   bs_key_filter=bs_key_filter)
 
     else:
-        fig = _fit_mult_plot_vol_worker(model, dt_pred, model_rep, period, show_future, group_var, bs_key_filter)
+        fig = _fit_mult_plot_vol_worker(model=model,
+                                        dt_pred=dt_pred,
+                                        model_rep=model_rep,
+                                        period=period,
+                                        show_future=show_future,
+                                        show_pretrain=show_pretrain,
+                                        group_var=group_var,
+                                        bs_key_filter=bs_key_filter)
 
     return fig
 
@@ -801,6 +914,7 @@ def _fit_mult_plot_vol_worker(model: "Model"
                               , model_rep: "ModelRep"
                               , period: str = 'day'  # 'day', 'week', 'month', 'quarter', 'year'
                               , show_future: bool = False
+                              , show_pretrain: bool = False
                               , group_var: list | tuple = ('superbrand',)
                               , bs_key_filter: list | tuple | None = None):
     """
@@ -816,13 +930,22 @@ def _fit_mult_plot_vol_worker(model: "Model"
     :param model_rep: ModelRep object (export settings)
     :param period: time period / interval to group by: 'day', 'week', 'month', 'quarter', 'year'
     :param show_future: show future periods or not
+    :param show_pretrain: show pretrain periods or not
     :param group_var: group entities by variables (list or tuple of strings)
     :param bs_key_filter: list or tuple of 'bs_key' values to preserve
     :return: filled figure (graphic object)
     :return:
     """
 
-    fig = _fit_mult_plot_inner(model, dt_pred, model_rep, period, show_future, group_var, bs_key_filter, 'vol')
+    fig = _fit_mult_plot_inner(model=model,
+                               dt_pred=dt_pred,
+                               model_rep=model_rep,
+                               period=period,
+                               show_future=show_future,
+                               show_pretrain=show_pretrain,
+                               group_var=group_var,
+                               bs_key_filter=bs_key_filter,
+                               plot_type='vol')
 
     return fig
 
@@ -833,6 +956,7 @@ def fit_mult_plot_val(model: "Model | list"
                       , model_rep: "ModelRep | list"
                       , period: str | list = 'day'  # 'day', 'week', 'month', 'quarter', 'year'
                       , show_future: bool = False
+                      , show_pretrain: bool = False
                       , group_var: list | tuple = ('superbrand',)
                       , bs_key_filter: list | tuple | None = None):
     """
@@ -848,6 +972,7 @@ def fit_mult_plot_val(model: "Model | list"
             :param model_rep: ModelRep object (export settings) or list of ModelRep objects
             :param period: time period / interval to group by: 'day', 'week', 'month', 'quarter', 'year': or list of time periods | intervals
             :param show_future: show future periods or not
+            :param show_pretrain: show pretrain periods or not
             :param group_var: group entities by variables (list or tuple of strings)
             :param bs_key_filter: list or tuple of 'bs_key' values to preserve
             :return: filled figure (graphic object)
@@ -859,13 +984,34 @@ def fit_mult_plot_val(model: "Model | list"
 
         if isinstance(period, list):
             for i in range(len(model)):
-                fig[i] = _fit_mult_plot_val_worker(model[i], dt_pred[i], model_rep[i], period[i], show_future, group_var, bs_key_filter)
+                fig[i] = _fit_mult_plot_val_worker(model=model[i],
+                                                   dt_pred=dt_pred[i],
+                                                   model_rep=model_rep[i],
+                                                   period=period[i],
+                                                   show_future=show_future,
+                                                   show_pretrain=show_pretrain,
+                                                   group_var=group_var,
+                                                   bs_key_filter=bs_key_filter)
         else:
             for i in range(len(model)):
-                fig[i] = _fit_mult_plot_val_worker(model[i], dt_pred[i], model_rep[i], period, show_future, group_var, bs_key_filter)
+                fig[i] = _fit_mult_plot_val_worker(model=model[i],
+                                                   dt_pred=dt_pred[i],
+                                                   model_rep=model_rep[i],
+                                                   period=period,
+                                                   show_future=show_future,
+                                                   show_pretrain=show_pretrain,
+                                                   group_var=group_var,
+                                                   bs_key_filter=bs_key_filter)
 
     else:
-        fig = _fit_mult_plot_val_worker(model, dt_pred, model_rep, period, show_future, group_var, bs_key_filter)
+        fig = _fit_mult_plot_val_worker(model=model,
+                                        dt_pred=dt_pred,
+                                        model_rep=model_rep,
+                                        period=period,
+                                        show_future=show_future,
+                                        show_pretrain=show_pretrain,
+                                        group_var=group_var,
+                                        bs_key_filter=bs_key_filter)
 
     return fig
 
@@ -876,6 +1022,7 @@ def _fit_mult_plot_val_worker(model: "Model"
                               , model_rep: "ModelRep"
                               , period: str = 'day'  # 'day', 'week', 'month', 'quarter', 'year'
                               , show_future: bool = False
+                              , show_pretrain: bool = False
                               , group_var: list | tuple = ('superbrand',)
                               , bs_key_filter: list | tuple | None = None):
     """
@@ -891,11 +1038,20 @@ def _fit_mult_plot_val_worker(model: "Model"
     :param model_rep: ModelRep object (export settings)
     :param period: time period / interval to group by: 'day', 'week', 'month', 'quarter', 'year'
     :param show_future: show future periods or not
+    :param show_pretrain: show pretrain periods or not
     :param group_var: group entities by variables (list or tuple of strings)
     :param bs_key_filter: list or tuple of 'bs_key' values to preserve
     :return: filled figure (graphic object)
     """
 
-    fig = _fit_mult_plot_inner(model, dt_pred, model_rep, period, show_future, group_var, bs_key_filter, 'val')
+    fig = _fit_mult_plot_inner(model=model,
+                               dt_pred=dt_pred,
+                               model_rep=model_rep,
+                               period=period,
+                               show_future=show_future,
+                               show_pretrain=show_pretrain,
+                               group_var=group_var,
+                               bs_key_filter=bs_key_filter,
+                               plot_type='val')
 
     return fig

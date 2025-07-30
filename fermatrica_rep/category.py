@@ -26,6 +26,7 @@ def category_data(model: "Model"
                   , period: str = 'day'  # 'day', 'week', 'month', 'quarter', 'year'
                   , err_int: float = .1
                   , show_future=False
+                  , show_pretrain: bool = False
                   ):
     """
     Prepare data describing category model to plot or use as is.
@@ -35,6 +36,7 @@ def category_data(model: "Model"
     :param period: time period / interval to group by: 'day', 'week', 'month', 'quarter', 'year'
     :param err_int: error interval in decimal (typically .1, .05, .2 etc.)
     :param show_future: show future periods or not
+    :param show_pretrain: show pretrain periods or not
     :return: dataframe to be plotted
     """
 
@@ -42,10 +44,14 @@ def category_data(model: "Model"
     tmp['observed'] = tmp[model.conf.Y_var]
     tmp['predicted'] = tmp['pred_mrk']
 
-    if show_future:
-        tmp = tmp[tmp['listed'].isin([2, 3, 4])]
-    else:
-        tmp = tmp[tmp['listed'].isin([2, 3])]
+    tmp_mask = tmp['listed'].isin([1, 2, 3, 4])
+
+    if not show_future:
+        tmp_mask = tmp_mask & ~tmp['listed'].isin([4])
+    if not show_pretrain:
+        tmp_mask = tmp_mask & ~tmp['listed'].isin([1])
+
+    tmp = tmp[tmp_mask]
 
     if period in ['day', 'd', 'D']:
         tmp['date'] = tmp['date'].dt.floor(freq='D')
@@ -61,10 +67,10 @@ def category_data(model: "Model"
     tmp['observed_lower'] = tmp['observed'] * (1 - err_int)
     tmp['observed_upper'] = tmp['observed'] * (1 + err_int)
 
-    tmp_pred = tmp[tmp['listed'].isin([2, 3, 4])].groupby(['date'], as_index=False, sort=True)
+    tmp_pred = tmp.groupby(['date'], as_index=False, sort=True)
     tmp_pred = tmp_pred['predicted'].max()
 
-    tmp_obs = tmp[tmp['listed'].isin([2, 3, 4])].groupby(['date'], as_index=False, sort=True)
+    tmp_obs = tmp.groupby(['date'], as_index=False, sort=True)
     tmp_obs = tmp_obs['observed'].sum()
 
     tmp = pd.concat([tmp_pred, tmp_obs.drop('date', axis=1)], axis=1)
@@ -186,6 +192,7 @@ def category_plot(model: "Model"
                   , period: str
                   , err_int=0.1
                   , show_future: bool = False
+                  , show_pretrain: bool = False
                   ):
     """
     Main plot of the category model: fit, predict and errors
@@ -195,12 +202,13 @@ def category_plot(model: "Model"
     :param period: time period / interval to group by
     :param err_int: error interval in decimal (typically .1, .05, .2 etc.)
     :param show_future: show future periods or not
+    :param show_pretrain: show pretrain periods or not
     :return:
     """
 
     fig = make_subplots(rows=2, cols=1, row_heights=[0.7, 0.3])
 
-    data = category_data(model=model, ds=ds, period=period, show_future=show_future)
+    data = category_data(model=model, ds=ds, period=period, show_future=show_future, show_pretrain=show_pretrain)
     fig = category_main_plot(ds=data, fig=fig, row_n=1, col_n=1)
     fig = category_err_plot(ds=data, fig=fig, row_n=2, col_n=1, err_int=err_int)
 
