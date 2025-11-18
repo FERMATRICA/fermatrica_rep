@@ -74,19 +74,19 @@ using transformation functions directly, so it is fast and (for user) simple.</p
 </span><span id="L-8"><a href="#L-8"><span class="linenos">  8</span></a><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="L-9"><a href="#L-9"><span class="linenos">  9</span></a>
 </span><span id="L-10"><a href="#L-10"><span class="linenos"> 10</span></a>
-</span><span id="L-11"><a href="#L-11"><span class="linenos"> 11</span></a><span class="kn">import</span> <span class="nn">datetime</span>
-</span><span id="L-12"><a href="#L-12"><span class="linenos"> 12</span></a><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-</span><span id="L-13"><a href="#L-13"><span class="linenos"> 13</span></a><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
-</span><span id="L-14"><a href="#L-14"><span class="linenos"> 14</span></a><span class="kn">import</span> <span class="nn">re</span>
+</span><span id="L-11"><a href="#L-11"><span class="linenos"> 11</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">datetime</span>
+</span><span id="L-12"><a href="#L-12"><span class="linenos"> 12</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+</span><span id="L-13"><a href="#L-13"><span class="linenos"> 13</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+</span><span id="L-14"><a href="#L-14"><span class="linenos"> 14</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
 </span><span id="L-15"><a href="#L-15"><span class="linenos"> 15</span></a>
-</span><span id="L-16"><a href="#L-16"><span class="linenos"> 16</span></a><span class="kn">import</span> <span class="nn">plotly.graph_objects</span> <span class="k">as</span> <span class="nn">go</span>
+</span><span id="L-16"><a href="#L-16"><span class="linenos"> 16</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">plotly.graph_objects</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">go</span>
 </span><span id="L-17"><a href="#L-17"><span class="linenos"> 17</span></a>
-</span><span id="L-18"><a href="#L-18"><span class="linenos"> 18</span></a><span class="kn">from</span> <span class="nn">line_profiler_pycharm</span> <span class="kn">import</span> <span class="n">profile</span>
+</span><span id="L-18"><a href="#L-18"><span class="linenos"> 18</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">line_profiler_pycharm</span><span class="w"> </span><span class="kn">import</span> <span class="n">profile</span>
 </span><span id="L-19"><a href="#L-19"><span class="linenos"> 19</span></a>
-</span><span id="L-20"><a href="#L-20"><span class="linenos"> 20</span></a><span class="kn">import</span> <span class="nn">fermatrica.model.transform</span> <span class="k">as</span> <span class="nn">tr</span>
-</span><span id="L-21"><a href="#L-21"><span class="linenos"> 21</span></a><span class="kn">from</span> <span class="nn">fermatrica.model.model</span> <span class="kn">import</span> <span class="n">Model</span>
-</span><span id="L-22"><a href="#L-22"><span class="linenos"> 22</span></a><span class="kn">from</span> <span class="nn">fermatrica_rep.meta_model.model_rep</span> <span class="kn">import</span> <span class="n">ModelRep</span>
-</span><span id="L-23"><a href="#L-23"><span class="linenos"> 23</span></a><span class="kn">import</span> <span class="nn">fermatrica_rep.basics</span>
+</span><span id="L-20"><a href="#L-20"><span class="linenos"> 20</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">fermatrica.model.transform</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">tr</span>
+</span><span id="L-21"><a href="#L-21"><span class="linenos"> 21</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">fermatrica.model.model</span><span class="w"> </span><span class="kn">import</span> <span class="n">Model</span>
+</span><span id="L-22"><a href="#L-22"><span class="linenos"> 22</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">fermatrica_rep.meta_model.model_rep</span><span class="w"> </span><span class="kn">import</span> <span class="n">ModelRep</span>
+</span><span id="L-23"><a href="#L-23"><span class="linenos"> 23</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">fermatrica_rep.basics</span>
 </span><span id="L-24"><a href="#L-24"><span class="linenos"> 24</span></a>
 </span><span id="L-25"><a href="#L-25"><span class="linenos"> 25</span></a>
 </span><span id="L-26"><a href="#L-26"><span class="linenos"> 26</span></a><span class="sd">&quot;&quot;&quot;</span>
@@ -95,7 +95,7 @@ using transformation functions directly, so it is fast and (for user) simple.</p
 </span><span id="L-29"><a href="#L-29"><span class="linenos"> 29</span></a>
 </span><span id="L-30"><a href="#L-30"><span class="linenos"> 30</span></a>
 </span><span id="L-31"><a href="#L-31"><span class="linenos"> 31</span></a><span class="nd">@profile</span>
-</span><span id="L-32"><a href="#L-32"><span class="linenos"> 32</span></a><span class="k">def</span> <span class="nf">_curve_simple_data_worker</span><span class="p">(</span>
+</span><span id="L-32"><a href="#L-32"><span class="linenos"> 32</span></a><span class="k">def</span><span class="w"> </span><span class="nf">_curve_simple_data_worker</span><span class="p">(</span>
 </span><span id="L-33"><a href="#L-33"><span class="linenos"> 33</span></a>        <span class="n">params</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
 </span><span id="L-34"><a href="#L-34"><span class="linenos"> 34</span></a>        <span class="p">,</span> <span class="n">coef_value</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="nb">int</span>
 </span><span id="L-35"><a href="#L-35"><span class="linenos"> 35</span></a>        <span class="p">,</span> <span class="n">var</span><span class="p">:</span> <span class="nb">str</span>
@@ -178,7 +178,7 @@ using transformation functions directly, so it is fast and (for user) simple.</p
 </span><span id="L-112"><a href="#L-112"><span class="linenos">112</span></a>
 </span><span id="L-113"><a href="#L-113"><span class="linenos">113</span></a>
 </span><span id="L-114"><a href="#L-114"><span class="linenos">114</span></a><span class="nd">@profile</span>
-</span><span id="L-115"><a href="#L-115"><span class="linenos">115</span></a><span class="k">def</span> <span class="nf">curves_simple_data</span><span class="p">(</span>
+</span><span id="L-115"><a href="#L-115"><span class="linenos">115</span></a><span class="k">def</span><span class="w"> </span><span class="nf">curves_simple_data</span><span class="p">(</span>
 </span><span id="L-116"><a href="#L-116"><span class="linenos">116</span></a>        <span class="n">model</span><span class="p">:</span> <span class="s2">&quot;Model&quot;</span>
 </span><span id="L-117"><a href="#L-117"><span class="linenos">117</span></a>        <span class="p">,</span> <span class="n">ds</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
 </span><span id="L-118"><a href="#L-118"><span class="linenos">118</span></a>        <span class="p">,</span> <span class="n">model_rep</span><span class="p">:</span> <span class="s2">&quot;ModelRep&quot;</span>
@@ -282,7 +282,7 @@ using transformation functions directly, so it is fast and (for user) simple.</p
 </span><span id="L-216"><a href="#L-216"><span class="linenos">216</span></a>
 </span><span id="L-217"><a href="#L-217"><span class="linenos">217</span></a>
 </span><span id="L-218"><a href="#L-218"><span class="linenos">218</span></a><span class="nd">@profile</span>
-</span><span id="L-219"><a href="#L-219"><span class="linenos">219</span></a><span class="k">def</span> <span class="nf">_curves_simple_plot_worker</span><span class="p">(</span><span class="n">ds</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+</span><span id="L-219"><a href="#L-219"><span class="linenos">219</span></a><span class="k">def</span><span class="w"> </span><span class="nf">_curves_simple_plot_worker</span><span class="p">(</span><span class="n">ds</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
 </span><span id="L-220"><a href="#L-220"><span class="linenos">220</span></a>                               <span class="n">model_rep</span><span class="p">:</span> <span class="s2">&quot;ModelRep&quot;</span><span class="p">,</span>
 </span><span id="L-221"><a href="#L-221"><span class="linenos">221</span></a>                               <span class="n">title</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 </span><span id="L-222"><a href="#L-222"><span class="linenos">222</span></a>                               <span class="p">):</span>
@@ -334,7 +334,7 @@ using transformation functions directly, so it is fast and (for user) simple.</p
 </span><span id="L-268"><a href="#L-268"><span class="linenos">268</span></a>
 </span><span id="L-269"><a href="#L-269"><span class="linenos">269</span></a>
 </span><span id="L-270"><a href="#L-270"><span class="linenos">270</span></a><span class="nd">@profile</span>
-</span><span id="L-271"><a href="#L-271"><span class="linenos">271</span></a><span class="k">def</span> <span class="nf">curves_simple_plot</span><span class="p">(</span><span class="n">ds</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+</span><span id="L-271"><a href="#L-271"><span class="linenos">271</span></a><span class="k">def</span><span class="w"> </span><span class="nf">curves_simple_plot</span><span class="p">(</span><span class="n">ds</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
 </span><span id="L-272"><a href="#L-272"><span class="linenos">272</span></a>                       <span class="n">model_rep</span><span class="p">:</span> <span class="s2">&quot;ModelRep&quot;</span><span class="p">,</span>
 </span><span id="L-273"><a href="#L-273"><span class="linenos">273</span></a>                       <span class="n">price</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 </span><span id="L-274"><a href="#L-274"><span class="linenos">274</span></a>                       <span class="n">conv</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -391,7 +391,7 @@ using transformation functions directly, so it is fast and (for user) simple.</p
     </div>
     <a class="headerlink" href="#curves_simple_data"></a>
             <div class="pdoc-code codehilite"><pre><span></span><span id="curves_simple_data-115"><a href="#curves_simple_data-115"><span class="linenos">115</span></a><span class="nd">@profile</span>
-</span><span id="curves_simple_data-116"><a href="#curves_simple_data-116"><span class="linenos">116</span></a><span class="k">def</span> <span class="nf">curves_simple_data</span><span class="p">(</span>
+</span><span id="curves_simple_data-116"><a href="#curves_simple_data-116"><span class="linenos">116</span></a><span class="k">def</span><span class="w"> </span><span class="nf">curves_simple_data</span><span class="p">(</span>
 </span><span id="curves_simple_data-117"><a href="#curves_simple_data-117"><span class="linenos">117</span></a>        <span class="n">model</span><span class="p">:</span> <span class="s2">&quot;Model&quot;</span>
 </span><span id="curves_simple_data-118"><a href="#curves_simple_data-118"><span class="linenos">118</span></a>        <span class="p">,</span> <span class="n">ds</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
 </span><span id="curves_simple_data-119"><a href="#curves_simple_data-119"><span class="linenos">119</span></a>        <span class="p">,</span> <span class="n">model_rep</span><span class="p">:</span> <span class="s2">&quot;ModelRep&quot;</span>
@@ -526,7 +526,7 @@ using transformation functions directly, so it is fast and (for user) simple.</p
     </div>
     <a class="headerlink" href="#curves_simple_plot"></a>
             <div class="pdoc-code codehilite"><pre><span></span><span id="curves_simple_plot-271"><a href="#curves_simple_plot-271"><span class="linenos">271</span></a><span class="nd">@profile</span>
-</span><span id="curves_simple_plot-272"><a href="#curves_simple_plot-272"><span class="linenos">272</span></a><span class="k">def</span> <span class="nf">curves_simple_plot</span><span class="p">(</span><span class="n">ds</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+</span><span id="curves_simple_plot-272"><a href="#curves_simple_plot-272"><span class="linenos">272</span></a><span class="k">def</span><span class="w"> </span><span class="nf">curves_simple_plot</span><span class="p">(</span><span class="n">ds</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
 </span><span id="curves_simple_plot-273"><a href="#curves_simple_plot-273"><span class="linenos">273</span></a>                       <span class="n">model_rep</span><span class="p">:</span> <span class="s2">&quot;ModelRep&quot;</span><span class="p">,</span>
 </span><span id="curves_simple_plot-274"><a href="#curves_simple_plot-274"><span class="linenos">274</span></a>                       <span class="n">price</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 </span><span id="curves_simple_plot-275"><a href="#curves_simple_plot-275"><span class="linenos">275</span></a>                       <span class="n">conv</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>

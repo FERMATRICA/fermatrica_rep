@@ -145,19 +145,19 @@ fit-predict, decomposition, waterfall etc.</p>
 </span><span id="L-6"><a href="#L-6"><span class="linenos">  6</span></a><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="L-7"><a href="#L-7"><span class="linenos">  7</span></a>
 </span><span id="L-8"><a href="#L-8"><span class="linenos">  8</span></a>
-</span><span id="L-9"><a href="#L-9"><span class="linenos">  9</span></a><span class="kn">import</span> <span class="nn">copy</span>
-</span><span id="L-10"><a href="#L-10"><span class="linenos"> 10</span></a><span class="kn">import</span> <span class="nn">io</span>
-</span><span id="L-11"><a href="#L-11"><span class="linenos"> 11</span></a><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-</span><span id="L-12"><a href="#L-12"><span class="linenos"> 12</span></a><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
-</span><span id="L-13"><a href="#L-13"><span class="linenos"> 13</span></a><span class="kn">import</span> <span class="nn">re</span>
-</span><span id="L-14"><a href="#L-14"><span class="linenos"> 14</span></a><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span>
+</span><span id="L-9"><a href="#L-9"><span class="linenos">  9</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
+</span><span id="L-10"><a href="#L-10"><span class="linenos"> 10</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">io</span>
+</span><span id="L-11"><a href="#L-11"><span class="linenos"> 11</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+</span><span id="L-12"><a href="#L-12"><span class="linenos"> 12</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+</span><span id="L-13"><a href="#L-13"><span class="linenos"> 13</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+</span><span id="L-14"><a href="#L-14"><span class="linenos"> 14</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">List</span>
 </span><span id="L-15"><a href="#L-15"><span class="linenos"> 15</span></a>
-</span><span id="L-16"><a href="#L-16"><span class="linenos"> 16</span></a><span class="kn">from</span> <span class="nn">fermatrica_utils</span> <span class="kn">import</span> <span class="n">select_eff</span>
-</span><span id="L-17"><a href="#L-17"><span class="linenos"> 17</span></a><span class="kn">from</span> <span class="nn">fermatrica.model.model_conf</span> <span class="kn">import</span> <span class="n">ModelConf</span>
-</span><span id="L-18"><a href="#L-18"><span class="linenos"> 18</span></a><span class="kn">from</span> <span class="nn">fermatrica_rep</span> <span class="kn">import</span> <span class="n">waterfall_data</span>
+</span><span id="L-16"><a href="#L-16"><span class="linenos"> 16</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">fermatrica_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">select_eff</span>
+</span><span id="L-17"><a href="#L-17"><span class="linenos"> 17</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">fermatrica.model.model_conf</span><span class="w"> </span><span class="kn">import</span> <span class="n">ModelConf</span>
+</span><span id="L-18"><a href="#L-18"><span class="linenos"> 18</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">fermatrica_rep</span><span class="w"> </span><span class="kn">import</span> <span class="n">waterfall_data</span>
 </span><span id="L-19"><a href="#L-19"><span class="linenos"> 19</span></a>
 </span><span id="L-20"><a href="#L-20"><span class="linenos"> 20</span></a>
-</span><span id="L-21"><a href="#L-21"><span class="linenos"> 21</span></a><span class="k">class</span> <span class="nc">ModelConfExp</span><span class="p">(</span><span class="n">ModelConf</span><span class="p">):</span>
+</span><span id="L-21"><a href="#L-21"><span class="linenos"> 21</span></a><span class="k">class</span><span class="w"> </span><span class="nc">ModelConfExp</span><span class="p">(</span><span class="n">ModelConf</span><span class="p">):</span>
 </span><span id="L-22"><a href="#L-22"><span class="linenos"> 22</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="L-23"><a href="#L-23"><span class="linenos"> 23</span></a><span class="sd">    Export model from dashboard: basic ModelConf + calculated metrics, curves, decomposition etc.</span>
 </span><span id="L-24"><a href="#L-24"><span class="linenos"> 24</span></a><span class="sd">    &quot;&quot;&quot;</span>
@@ -190,7 +190,7 @@ fit-predict, decomposition, waterfall etc.</p>
 </span><span id="L-51"><a href="#L-51"><span class="linenos"> 51</span></a>    <span class="n">vifs</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span>
 </span><span id="L-52"><a href="#L-52"><span class="linenos"> 52</span></a>    <span class="n">predictors</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span>
 </span><span id="L-53"><a href="#L-53"><span class="linenos"> 53</span></a>
-</span><span id="L-54"><a href="#L-54"><span class="linenos"> 54</span></a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span>
+</span><span id="L-54"><a href="#L-54"><span class="linenos"> 54</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span>
 </span><span id="L-55"><a href="#L-55"><span class="linenos"> 55</span></a>                 <span class="p">,</span> <span class="n">model_conf</span><span class="p">:</span> <span class="s2">&quot;ModelConf&quot;</span>
 </span><span id="L-56"><a href="#L-56"><span class="linenos"> 56</span></a>                 <span class="p">,</span> <span class="n">board_name_list</span><span class="p">:</span> <span class="nb">list</span> <span class="o">|</span> <span class="nb">tuple</span> <span class="o">=</span><span class="p">(</span><span class="s1">&#39;statistics&#39;</span><span class="p">,</span> <span class="s1">&#39;fitness&#39;</span><span class="p">,</span> <span class="s1">&#39;decomposition&#39;</span><span class="p">,</span> <span class="s1">&#39;waterfall&#39;</span>
 </span><span id="L-57"><a href="#L-57"><span class="linenos"> 57</span></a>                                                   <span class="p">,</span> <span class="s1">&#39;curves_simple&#39;</span><span class="p">,</span> <span class="s1">&#39;curves_full&#39;</span><span class="p">,</span> <span class="s1">&#39;optim&#39;</span><span class="p">,</span> <span class="s1">&#39;transformations&#39;</span><span class="p">,</span> <span class="s1">&#39;export&#39;</span><span class="p">)</span>
@@ -298,7 +298,7 @@ fit-predict, decomposition, waterfall etc.</p>
 </span><span id="L-159"><a href="#L-159"><span class="linenos">159</span></a>
 </span><span id="L-160"><a href="#L-160"><span class="linenos">160</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_init_finish</span><span class="p">()</span>
 </span><span id="L-161"><a href="#L-161"><span class="linenos">161</span></a>
-</span><span id="L-162"><a href="#L-162"><span class="linenos">162</span></a>    <span class="k">def</span> <span class="nf">_decompose</span><span class="p">(</span><span class="bp">self</span>
+</span><span id="L-162"><a href="#L-162"><span class="linenos">162</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_decompose</span><span class="p">(</span><span class="bp">self</span>
 </span><span id="L-163"><a href="#L-163"><span class="linenos">163</span></a>                   <span class="p">,</span> <span class="n">split_m_m</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span>
 </span><span id="L-164"><a href="#L-164"><span class="linenos">164</span></a>                   <span class="p">,</span> <span class="n">period_decomp</span><span class="p">:</span> <span class="nb">str</span>
 </span><span id="L-165"><a href="#L-165"><span class="linenos">165</span></a>                   <span class="p">,</span> <span class="n">board_name_list</span><span class="p">:</span> <span class="nb">list</span> <span class="o">|</span> <span class="nb">tuple</span><span class="p">):</span>
@@ -336,7 +336,7 @@ fit-predict, decomposition, waterfall etc.</p>
 </span><span id="L-197"><a href="#L-197"><span class="linenos">197</span></a>
 </span><span id="L-198"><a href="#L-198"><span class="linenos">198</span></a>        <span class="k">pass</span>
 </span><span id="L-199"><a href="#L-199"><span class="linenos">199</span></a>
-</span><span id="L-200"><a href="#L-200"><span class="linenos">200</span></a>    <span class="k">def</span> <span class="nf">_waterfall</span><span class="p">(</span><span class="bp">self</span>
+</span><span id="L-200"><a href="#L-200"><span class="linenos">200</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_waterfall</span><span class="p">(</span><span class="bp">self</span>
 </span><span id="L-201"><a href="#L-201"><span class="linenos">201</span></a>                   <span class="p">,</span> <span class="n">split_m_m</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span>
 </span><span id="L-202"><a href="#L-202"><span class="linenos">202</span></a>                   <span class="p">,</span> <span class="n">waterfall_date_start</span><span class="p">:</span> <span class="nb">str</span>
 </span><span id="L-203"><a href="#L-203"><span class="linenos">203</span></a>                   <span class="p">,</span> <span class="n">waterfall_date_end</span><span class="p">:</span> <span class="nb">str</span>
@@ -363,7 +363,7 @@ fit-predict, decomposition, waterfall etc.</p>
 </span><span id="L-224"><a href="#L-224"><span class="linenos">224</span></a>            <span class="bp">self</span><span class="o">.</span><span class="n">waterfall</span> <span class="o">=</span> <span class="n">split</span>
 </span><span id="L-225"><a href="#L-225"><span class="linenos">225</span></a>        <span class="k">pass</span>
 </span><span id="L-226"><a href="#L-226"><span class="linenos">226</span></a>
-</span><span id="L-227"><a href="#L-227"><span class="linenos">227</span></a>    <span class="k">def</span> <span class="nf">_fit</span><span class="p">(</span><span class="bp">self</span>
+</span><span id="L-227"><a href="#L-227"><span class="linenos">227</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_fit</span><span class="p">(</span><span class="bp">self</span>
 </span><span id="L-228"><a href="#L-228"><span class="linenos">228</span></a>             <span class="p">,</span> <span class="n">dt_pred</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span>
 </span><span id="L-229"><a href="#L-229"><span class="linenos">229</span></a>             <span class="p">,</span> <span class="n">ds</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span>
 </span><span id="L-230"><a href="#L-230"><span class="linenos">230</span></a>             <span class="p">,</span> <span class="n">period_fit</span><span class="p">:</span> <span class="nb">str</span>
@@ -420,7 +420,7 @@ fit-predict, decomposition, waterfall etc.</p>
 </span><span id="L-281"><a href="#L-281"><span class="linenos">281</span></a>
 </span><span id="L-282"><a href="#L-282"><span class="linenos">282</span></a>        <span class="k">pass</span>
 </span><span id="L-283"><a href="#L-283"><span class="linenos">283</span></a>
-</span><span id="L-284"><a href="#L-284"><span class="linenos">284</span></a>    <span class="k">def</span> <span class="nf">_curves_simple</span><span class="p">(</span><span class="bp">self</span>
+</span><span id="L-284"><a href="#L-284"><span class="linenos">284</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_curves_simple</span><span class="p">(</span><span class="bp">self</span>
 </span><span id="L-285"><a href="#L-285"><span class="linenos">285</span></a>                       <span class="p">,</span> <span class="n">curves_simple_data</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span>
 </span><span id="L-286"><a href="#L-286"><span class="linenos">286</span></a>                       <span class="p">,</span> <span class="n">price</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span>
 </span><span id="L-287"><a href="#L-287"><span class="linenos">287</span></a>                       <span class="p">,</span> <span class="n">conv</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span>
@@ -474,7 +474,7 @@ fit-predict, decomposition, waterfall etc.</p>
 </span><span id="L-335"><a href="#L-335"><span class="linenos">335</span></a>
 </span><span id="L-336"><a href="#L-336"><span class="linenos">336</span></a>        <span class="k">pass</span>
 </span><span id="L-337"><a href="#L-337"><span class="linenos">337</span></a>
-</span><span id="L-338"><a href="#L-338"><span class="linenos">338</span></a>    <span class="k">def</span> <span class="nf">_curves_full</span><span class="p">(</span><span class="bp">self</span>
+</span><span id="L-338"><a href="#L-338"><span class="linenos">338</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_curves_full</span><span class="p">(</span><span class="bp">self</span>
 </span><span id="L-339"><a href="#L-339"><span class="linenos">339</span></a>                     <span class="p">,</span> <span class="n">curves_full_data</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span>
 </span><span id="L-340"><a href="#L-340"><span class="linenos">340</span></a>                     <span class="p">,</span> <span class="n">board_name_list</span><span class="p">:</span> <span class="nb">list</span> <span class="o">|</span> <span class="nb">tuple</span><span class="p">):</span>
 </span><span id="L-341"><a href="#L-341"><span class="linenos">341</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -530,7 +530,7 @@ fit-predict, decomposition, waterfall etc.</p>
 </span><span id="L-391"><a href="#L-391"><span class="linenos">391</span></a>
 </span><span id="L-392"><a href="#L-392"><span class="linenos">392</span></a>        <span class="k">pass</span>
 </span><span id="L-393"><a href="#L-393"><span class="linenos">393</span></a>
-</span><span id="L-394"><a href="#L-394"><span class="linenos">394</span></a>    <span class="k">def</span> <span class="nf">_current_options</span><span class="p">(</span><span class="bp">self</span>
+</span><span id="L-394"><a href="#L-394"><span class="linenos">394</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_current_options</span><span class="p">(</span><span class="bp">self</span>
 </span><span id="L-395"><a href="#L-395"><span class="linenos">395</span></a>                         <span class="p">,</span> <span class="n">current_options</span><span class="p">:</span> <span class="nb">dict</span><span class="p">):</span>
 </span><span id="L-396"><a href="#L-396"><span class="linenos">396</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="L-397"><a href="#L-397"><span class="linenos">397</span></a><span class="sd">        Prepare current options as pandas DataFrame.</span>
@@ -544,7 +544,7 @@ fit-predict, decomposition, waterfall etc.</p>
 </span><span id="L-405"><a href="#L-405"><span class="linenos">405</span></a>
 </span><span id="L-406"><a href="#L-406"><span class="linenos">406</span></a>        <span class="k">pass</span>
 </span><span id="L-407"><a href="#L-407"><span class="linenos">407</span></a>
-</span><span id="L-408"><a href="#L-408"><span class="linenos">408</span></a>    <span class="k">def</span> <span class="nf">_current_options_detailed</span><span class="p">(</span><span class="bp">self</span>
+</span><span id="L-408"><a href="#L-408"><span class="linenos">408</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_current_options_detailed</span><span class="p">(</span><span class="bp">self</span>
 </span><span id="L-409"><a href="#L-409"><span class="linenos">409</span></a>                                  <span class="p">,</span> <span class="n">current_options_detailed</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">|</span> <span class="nb">dict</span><span class="p">):</span>
 </span><span id="L-410"><a href="#L-410"><span class="linenos">410</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="L-411"><a href="#L-411"><span class="linenos">411</span></a><span class="sd">        Prepare current options as pandas DataFrame.</span>
@@ -560,7 +560,7 @@ fit-predict, decomposition, waterfall etc.</p>
 </span><span id="L-421"><a href="#L-421"><span class="linenos">421</span></a>
 </span><span id="L-422"><a href="#L-422"><span class="linenos">422</span></a>        <span class="k">pass</span>
 </span><span id="L-423"><a href="#L-423"><span class="linenos">423</span></a>
-</span><span id="L-424"><a href="#L-424"><span class="linenos">424</span></a>    <span class="k">def</span> <span class="nf">_current_predict</span><span class="p">(</span><span class="bp">self</span>
+</span><span id="L-424"><a href="#L-424"><span class="linenos">424</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_current_predict</span><span class="p">(</span><span class="bp">self</span>
 </span><span id="L-425"><a href="#L-425"><span class="linenos">425</span></a>             <span class="p">,</span> <span class="n">dt_pred</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span><span class="p">):</span>
 </span><span id="L-426"><a href="#L-426"><span class="linenos">426</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="L-427"><a href="#L-427"><span class="linenos">427</span></a><span class="sd">        Prepare fit-predict data by year.</span>
@@ -626,7 +626,7 @@ fit-predict, decomposition, waterfall etc.</p>
 </span><span id="L-487"><a href="#L-487"><span class="linenos">487</span></a>    <span class="c1">#     return vif, predictors</span>
 </span><span id="L-488"><a href="#L-488"><span class="linenos">488</span></a>
 </span><span id="L-489"><a href="#L-489"><span class="linenos">489</span></a>
-</span><span id="L-490"><a href="#L-490"><span class="linenos">490</span></a>    <span class="k">def</span> <span class="nf">_state</span><span class="p">(</span><span class="bp">self</span>
+</span><span id="L-490"><a href="#L-490"><span class="linenos">490</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_state</span><span class="p">(</span><span class="bp">self</span>
 </span><span id="L-491"><a href="#L-491"><span class="linenos">491</span></a>               <span class="p">,</span> <span class="n">current_options</span><span class="p">:</span> <span class="nb">dict</span>
 </span><span id="L-492"><a href="#L-492"><span class="linenos">492</span></a>               <span class="p">,</span> <span class="n">current_options_detailed</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span>
 </span><span id="L-493"><a href="#L-493"><span class="linenos">493</span></a>               <span class="p">,</span> <span class="n">options_date_range</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span>
@@ -695,7 +695,7 @@ fit-predict, decomposition, waterfall etc.</p>
 </span><span id="L-556"><a href="#L-556"><span class="linenos">556</span></a>
 </span><span id="L-557"><a href="#L-557"><span class="linenos">557</span></a>        <span class="k">pass</span>
 </span><span id="L-558"><a href="#L-558"><span class="linenos">558</span></a>
-</span><span id="L-559"><a href="#L-559"><span class="linenos">559</span></a>    <span class="k">def</span> <span class="nf">_info</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span id="L-559"><a href="#L-559"><span class="linenos">559</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_info</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 </span><span id="L-560"><a href="#L-560"><span class="linenos">560</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="L-561"><a href="#L-561"><span class="linenos">561</span></a><span class="sd">        Prepare description to be exported as &#39;info&#39;</span>
 </span><span id="L-562"><a href="#L-562"><span class="linenos">562</span></a>
@@ -779,7 +779,7 @@ fit-predict, decomposition, waterfall etc.</p>
 </span><span id="L-640"><a href="#L-640"><span class="linenos">640</span></a>        <span class="k">pass</span>
 </span><span id="L-641"><a href="#L-641"><span class="linenos">641</span></a>
 </span><span id="L-642"><a href="#L-642"><span class="linenos">642</span></a>
-</span><span id="L-643"><a href="#L-643"><span class="linenos">643</span></a><span class="k">def</span> <span class="nf">export_model</span><span class="p">(</span><span class="n">model_exp</span><span class="p">:</span> <span class="s2">&quot;ModelConfExp&quot;</span>
+</span><span id="L-643"><a href="#L-643"><span class="linenos">643</span></a><span class="k">def</span><span class="w"> </span><span class="nf">export_model</span><span class="p">(</span><span class="n">model_exp</span><span class="p">:</span> <span class="s2">&quot;ModelConfExp&quot;</span>
 </span><span id="L-644"><a href="#L-644"><span class="linenos">644</span></a>                 <span class="p">,</span> <span class="n">mode</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;client&quot;</span>  <span class="c1"># &quot;full&quot;, &quot;client&quot;, &quot;analysis&quot;</span>
 </span><span id="L-645"><a href="#L-645"><span class="linenos">645</span></a>                 <span class="p">):</span>
 </span><span id="L-646"><a href="#L-646"><span class="linenos">646</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
@@ -892,7 +892,7 @@ fit-predict, decomposition, waterfall etc.</p>
 
     </div>
     <a class="headerlink" href="#ModelConfExp"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="ModelConfExp-22"><a href="#ModelConfExp-22"><span class="linenos"> 22</span></a><span class="k">class</span> <span class="nc">ModelConfExp</span><span class="p">(</span><span class="n">ModelConf</span><span class="p">):</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="ModelConfExp-22"><a href="#ModelConfExp-22"><span class="linenos"> 22</span></a><span class="k">class</span><span class="w"> </span><span class="nc">ModelConfExp</span><span class="p">(</span><span class="n">ModelConf</span><span class="p">):</span>
 </span><span id="ModelConfExp-23"><a href="#ModelConfExp-23"><span class="linenos"> 23</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="ModelConfExp-24"><a href="#ModelConfExp-24"><span class="linenos"> 24</span></a><span class="sd">    Export model from dashboard: basic ModelConf + calculated metrics, curves, decomposition etc.</span>
 </span><span id="ModelConfExp-25"><a href="#ModelConfExp-25"><span class="linenos"> 25</span></a><span class="sd">    &quot;&quot;&quot;</span>
@@ -925,7 +925,7 @@ fit-predict, decomposition, waterfall etc.</p>
 </span><span id="ModelConfExp-52"><a href="#ModelConfExp-52"><span class="linenos"> 52</span></a>    <span class="n">vifs</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span>
 </span><span id="ModelConfExp-53"><a href="#ModelConfExp-53"><span class="linenos"> 53</span></a>    <span class="n">predictors</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span>
 </span><span id="ModelConfExp-54"><a href="#ModelConfExp-54"><span class="linenos"> 54</span></a>
-</span><span id="ModelConfExp-55"><a href="#ModelConfExp-55"><span class="linenos"> 55</span></a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span>
+</span><span id="ModelConfExp-55"><a href="#ModelConfExp-55"><span class="linenos"> 55</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span>
 </span><span id="ModelConfExp-56"><a href="#ModelConfExp-56"><span class="linenos"> 56</span></a>                 <span class="p">,</span> <span class="n">model_conf</span><span class="p">:</span> <span class="s2">&quot;ModelConf&quot;</span>
 </span><span id="ModelConfExp-57"><a href="#ModelConfExp-57"><span class="linenos"> 57</span></a>                 <span class="p">,</span> <span class="n">board_name_list</span><span class="p">:</span> <span class="nb">list</span> <span class="o">|</span> <span class="nb">tuple</span> <span class="o">=</span><span class="p">(</span><span class="s1">&#39;statistics&#39;</span><span class="p">,</span> <span class="s1">&#39;fitness&#39;</span><span class="p">,</span> <span class="s1">&#39;decomposition&#39;</span><span class="p">,</span> <span class="s1">&#39;waterfall&#39;</span>
 </span><span id="ModelConfExp-58"><a href="#ModelConfExp-58"><span class="linenos"> 58</span></a>                                                   <span class="p">,</span> <span class="s1">&#39;curves_simple&#39;</span><span class="p">,</span> <span class="s1">&#39;curves_full&#39;</span><span class="p">,</span> <span class="s1">&#39;optim&#39;</span><span class="p">,</span> <span class="s1">&#39;transformations&#39;</span><span class="p">,</span> <span class="s1">&#39;export&#39;</span><span class="p">)</span>
@@ -1033,7 +1033,7 @@ fit-predict, decomposition, waterfall etc.</p>
 </span><span id="ModelConfExp-160"><a href="#ModelConfExp-160"><span class="linenos">160</span></a>
 </span><span id="ModelConfExp-161"><a href="#ModelConfExp-161"><span class="linenos">161</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_init_finish</span><span class="p">()</span>
 </span><span id="ModelConfExp-162"><a href="#ModelConfExp-162"><span class="linenos">162</span></a>
-</span><span id="ModelConfExp-163"><a href="#ModelConfExp-163"><span class="linenos">163</span></a>    <span class="k">def</span> <span class="nf">_decompose</span><span class="p">(</span><span class="bp">self</span>
+</span><span id="ModelConfExp-163"><a href="#ModelConfExp-163"><span class="linenos">163</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_decompose</span><span class="p">(</span><span class="bp">self</span>
 </span><span id="ModelConfExp-164"><a href="#ModelConfExp-164"><span class="linenos">164</span></a>                   <span class="p">,</span> <span class="n">split_m_m</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span>
 </span><span id="ModelConfExp-165"><a href="#ModelConfExp-165"><span class="linenos">165</span></a>                   <span class="p">,</span> <span class="n">period_decomp</span><span class="p">:</span> <span class="nb">str</span>
 </span><span id="ModelConfExp-166"><a href="#ModelConfExp-166"><span class="linenos">166</span></a>                   <span class="p">,</span> <span class="n">board_name_list</span><span class="p">:</span> <span class="nb">list</span> <span class="o">|</span> <span class="nb">tuple</span><span class="p">):</span>
@@ -1071,7 +1071,7 @@ fit-predict, decomposition, waterfall etc.</p>
 </span><span id="ModelConfExp-198"><a href="#ModelConfExp-198"><span class="linenos">198</span></a>
 </span><span id="ModelConfExp-199"><a href="#ModelConfExp-199"><span class="linenos">199</span></a>        <span class="k">pass</span>
 </span><span id="ModelConfExp-200"><a href="#ModelConfExp-200"><span class="linenos">200</span></a>
-</span><span id="ModelConfExp-201"><a href="#ModelConfExp-201"><span class="linenos">201</span></a>    <span class="k">def</span> <span class="nf">_waterfall</span><span class="p">(</span><span class="bp">self</span>
+</span><span id="ModelConfExp-201"><a href="#ModelConfExp-201"><span class="linenos">201</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_waterfall</span><span class="p">(</span><span class="bp">self</span>
 </span><span id="ModelConfExp-202"><a href="#ModelConfExp-202"><span class="linenos">202</span></a>                   <span class="p">,</span> <span class="n">split_m_m</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span>
 </span><span id="ModelConfExp-203"><a href="#ModelConfExp-203"><span class="linenos">203</span></a>                   <span class="p">,</span> <span class="n">waterfall_date_start</span><span class="p">:</span> <span class="nb">str</span>
 </span><span id="ModelConfExp-204"><a href="#ModelConfExp-204"><span class="linenos">204</span></a>                   <span class="p">,</span> <span class="n">waterfall_date_end</span><span class="p">:</span> <span class="nb">str</span>
@@ -1098,7 +1098,7 @@ fit-predict, decomposition, waterfall etc.</p>
 </span><span id="ModelConfExp-225"><a href="#ModelConfExp-225"><span class="linenos">225</span></a>            <span class="bp">self</span><span class="o">.</span><span class="n">waterfall</span> <span class="o">=</span> <span class="n">split</span>
 </span><span id="ModelConfExp-226"><a href="#ModelConfExp-226"><span class="linenos">226</span></a>        <span class="k">pass</span>
 </span><span id="ModelConfExp-227"><a href="#ModelConfExp-227"><span class="linenos">227</span></a>
-</span><span id="ModelConfExp-228"><a href="#ModelConfExp-228"><span class="linenos">228</span></a>    <span class="k">def</span> <span class="nf">_fit</span><span class="p">(</span><span class="bp">self</span>
+</span><span id="ModelConfExp-228"><a href="#ModelConfExp-228"><span class="linenos">228</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_fit</span><span class="p">(</span><span class="bp">self</span>
 </span><span id="ModelConfExp-229"><a href="#ModelConfExp-229"><span class="linenos">229</span></a>             <span class="p">,</span> <span class="n">dt_pred</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span>
 </span><span id="ModelConfExp-230"><a href="#ModelConfExp-230"><span class="linenos">230</span></a>             <span class="p">,</span> <span class="n">ds</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span>
 </span><span id="ModelConfExp-231"><a href="#ModelConfExp-231"><span class="linenos">231</span></a>             <span class="p">,</span> <span class="n">period_fit</span><span class="p">:</span> <span class="nb">str</span>
@@ -1155,7 +1155,7 @@ fit-predict, decomposition, waterfall etc.</p>
 </span><span id="ModelConfExp-282"><a href="#ModelConfExp-282"><span class="linenos">282</span></a>
 </span><span id="ModelConfExp-283"><a href="#ModelConfExp-283"><span class="linenos">283</span></a>        <span class="k">pass</span>
 </span><span id="ModelConfExp-284"><a href="#ModelConfExp-284"><span class="linenos">284</span></a>
-</span><span id="ModelConfExp-285"><a href="#ModelConfExp-285"><span class="linenos">285</span></a>    <span class="k">def</span> <span class="nf">_curves_simple</span><span class="p">(</span><span class="bp">self</span>
+</span><span id="ModelConfExp-285"><a href="#ModelConfExp-285"><span class="linenos">285</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_curves_simple</span><span class="p">(</span><span class="bp">self</span>
 </span><span id="ModelConfExp-286"><a href="#ModelConfExp-286"><span class="linenos">286</span></a>                       <span class="p">,</span> <span class="n">curves_simple_data</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span>
 </span><span id="ModelConfExp-287"><a href="#ModelConfExp-287"><span class="linenos">287</span></a>                       <span class="p">,</span> <span class="n">price</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span>
 </span><span id="ModelConfExp-288"><a href="#ModelConfExp-288"><span class="linenos">288</span></a>                       <span class="p">,</span> <span class="n">conv</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span>
@@ -1209,7 +1209,7 @@ fit-predict, decomposition, waterfall etc.</p>
 </span><span id="ModelConfExp-336"><a href="#ModelConfExp-336"><span class="linenos">336</span></a>
 </span><span id="ModelConfExp-337"><a href="#ModelConfExp-337"><span class="linenos">337</span></a>        <span class="k">pass</span>
 </span><span id="ModelConfExp-338"><a href="#ModelConfExp-338"><span class="linenos">338</span></a>
-</span><span id="ModelConfExp-339"><a href="#ModelConfExp-339"><span class="linenos">339</span></a>    <span class="k">def</span> <span class="nf">_curves_full</span><span class="p">(</span><span class="bp">self</span>
+</span><span id="ModelConfExp-339"><a href="#ModelConfExp-339"><span class="linenos">339</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_curves_full</span><span class="p">(</span><span class="bp">self</span>
 </span><span id="ModelConfExp-340"><a href="#ModelConfExp-340"><span class="linenos">340</span></a>                     <span class="p">,</span> <span class="n">curves_full_data</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span>
 </span><span id="ModelConfExp-341"><a href="#ModelConfExp-341"><span class="linenos">341</span></a>                     <span class="p">,</span> <span class="n">board_name_list</span><span class="p">:</span> <span class="nb">list</span> <span class="o">|</span> <span class="nb">tuple</span><span class="p">):</span>
 </span><span id="ModelConfExp-342"><a href="#ModelConfExp-342"><span class="linenos">342</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -1265,7 +1265,7 @@ fit-predict, decomposition, waterfall etc.</p>
 </span><span id="ModelConfExp-392"><a href="#ModelConfExp-392"><span class="linenos">392</span></a>
 </span><span id="ModelConfExp-393"><a href="#ModelConfExp-393"><span class="linenos">393</span></a>        <span class="k">pass</span>
 </span><span id="ModelConfExp-394"><a href="#ModelConfExp-394"><span class="linenos">394</span></a>
-</span><span id="ModelConfExp-395"><a href="#ModelConfExp-395"><span class="linenos">395</span></a>    <span class="k">def</span> <span class="nf">_current_options</span><span class="p">(</span><span class="bp">self</span>
+</span><span id="ModelConfExp-395"><a href="#ModelConfExp-395"><span class="linenos">395</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_current_options</span><span class="p">(</span><span class="bp">self</span>
 </span><span id="ModelConfExp-396"><a href="#ModelConfExp-396"><span class="linenos">396</span></a>                         <span class="p">,</span> <span class="n">current_options</span><span class="p">:</span> <span class="nb">dict</span><span class="p">):</span>
 </span><span id="ModelConfExp-397"><a href="#ModelConfExp-397"><span class="linenos">397</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="ModelConfExp-398"><a href="#ModelConfExp-398"><span class="linenos">398</span></a><span class="sd">        Prepare current options as pandas DataFrame.</span>
@@ -1279,7 +1279,7 @@ fit-predict, decomposition, waterfall etc.</p>
 </span><span id="ModelConfExp-406"><a href="#ModelConfExp-406"><span class="linenos">406</span></a>
 </span><span id="ModelConfExp-407"><a href="#ModelConfExp-407"><span class="linenos">407</span></a>        <span class="k">pass</span>
 </span><span id="ModelConfExp-408"><a href="#ModelConfExp-408"><span class="linenos">408</span></a>
-</span><span id="ModelConfExp-409"><a href="#ModelConfExp-409"><span class="linenos">409</span></a>    <span class="k">def</span> <span class="nf">_current_options_detailed</span><span class="p">(</span><span class="bp">self</span>
+</span><span id="ModelConfExp-409"><a href="#ModelConfExp-409"><span class="linenos">409</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_current_options_detailed</span><span class="p">(</span><span class="bp">self</span>
 </span><span id="ModelConfExp-410"><a href="#ModelConfExp-410"><span class="linenos">410</span></a>                                  <span class="p">,</span> <span class="n">current_options_detailed</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">|</span> <span class="nb">dict</span><span class="p">):</span>
 </span><span id="ModelConfExp-411"><a href="#ModelConfExp-411"><span class="linenos">411</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="ModelConfExp-412"><a href="#ModelConfExp-412"><span class="linenos">412</span></a><span class="sd">        Prepare current options as pandas DataFrame.</span>
@@ -1295,7 +1295,7 @@ fit-predict, decomposition, waterfall etc.</p>
 </span><span id="ModelConfExp-422"><a href="#ModelConfExp-422"><span class="linenos">422</span></a>
 </span><span id="ModelConfExp-423"><a href="#ModelConfExp-423"><span class="linenos">423</span></a>        <span class="k">pass</span>
 </span><span id="ModelConfExp-424"><a href="#ModelConfExp-424"><span class="linenos">424</span></a>
-</span><span id="ModelConfExp-425"><a href="#ModelConfExp-425"><span class="linenos">425</span></a>    <span class="k">def</span> <span class="nf">_current_predict</span><span class="p">(</span><span class="bp">self</span>
+</span><span id="ModelConfExp-425"><a href="#ModelConfExp-425"><span class="linenos">425</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_current_predict</span><span class="p">(</span><span class="bp">self</span>
 </span><span id="ModelConfExp-426"><a href="#ModelConfExp-426"><span class="linenos">426</span></a>             <span class="p">,</span> <span class="n">dt_pred</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span><span class="p">):</span>
 </span><span id="ModelConfExp-427"><a href="#ModelConfExp-427"><span class="linenos">427</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="ModelConfExp-428"><a href="#ModelConfExp-428"><span class="linenos">428</span></a><span class="sd">        Prepare fit-predict data by year.</span>
@@ -1361,7 +1361,7 @@ fit-predict, decomposition, waterfall etc.</p>
 </span><span id="ModelConfExp-488"><a href="#ModelConfExp-488"><span class="linenos">488</span></a>    <span class="c1">#     return vif, predictors</span>
 </span><span id="ModelConfExp-489"><a href="#ModelConfExp-489"><span class="linenos">489</span></a>
 </span><span id="ModelConfExp-490"><a href="#ModelConfExp-490"><span class="linenos">490</span></a>
-</span><span id="ModelConfExp-491"><a href="#ModelConfExp-491"><span class="linenos">491</span></a>    <span class="k">def</span> <span class="nf">_state</span><span class="p">(</span><span class="bp">self</span>
+</span><span id="ModelConfExp-491"><a href="#ModelConfExp-491"><span class="linenos">491</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_state</span><span class="p">(</span><span class="bp">self</span>
 </span><span id="ModelConfExp-492"><a href="#ModelConfExp-492"><span class="linenos">492</span></a>               <span class="p">,</span> <span class="n">current_options</span><span class="p">:</span> <span class="nb">dict</span>
 </span><span id="ModelConfExp-493"><a href="#ModelConfExp-493"><span class="linenos">493</span></a>               <span class="p">,</span> <span class="n">current_options_detailed</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span>
 </span><span id="ModelConfExp-494"><a href="#ModelConfExp-494"><span class="linenos">494</span></a>               <span class="p">,</span> <span class="n">options_date_range</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span>
@@ -1430,7 +1430,7 @@ fit-predict, decomposition, waterfall etc.</p>
 </span><span id="ModelConfExp-557"><a href="#ModelConfExp-557"><span class="linenos">557</span></a>
 </span><span id="ModelConfExp-558"><a href="#ModelConfExp-558"><span class="linenos">558</span></a>        <span class="k">pass</span>
 </span><span id="ModelConfExp-559"><a href="#ModelConfExp-559"><span class="linenos">559</span></a>
-</span><span id="ModelConfExp-560"><a href="#ModelConfExp-560"><span class="linenos">560</span></a>    <span class="k">def</span> <span class="nf">_info</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span id="ModelConfExp-560"><a href="#ModelConfExp-560"><span class="linenos">560</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_info</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 </span><span id="ModelConfExp-561"><a href="#ModelConfExp-561"><span class="linenos">561</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="ModelConfExp-562"><a href="#ModelConfExp-562"><span class="linenos">562</span></a><span class="sd">        Prepare description to be exported as &#39;info&#39;</span>
 </span><span id="ModelConfExp-563"><a href="#ModelConfExp-563"><span class="linenos">563</span></a>
@@ -1529,7 +1529,7 @@ fit-predict, decomposition, waterfall etc.</p>
 
     </div>
     <a class="headerlink" href="#ModelConfExp.__init__"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="ModelConfExp.__init__-55"><a href="#ModelConfExp.__init__-55"><span class="linenos"> 55</span></a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="ModelConfExp.__init__-55"><a href="#ModelConfExp.__init__-55"><span class="linenos"> 55</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span>
 </span><span id="ModelConfExp.__init__-56"><a href="#ModelConfExp.__init__-56"><span class="linenos"> 56</span></a>                 <span class="p">,</span> <span class="n">model_conf</span><span class="p">:</span> <span class="s2">&quot;ModelConf&quot;</span>
 </span><span id="ModelConfExp.__init__-57"><a href="#ModelConfExp.__init__-57"><span class="linenos"> 57</span></a>                 <span class="p">,</span> <span class="n">board_name_list</span><span class="p">:</span> <span class="nb">list</span> <span class="o">|</span> <span class="nb">tuple</span> <span class="o">=</span><span class="p">(</span><span class="s1">&#39;statistics&#39;</span><span class="p">,</span> <span class="s1">&#39;fitness&#39;</span><span class="p">,</span> <span class="s1">&#39;decomposition&#39;</span><span class="p">,</span> <span class="s1">&#39;waterfall&#39;</span>
 </span><span id="ModelConfExp.__init__-58"><a href="#ModelConfExp.__init__-58"><span class="linenos"> 58</span></a>                                                   <span class="p">,</span> <span class="s1">&#39;curves_simple&#39;</span><span class="p">,</span> <span class="s1">&#39;curves_full&#39;</span><span class="p">,</span> <span class="s1">&#39;optim&#39;</span><span class="p">,</span> <span class="s1">&#39;transformations&#39;</span><span class="p">,</span> <span class="s1">&#39;export&#39;</span><span class="p">)</span>
@@ -1936,7 +1936,7 @@ with data to be exported</p>
 
     </div>
     <a class="headerlink" href="#export_model"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="export_model-644"><a href="#export_model-644"><span class="linenos">644</span></a><span class="k">def</span> <span class="nf">export_model</span><span class="p">(</span><span class="n">model_exp</span><span class="p">:</span> <span class="s2">&quot;ModelConfExp&quot;</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="export_model-644"><a href="#export_model-644"><span class="linenos">644</span></a><span class="k">def</span><span class="w"> </span><span class="nf">export_model</span><span class="p">(</span><span class="n">model_exp</span><span class="p">:</span> <span class="s2">&quot;ModelConfExp&quot;</span>
 </span><span id="export_model-645"><a href="#export_model-645"><span class="linenos">645</span></a>                 <span class="p">,</span> <span class="n">mode</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;client&quot;</span>  <span class="c1"># &quot;full&quot;, &quot;client&quot;, &quot;analysis&quot;</span>
 </span><span id="export_model-646"><a href="#export_model-646"><span class="linenos">646</span></a>                 <span class="p">):</span>
 </span><span id="export_model-647"><a href="#export_model-647"><span class="linenos">647</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>

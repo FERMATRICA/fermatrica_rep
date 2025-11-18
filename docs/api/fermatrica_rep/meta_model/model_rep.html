@@ -115,19 +115,19 @@ coefs, translation etc.</p>
 </span><span id="L-6"><a href="#L-6"><span class="linenos">  6</span></a><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="L-7"><a href="#L-7"><span class="linenos">  7</span></a>
 </span><span id="L-8"><a href="#L-8"><span class="linenos">  8</span></a>
-</span><span id="L-9"><a href="#L-9"><span class="linenos">  9</span></a><span class="kn">import</span> <span class="nn">inspect</span>
-</span><span id="L-10"><a href="#L-10"><span class="linenos"> 10</span></a><span class="kn">import</span> <span class="nn">logging</span>
-</span><span id="L-11"><a href="#L-11"><span class="linenos"> 11</span></a><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
-</span><span id="L-12"><a href="#L-12"><span class="linenos"> 12</span></a><span class="kn">import</span> <span class="nn">typing</span>
-</span><span id="L-13"><a href="#L-13"><span class="linenos"> 13</span></a><span class="kn">from</span> <span class="nn">importlib</span> <span class="kn">import</span> <span class="n">resources</span>
+</span><span id="L-9"><a href="#L-9"><span class="linenos">  9</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">inspect</span>
+</span><span id="L-10"><a href="#L-10"><span class="linenos"> 10</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+</span><span id="L-11"><a href="#L-11"><span class="linenos"> 11</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+</span><span id="L-12"><a href="#L-12"><span class="linenos"> 12</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">typing</span>
+</span><span id="L-13"><a href="#L-13"><span class="linenos"> 13</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">importlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">resources</span>
 </span><span id="L-14"><a href="#L-14"><span class="linenos"> 14</span></a>
-</span><span id="L-15"><a href="#L-15"><span class="linenos"> 15</span></a><span class="kn">from</span> <span class="nn">fermatrica_utils</span> <span class="kn">import</span> <span class="n">StableClass</span>
+</span><span id="L-15"><a href="#L-15"><span class="linenos"> 15</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">fermatrica_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">StableClass</span>
 </span><span id="L-16"><a href="#L-16"><span class="linenos"> 16</span></a>
-</span><span id="L-17"><a href="#L-17"><span class="linenos"> 17</span></a><span class="kn">from</span> <span class="nn">fermatrica_rep.basics</span> <span class="kn">import</span> <span class="n">palette_fill</span>
-</span><span id="L-18"><a href="#L-18"><span class="linenos"> 18</span></a><span class="kn">from</span> <span class="nn">fermatrica_rep.options.calc</span> <span class="kn">import</span> <span class="n">option_translate_long</span> <span class="k">as</span> <span class="n">otl</span>
+</span><span id="L-17"><a href="#L-17"><span class="linenos"> 17</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">fermatrica_rep.basics</span><span class="w"> </span><span class="kn">import</span> <span class="n">palette_fill</span>
+</span><span id="L-18"><a href="#L-18"><span class="linenos"> 18</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">fermatrica_rep.options.calc</span><span class="w"> </span><span class="kn">import</span> <span class="n">option_translate_long</span> <span class="k">as</span> <span class="n">otl</span>
 </span><span id="L-19"><a href="#L-19"><span class="linenos"> 19</span></a>
 </span><span id="L-20"><a href="#L-20"><span class="linenos"> 20</span></a>
-</span><span id="L-21"><a href="#L-21"><span class="linenos"> 21</span></a><span class="k">class</span> <span class="nc">ModelRep</span><span class="p">(</span><span class="n">StableClass</span><span class="p">):</span>
+</span><span id="L-21"><a href="#L-21"><span class="linenos"> 21</span></a><span class="k">class</span><span class="w"> </span><span class="nc">ModelRep</span><span class="p">(</span><span class="n">StableClass</span><span class="p">):</span>
 </span><span id="L-22"><a href="#L-22"><span class="linenos"> 22</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="L-23"><a href="#L-23"><span class="linenos"> 23</span></a><span class="sd">    Model Reporting settings.</span>
 </span><span id="L-24"><a href="#L-24"><span class="linenos"> 24</span></a><span class="sd">    &quot;&quot;&quot;</span>
@@ -142,7 +142,7 @@ coefs, translation etc.</p>
 </span><span id="L-33"><a href="#L-33"><span class="linenos"> 33</span></a>    <span class="n">option_summary_adhoc</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Callable</span> <span class="o">|</span> <span class="kc">None</span>
 </span><span id="L-34"><a href="#L-34"><span class="linenos"> 34</span></a>    <span class="n">aud_coefs</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span>
 </span><span id="L-35"><a href="#L-35"><span class="linenos"> 35</span></a>
-</span><span id="L-36"><a href="#L-36"><span class="linenos"> 36</span></a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+</span><span id="L-36"><a href="#L-36"><span class="linenos"> 36</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
 </span><span id="L-37"><a href="#L-37"><span class="linenos"> 37</span></a>            <span class="bp">self</span>
 </span><span id="L-38"><a href="#L-38"><span class="linenos"> 38</span></a>            <span class="p">,</span> <span class="n">ds</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
 </span><span id="L-39"><a href="#L-39"><span class="linenos"> 39</span></a>            <span class="p">,</span> <span class="n">vis_dict</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
@@ -188,7 +188,7 @@ coefs, translation etc.</p>
 </span><span id="L-79"><a href="#L-79"><span class="linenos"> 79</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">option_summary_adhoc</span> <span class="o">=</span> <span class="n">option_summary_adhoc_fn</span>
 </span><span id="L-80"><a href="#L-80"><span class="linenos"> 80</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">aud_coefs</span> <span class="o">=</span> <span class="kc">None</span>
 </span><span id="L-81"><a href="#L-81"><span class="linenos"> 81</span></a>
-</span><span id="L-82"><a href="#L-82"><span class="linenos"> 82</span></a>    <span class="k">def</span> <span class="nf">set_language</span><span class="p">(</span><span class="bp">self</span>
+</span><span id="L-82"><a href="#L-82"><span class="linenos"> 82</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">set_language</span><span class="p">(</span><span class="bp">self</span>
 </span><span id="L-83"><a href="#L-83"><span class="linenos"> 83</span></a>                     <span class="p">,</span> <span class="n">language</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
 </span><span id="L-84"><a href="#L-84"><span class="linenos"> 84</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="L-85"><a href="#L-85"><span class="linenos"> 85</span></a><span class="sd">        Set export language.</span>
@@ -204,7 +204,7 @@ coefs, translation etc.</p>
 </span><span id="L-95"><a href="#L-95"><span class="linenos"> 95</span></a>            <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s1">&#39;Language &#39;</span> <span class="o">+</span> <span class="n">language</span> <span class="o">+</span> <span class="s1">&#39; is not supported. Reset to the default value: English&#39;</span><span class="p">)</span>
 </span><span id="L-96"><a href="#L-96"><span class="linenos"> 96</span></a>            <span class="bp">self</span><span class="o">.</span><span class="n">language</span> <span class="o">=</span> <span class="s1">&#39;english&#39;</span>
 </span><span id="L-97"><a href="#L-97"><span class="linenos"> 97</span></a>
-</span><span id="L-98"><a href="#L-98"><span class="linenos"> 98</span></a>    <span class="k">def</span> <span class="nf">fill_colours</span><span class="p">(</span><span class="bp">self</span>
+</span><span id="L-98"><a href="#L-98"><span class="linenos"> 98</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">fill_colours</span><span class="p">(</span><span class="bp">self</span>
 </span><span id="L-99"><a href="#L-99"><span class="linenos"> 99</span></a>                     <span class="p">,</span> <span class="n">ds</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
 </span><span id="L-100"><a href="#L-100"><span class="linenos">100</span></a>                     <span class="p">,</span> <span class="n">tools_list</span><span class="p">:</span> <span class="nb">list</span> <span class="o">|</span> <span class="nb">tuple</span> <span class="o">=</span> <span class="p">()</span>
 </span><span id="L-101"><a href="#L-101"><span class="linenos">101</span></a>                     <span class="p">,</span> <span class="n">palette_sbr_names</span><span class="p">:</span> <span class="nb">list</span> <span class="o">|</span> <span class="nb">tuple</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;glasbey&#39;</span><span class="p">,)</span>
@@ -228,7 +228,7 @@ coefs, translation etc.</p>
 </span><span id="L-119"><a href="#L-119"><span class="linenos">119</span></a>        <span class="k">if</span> <span class="n">pd</span><span class="o">.</span><span class="n">notna</span><span class="p">(</span><span class="n">tools_list</span><span class="p">):</span>
 </span><span id="L-120"><a href="#L-120"><span class="linenos">120</span></a>            <span class="bp">self</span><span class="o">.</span><span class="n">fill_colours_tools</span><span class="p">(</span><span class="n">tools_list</span><span class="p">,</span> <span class="n">palette_tool_names</span><span class="p">)</span>
 </span><span id="L-121"><a href="#L-121"><span class="linenos">121</span></a>
-</span><span id="L-122"><a href="#L-122"><span class="linenos">122</span></a>    <span class="k">def</span> <span class="nf">fill_colours_sbr</span><span class="p">(</span><span class="bp">self</span>
+</span><span id="L-122"><a href="#L-122"><span class="linenos">122</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">fill_colours_sbr</span><span class="p">(</span><span class="bp">self</span>
 </span><span id="L-123"><a href="#L-123"><span class="linenos">123</span></a>                         <span class="p">,</span> <span class="n">entities_new</span><span class="p">:</span> <span class="nb">dict</span>
 </span><span id="L-124"><a href="#L-124"><span class="linenos">124</span></a>                         <span class="p">,</span> <span class="n">palette_names</span><span class="p">:</span> <span class="nb">list</span> <span class="o">|</span> <span class="nb">tuple</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;glasbey&#39;</span><span class="p">,)):</span>
 </span><span id="L-125"><a href="#L-125"><span class="linenos">125</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -245,7 +245,7 @@ coefs, translation etc.</p>
 </span><span id="L-136"><a href="#L-136"><span class="linenos">136</span></a>
 </span><span id="L-137"><a href="#L-137"><span class="linenos">137</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">palette_sbr</span> <span class="o">=</span> <span class="n">palette_fill</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">palette_sbr</span><span class="p">,</span> <span class="n">entities_new</span><span class="p">,</span> <span class="n">palette_names</span><span class="p">)</span>
 </span><span id="L-138"><a href="#L-138"><span class="linenos">138</span></a>
-</span><span id="L-139"><a href="#L-139"><span class="linenos">139</span></a>    <span class="k">def</span> <span class="nf">fill_colours_tools</span><span class="p">(</span><span class="bp">self</span>
+</span><span id="L-139"><a href="#L-139"><span class="linenos">139</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">fill_colours_tools</span><span class="p">(</span><span class="bp">self</span>
 </span><span id="L-140"><a href="#L-140"><span class="linenos">140</span></a>                           <span class="p">,</span> <span class="n">entities_new</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="nb">list</span>
 </span><span id="L-141"><a href="#L-141"><span class="linenos">141</span></a>                           <span class="p">,</span> <span class="n">palette_names</span><span class="p">:</span> <span class="nb">list</span> <span class="o">|</span> <span class="nb">tuple</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;glasbey&#39;</span><span class="p">,)):</span>
 </span><span id="L-142"><a href="#L-142"><span class="linenos">142</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -261,7 +261,7 @@ coefs, translation etc.</p>
 </span><span id="L-152"><a href="#L-152"><span class="linenos">152</span></a>
 </span><span id="L-153"><a href="#L-153"><span class="linenos">153</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">palette_tools</span> <span class="o">=</span> <span class="n">palette_fill</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">palette_tools</span><span class="p">,</span> <span class="n">entities_new</span><span class="p">,</span> <span class="n">palette_names</span><span class="p">)</span>
 </span><span id="L-154"><a href="#L-154"><span class="linenos">154</span></a>
-</span><span id="L-155"><a href="#L-155"><span class="linenos">155</span></a>    <span class="k">def</span> <span class="nf">fill_adhoc_code_src</span><span class="p">(</span><span class="bp">self</span>
+</span><span id="L-155"><a href="#L-155"><span class="linenos">155</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">fill_adhoc_code_src</span><span class="p">(</span><span class="bp">self</span>
 </span><span id="L-156"><a href="#L-156"><span class="linenos">156</span></a>                            <span class="p">,</span> <span class="n">adhoc_code</span><span class="p">:</span> <span class="nb">list</span> <span class="o">|</span> <span class="kc">None</span><span class="p">):</span>
 </span><span id="L-157"><a href="#L-157"><span class="linenos">157</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="L-158"><a href="#L-158"><span class="linenos">158</span></a><span class="sd">        Extract source code from the adhoc modules and keep it as string dictionary.</span>
@@ -291,7 +291,7 @@ coefs, translation etc.</p>
 
     </div>
     <a class="headerlink" href="#ModelRep"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="ModelRep-22"><a href="#ModelRep-22"><span class="linenos"> 22</span></a><span class="k">class</span> <span class="nc">ModelRep</span><span class="p">(</span><span class="n">StableClass</span><span class="p">):</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="ModelRep-22"><a href="#ModelRep-22"><span class="linenos"> 22</span></a><span class="k">class</span><span class="w"> </span><span class="nc">ModelRep</span><span class="p">(</span><span class="n">StableClass</span><span class="p">):</span>
 </span><span id="ModelRep-23"><a href="#ModelRep-23"><span class="linenos"> 23</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="ModelRep-24"><a href="#ModelRep-24"><span class="linenos"> 24</span></a><span class="sd">    Model Reporting settings.</span>
 </span><span id="ModelRep-25"><a href="#ModelRep-25"><span class="linenos"> 25</span></a><span class="sd">    &quot;&quot;&quot;</span>
@@ -306,7 +306,7 @@ coefs, translation etc.</p>
 </span><span id="ModelRep-34"><a href="#ModelRep-34"><span class="linenos"> 34</span></a>    <span class="n">option_summary_adhoc</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Callable</span> <span class="o">|</span> <span class="kc">None</span>
 </span><span id="ModelRep-35"><a href="#ModelRep-35"><span class="linenos"> 35</span></a>    <span class="n">aud_coefs</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span>
 </span><span id="ModelRep-36"><a href="#ModelRep-36"><span class="linenos"> 36</span></a>
-</span><span id="ModelRep-37"><a href="#ModelRep-37"><span class="linenos"> 37</span></a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+</span><span id="ModelRep-37"><a href="#ModelRep-37"><span class="linenos"> 37</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
 </span><span id="ModelRep-38"><a href="#ModelRep-38"><span class="linenos"> 38</span></a>            <span class="bp">self</span>
 </span><span id="ModelRep-39"><a href="#ModelRep-39"><span class="linenos"> 39</span></a>            <span class="p">,</span> <span class="n">ds</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
 </span><span id="ModelRep-40"><a href="#ModelRep-40"><span class="linenos"> 40</span></a>            <span class="p">,</span> <span class="n">vis_dict</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
@@ -352,7 +352,7 @@ coefs, translation etc.</p>
 </span><span id="ModelRep-80"><a href="#ModelRep-80"><span class="linenos"> 80</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">option_summary_adhoc</span> <span class="o">=</span> <span class="n">option_summary_adhoc_fn</span>
 </span><span id="ModelRep-81"><a href="#ModelRep-81"><span class="linenos"> 81</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">aud_coefs</span> <span class="o">=</span> <span class="kc">None</span>
 </span><span id="ModelRep-82"><a href="#ModelRep-82"><span class="linenos"> 82</span></a>
-</span><span id="ModelRep-83"><a href="#ModelRep-83"><span class="linenos"> 83</span></a>    <span class="k">def</span> <span class="nf">set_language</span><span class="p">(</span><span class="bp">self</span>
+</span><span id="ModelRep-83"><a href="#ModelRep-83"><span class="linenos"> 83</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">set_language</span><span class="p">(</span><span class="bp">self</span>
 </span><span id="ModelRep-84"><a href="#ModelRep-84"><span class="linenos"> 84</span></a>                     <span class="p">,</span> <span class="n">language</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
 </span><span id="ModelRep-85"><a href="#ModelRep-85"><span class="linenos"> 85</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="ModelRep-86"><a href="#ModelRep-86"><span class="linenos"> 86</span></a><span class="sd">        Set export language.</span>
@@ -368,7 +368,7 @@ coefs, translation etc.</p>
 </span><span id="ModelRep-96"><a href="#ModelRep-96"><span class="linenos"> 96</span></a>            <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s1">&#39;Language &#39;</span> <span class="o">+</span> <span class="n">language</span> <span class="o">+</span> <span class="s1">&#39; is not supported. Reset to the default value: English&#39;</span><span class="p">)</span>
 </span><span id="ModelRep-97"><a href="#ModelRep-97"><span class="linenos"> 97</span></a>            <span class="bp">self</span><span class="o">.</span><span class="n">language</span> <span class="o">=</span> <span class="s1">&#39;english&#39;</span>
 </span><span id="ModelRep-98"><a href="#ModelRep-98"><span class="linenos"> 98</span></a>
-</span><span id="ModelRep-99"><a href="#ModelRep-99"><span class="linenos"> 99</span></a>    <span class="k">def</span> <span class="nf">fill_colours</span><span class="p">(</span><span class="bp">self</span>
+</span><span id="ModelRep-99"><a href="#ModelRep-99"><span class="linenos"> 99</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">fill_colours</span><span class="p">(</span><span class="bp">self</span>
 </span><span id="ModelRep-100"><a href="#ModelRep-100"><span class="linenos">100</span></a>                     <span class="p">,</span> <span class="n">ds</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
 </span><span id="ModelRep-101"><a href="#ModelRep-101"><span class="linenos">101</span></a>                     <span class="p">,</span> <span class="n">tools_list</span><span class="p">:</span> <span class="nb">list</span> <span class="o">|</span> <span class="nb">tuple</span> <span class="o">=</span> <span class="p">()</span>
 </span><span id="ModelRep-102"><a href="#ModelRep-102"><span class="linenos">102</span></a>                     <span class="p">,</span> <span class="n">palette_sbr_names</span><span class="p">:</span> <span class="nb">list</span> <span class="o">|</span> <span class="nb">tuple</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;glasbey&#39;</span><span class="p">,)</span>
@@ -392,7 +392,7 @@ coefs, translation etc.</p>
 </span><span id="ModelRep-120"><a href="#ModelRep-120"><span class="linenos">120</span></a>        <span class="k">if</span> <span class="n">pd</span><span class="o">.</span><span class="n">notna</span><span class="p">(</span><span class="n">tools_list</span><span class="p">):</span>
 </span><span id="ModelRep-121"><a href="#ModelRep-121"><span class="linenos">121</span></a>            <span class="bp">self</span><span class="o">.</span><span class="n">fill_colours_tools</span><span class="p">(</span><span class="n">tools_list</span><span class="p">,</span> <span class="n">palette_tool_names</span><span class="p">)</span>
 </span><span id="ModelRep-122"><a href="#ModelRep-122"><span class="linenos">122</span></a>
-</span><span id="ModelRep-123"><a href="#ModelRep-123"><span class="linenos">123</span></a>    <span class="k">def</span> <span class="nf">fill_colours_sbr</span><span class="p">(</span><span class="bp">self</span>
+</span><span id="ModelRep-123"><a href="#ModelRep-123"><span class="linenos">123</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">fill_colours_sbr</span><span class="p">(</span><span class="bp">self</span>
 </span><span id="ModelRep-124"><a href="#ModelRep-124"><span class="linenos">124</span></a>                         <span class="p">,</span> <span class="n">entities_new</span><span class="p">:</span> <span class="nb">dict</span>
 </span><span id="ModelRep-125"><a href="#ModelRep-125"><span class="linenos">125</span></a>                         <span class="p">,</span> <span class="n">palette_names</span><span class="p">:</span> <span class="nb">list</span> <span class="o">|</span> <span class="nb">tuple</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;glasbey&#39;</span><span class="p">,)):</span>
 </span><span id="ModelRep-126"><a href="#ModelRep-126"><span class="linenos">126</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -409,7 +409,7 @@ coefs, translation etc.</p>
 </span><span id="ModelRep-137"><a href="#ModelRep-137"><span class="linenos">137</span></a>
 </span><span id="ModelRep-138"><a href="#ModelRep-138"><span class="linenos">138</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">palette_sbr</span> <span class="o">=</span> <span class="n">palette_fill</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">palette_sbr</span><span class="p">,</span> <span class="n">entities_new</span><span class="p">,</span> <span class="n">palette_names</span><span class="p">)</span>
 </span><span id="ModelRep-139"><a href="#ModelRep-139"><span class="linenos">139</span></a>
-</span><span id="ModelRep-140"><a href="#ModelRep-140"><span class="linenos">140</span></a>    <span class="k">def</span> <span class="nf">fill_colours_tools</span><span class="p">(</span><span class="bp">self</span>
+</span><span id="ModelRep-140"><a href="#ModelRep-140"><span class="linenos">140</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">fill_colours_tools</span><span class="p">(</span><span class="bp">self</span>
 </span><span id="ModelRep-141"><a href="#ModelRep-141"><span class="linenos">141</span></a>                           <span class="p">,</span> <span class="n">entities_new</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="nb">list</span>
 </span><span id="ModelRep-142"><a href="#ModelRep-142"><span class="linenos">142</span></a>                           <span class="p">,</span> <span class="n">palette_names</span><span class="p">:</span> <span class="nb">list</span> <span class="o">|</span> <span class="nb">tuple</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;glasbey&#39;</span><span class="p">,)):</span>
 </span><span id="ModelRep-143"><a href="#ModelRep-143"><span class="linenos">143</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -425,7 +425,7 @@ coefs, translation etc.</p>
 </span><span id="ModelRep-153"><a href="#ModelRep-153"><span class="linenos">153</span></a>
 </span><span id="ModelRep-154"><a href="#ModelRep-154"><span class="linenos">154</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">palette_tools</span> <span class="o">=</span> <span class="n">palette_fill</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">palette_tools</span><span class="p">,</span> <span class="n">entities_new</span><span class="p">,</span> <span class="n">palette_names</span><span class="p">)</span>
 </span><span id="ModelRep-155"><a href="#ModelRep-155"><span class="linenos">155</span></a>
-</span><span id="ModelRep-156"><a href="#ModelRep-156"><span class="linenos">156</span></a>    <span class="k">def</span> <span class="nf">fill_adhoc_code_src</span><span class="p">(</span><span class="bp">self</span>
+</span><span id="ModelRep-156"><a href="#ModelRep-156"><span class="linenos">156</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">fill_adhoc_code_src</span><span class="p">(</span><span class="bp">self</span>
 </span><span id="ModelRep-157"><a href="#ModelRep-157"><span class="linenos">157</span></a>                            <span class="p">,</span> <span class="n">adhoc_code</span><span class="p">:</span> <span class="nb">list</span> <span class="o">|</span> <span class="kc">None</span><span class="p">):</span>
 </span><span id="ModelRep-158"><a href="#ModelRep-158"><span class="linenos">158</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="ModelRep-159"><a href="#ModelRep-159"><span class="linenos">159</span></a><span class="sd">        Extract source code from the adhoc modules and keep it as string dictionary.</span>
@@ -457,7 +457,7 @@ coefs, translation etc.</p>
 
     </div>
     <a class="headerlink" href="#ModelRep.__init__"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="ModelRep.__init__-37"><a href="#ModelRep.__init__-37"><span class="linenos">37</span></a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="ModelRep.__init__-37"><a href="#ModelRep.__init__-37"><span class="linenos">37</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
 </span><span id="ModelRep.__init__-38"><a href="#ModelRep.__init__-38"><span class="linenos">38</span></a>            <span class="bp">self</span>
 </span><span id="ModelRep.__init__-39"><a href="#ModelRep.__init__-39"><span class="linenos">39</span></a>            <span class="p">,</span> <span class="n">ds</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
 </span><span id="ModelRep.__init__-40"><a href="#ModelRep.__init__-40"><span class="linenos">40</span></a>            <span class="p">,</span> <span class="n">vis_dict</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
@@ -637,7 +637,7 @@ function is used)</li>
 
     </div>
     <a class="headerlink" href="#ModelRep.set_language"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="ModelRep.set_language-83"><a href="#ModelRep.set_language-83"><span class="linenos">83</span></a>    <span class="k">def</span> <span class="nf">set_language</span><span class="p">(</span><span class="bp">self</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="ModelRep.set_language-83"><a href="#ModelRep.set_language-83"><span class="linenos">83</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">set_language</span><span class="p">(</span><span class="bp">self</span>
 </span><span id="ModelRep.set_language-84"><a href="#ModelRep.set_language-84"><span class="linenos">84</span></a>                     <span class="p">,</span> <span class="n">language</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
 </span><span id="ModelRep.set_language-85"><a href="#ModelRep.set_language-85"><span class="linenos">85</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="ModelRep.set_language-86"><a href="#ModelRep.set_language-86"><span class="linenos">86</span></a><span class="sd">        Set export language.</span>
@@ -683,7 +683,7 @@ function is used)</li>
 
     </div>
     <a class="headerlink" href="#ModelRep.fill_colours"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="ModelRep.fill_colours-99"><a href="#ModelRep.fill_colours-99"><span class="linenos"> 99</span></a>    <span class="k">def</span> <span class="nf">fill_colours</span><span class="p">(</span><span class="bp">self</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="ModelRep.fill_colours-99"><a href="#ModelRep.fill_colours-99"><span class="linenos"> 99</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">fill_colours</span><span class="p">(</span><span class="bp">self</span>
 </span><span id="ModelRep.fill_colours-100"><a href="#ModelRep.fill_colours-100"><span class="linenos">100</span></a>                     <span class="p">,</span> <span class="n">ds</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
 </span><span id="ModelRep.fill_colours-101"><a href="#ModelRep.fill_colours-101"><span class="linenos">101</span></a>                     <span class="p">,</span> <span class="n">tools_list</span><span class="p">:</span> <span class="nb">list</span> <span class="o">|</span> <span class="nb">tuple</span> <span class="o">=</span> <span class="p">()</span>
 </span><span id="ModelRep.fill_colours-102"><a href="#ModelRep.fill_colours-102"><span class="linenos">102</span></a>                     <span class="p">,</span> <span class="n">palette_sbr_names</span><span class="p">:</span> <span class="nb">list</span> <span class="o">|</span> <span class="nb">tuple</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;glasbey&#39;</span><span class="p">,)</span>
@@ -740,7 +740,7 @@ function is used)</li>
 
     </div>
     <a class="headerlink" href="#ModelRep.fill_colours_sbr"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="ModelRep.fill_colours_sbr-123"><a href="#ModelRep.fill_colours_sbr-123"><span class="linenos">123</span></a>    <span class="k">def</span> <span class="nf">fill_colours_sbr</span><span class="p">(</span><span class="bp">self</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="ModelRep.fill_colours_sbr-123"><a href="#ModelRep.fill_colours_sbr-123"><span class="linenos">123</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">fill_colours_sbr</span><span class="p">(</span><span class="bp">self</span>
 </span><span id="ModelRep.fill_colours_sbr-124"><a href="#ModelRep.fill_colours_sbr-124"><span class="linenos">124</span></a>                         <span class="p">,</span> <span class="n">entities_new</span><span class="p">:</span> <span class="nb">dict</span>
 </span><span id="ModelRep.fill_colours_sbr-125"><a href="#ModelRep.fill_colours_sbr-125"><span class="linenos">125</span></a>                         <span class="p">,</span> <span class="n">palette_names</span><span class="p">:</span> <span class="nb">list</span> <span class="o">|</span> <span class="nb">tuple</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;glasbey&#39;</span><span class="p">,)):</span>
 </span><span id="ModelRep.fill_colours_sbr-126"><a href="#ModelRep.fill_colours_sbr-126"><span class="linenos">126</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -789,7 +789,7 @@ if not yet</li>
 
     </div>
     <a class="headerlink" href="#ModelRep.fill_colours_tools"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="ModelRep.fill_colours_tools-140"><a href="#ModelRep.fill_colours_tools-140"><span class="linenos">140</span></a>    <span class="k">def</span> <span class="nf">fill_colours_tools</span><span class="p">(</span><span class="bp">self</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="ModelRep.fill_colours_tools-140"><a href="#ModelRep.fill_colours_tools-140"><span class="linenos">140</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">fill_colours_tools</span><span class="p">(</span><span class="bp">self</span>
 </span><span id="ModelRep.fill_colours_tools-141"><a href="#ModelRep.fill_colours_tools-141"><span class="linenos">141</span></a>                           <span class="p">,</span> <span class="n">entities_new</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="nb">list</span>
 </span><span id="ModelRep.fill_colours_tools-142"><a href="#ModelRep.fill_colours_tools-142"><span class="linenos">142</span></a>                           <span class="p">,</span> <span class="n">palette_names</span><span class="p">:</span> <span class="nb">list</span> <span class="o">|</span> <span class="nb">tuple</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;glasbey&#39;</span><span class="p">,)):</span>
 </span><span id="ModelRep.fill_colours_tools-143"><a href="#ModelRep.fill_colours_tools-143"><span class="linenos">143</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -835,7 +835,7 @@ if not yet</li>
 
     </div>
     <a class="headerlink" href="#ModelRep.fill_adhoc_code_src"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="ModelRep.fill_adhoc_code_src-156"><a href="#ModelRep.fill_adhoc_code_src-156"><span class="linenos">156</span></a>    <span class="k">def</span> <span class="nf">fill_adhoc_code_src</span><span class="p">(</span><span class="bp">self</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="ModelRep.fill_adhoc_code_src-156"><a href="#ModelRep.fill_adhoc_code_src-156"><span class="linenos">156</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">fill_adhoc_code_src</span><span class="p">(</span><span class="bp">self</span>
 </span><span id="ModelRep.fill_adhoc_code_src-157"><a href="#ModelRep.fill_adhoc_code_src-157"><span class="linenos">157</span></a>                            <span class="p">,</span> <span class="n">adhoc_code</span><span class="p">:</span> <span class="nb">list</span> <span class="o">|</span> <span class="kc">None</span><span class="p">):</span>
 </span><span id="ModelRep.fill_adhoc_code_src-158"><a href="#ModelRep.fill_adhoc_code_src-158"><span class="linenos">158</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="ModelRep.fill_adhoc_code_src-159"><a href="#ModelRep.fill_adhoc_code_src-159"><span class="linenos">159</span></a><span class="sd">        Extract source code from the adhoc modules and keep it as string dictionary.</span>

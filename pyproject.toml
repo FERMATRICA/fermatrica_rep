@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fermatrica-rep"
-version = "0.3"
+version = "0.3.1"
 description = "FERMATRICA Flexible Econometrics Regression Models and Tools: Reporting"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -22,7 +22,7 @@ classifiers = [
 dependencies = [
 ]
 
-urls = {"Homepage" = "https://gitlab.mitcoms.ru/Econometrics/fermatrica/fermatrica_rep"}
+urls = {"Homepage" = "https://github.com/FERMATRICA/fermatrica_rep"}
 
 [tool.setuptools.packages.find]
 where = ["."]

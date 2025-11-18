@@ -63,19 +63,19 @@ defined in <code>options_m</code> dictionary.</p>
 </span><span id="L-4"><a href="#L-4"><span class="linenos">  4</span></a><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="L-5"><a href="#L-5"><span class="linenos">  5</span></a>
 </span><span id="L-6"><a href="#L-6"><span class="linenos">  6</span></a>
-</span><span id="L-7"><a href="#L-7"><span class="linenos">  7</span></a><span class="kn">import</span> <span class="nn">copy</span>
-</span><span id="L-8"><a href="#L-8"><span class="linenos">  8</span></a><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
-</span><span id="L-9"><a href="#L-9"><span class="linenos">  9</span></a><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+</span><span id="L-7"><a href="#L-7"><span class="linenos">  7</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
+</span><span id="L-8"><a href="#L-8"><span class="linenos">  8</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+</span><span id="L-9"><a href="#L-9"><span class="linenos">  9</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 </span><span id="L-10"><a href="#L-10"><span class="linenos"> 10</span></a>
-</span><span id="L-11"><a href="#L-11"><span class="linenos"> 11</span></a><span class="kn">from</span> <span class="nn">pptx.presentation</span> <span class="kn">import</span> <span class="n">Presentation</span>
-</span><span id="L-12"><a href="#L-12"><span class="linenos"> 12</span></a><span class="kn">from</span> <span class="nn">pptx.dml.color</span> <span class="kn">import</span> <span class="n">RGBColor</span>
+</span><span id="L-11"><a href="#L-11"><span class="linenos"> 11</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">pptx.presentation</span><span class="w"> </span><span class="kn">import</span> <span class="n">Presentation</span>
+</span><span id="L-12"><a href="#L-12"><span class="linenos"> 12</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">pptx.dml.color</span><span class="w"> </span><span class="kn">import</span> <span class="n">RGBColor</span>
 </span><span id="L-13"><a href="#L-13"><span class="linenos"> 13</span></a>
-</span><span id="L-14"><a href="#L-14"><span class="linenos"> 14</span></a><span class="kn">from</span> <span class="nn">fermatrica_rep.export.basics</span> <span class="kn">import</span> <span class="n">set_table_border</span><span class="p">,</span> <span class="n">adjust_table_width</span><span class="p">,</span> <span class="n">table_text_format</span>
-</span><span id="L-15"><a href="#L-15"><span class="linenos"> 15</span></a><span class="kn">from</span> <span class="nn">fermatrica_rep.options.define</span> <span class="kn">import</span> <span class="n">OptionSettings</span>
-</span><span id="L-16"><a href="#L-16"><span class="linenos"> 16</span></a><span class="kn">import</span> <span class="nn">fermatrica_rep.options.calc</span> <span class="k">as</span> <span class="nn">calc</span>
+</span><span id="L-14"><a href="#L-14"><span class="linenos"> 14</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">fermatrica_rep.export.basics</span><span class="w"> </span><span class="kn">import</span> <span class="n">set_table_border</span><span class="p">,</span> <span class="n">adjust_table_width</span><span class="p">,</span> <span class="n">table_text_format</span>
+</span><span id="L-15"><a href="#L-15"><span class="linenos"> 15</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">fermatrica_rep.options.define</span><span class="w"> </span><span class="kn">import</span> <span class="n">OptionSettings</span>
+</span><span id="L-16"><a href="#L-16"><span class="linenos"> 16</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">fermatrica_rep.options.calc</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">calc</span>
 </span><span id="L-17"><a href="#L-17"><span class="linenos"> 17</span></a>
 </span><span id="L-18"><a href="#L-18"><span class="linenos"> 18</span></a>
-</span><span id="L-19"><a href="#L-19"><span class="linenos"> 19</span></a><span class="k">def</span> <span class="nf">create</span><span class="p">(</span><span class="n">prs</span><span class="p">:</span> <span class="n">Presentation</span><span class="p">,</span>
+</span><span id="L-19"><a href="#L-19"><span class="linenos"> 19</span></a><span class="k">def</span><span class="w"> </span><span class="nf">create</span><span class="p">(</span><span class="n">prs</span><span class="p">:</span> <span class="n">Presentation</span><span class="p">,</span>
 </span><span id="L-20"><a href="#L-20"><span class="linenos"> 20</span></a>           <span class="n">model</span><span class="p">:</span> <span class="s2">&quot;Model | list&quot;</span><span class="p">,</span>
 </span><span id="L-21"><a href="#L-21"><span class="linenos"> 21</span></a>           <span class="n">model_rep</span><span class="p">:</span> <span class="s2">&quot;ModelRep | list&quot;</span><span class="p">,</span>
 </span><span id="L-22"><a href="#L-22"><span class="linenos"> 22</span></a>           <span class="n">dt_pred</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="nb">list</span><span class="p">,</span>
@@ -266,7 +266,7 @@ defined in <code>options_m</code> dictionary.</p>
 </span><span id="L-207"><a href="#L-207"><span class="linenos">207</span></a>    <span class="k">return</span> <span class="n">prs</span>
 </span><span id="L-208"><a href="#L-208"><span class="linenos">208</span></a>
 </span><span id="L-209"><a href="#L-209"><span class="linenos">209</span></a>
-</span><span id="L-210"><a href="#L-210"><span class="linenos">210</span></a><span class="k">def</span> <span class="nf">_tables_data_worker</span><span class="p">(</span><span class="n">model</span><span class="p">:</span> <span class="s2">&quot;Model | list&quot;</span><span class="p">,</span>
+</span><span id="L-210"><a href="#L-210"><span class="linenos">210</span></a><span class="k">def</span><span class="w"> </span><span class="nf">_tables_data_worker</span><span class="p">(</span><span class="n">model</span><span class="p">:</span> <span class="s2">&quot;Model | list&quot;</span><span class="p">,</span>
 </span><span id="L-211"><a href="#L-211"><span class="linenos">211</span></a>                        <span class="n">model_rep</span><span class="p">:</span> <span class="s2">&quot;ModelRep | list&quot;</span><span class="p">,</span>
 </span><span id="L-212"><a href="#L-212"><span class="linenos">212</span></a>                        <span class="n">ds</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="nb">list</span><span class="p">,</span>
 </span><span id="L-213"><a href="#L-213"><span class="linenos">213</span></a>                        <span class="n">opt_set</span><span class="p">:</span> <span class="s2">&quot;OptionSettings&quot;</span><span class="p">,</span>
@@ -455,7 +455,7 @@ defined in <code>options_m</code> dictionary.</p>
 </span><span id="L-396"><a href="#L-396"><span class="linenos">396</span></a>    <span class="k">return</span> <span class="n">options_df</span><span class="p">,</span> <span class="n">calc_df</span>
 </span><span id="L-397"><a href="#L-397"><span class="linenos">397</span></a>
 </span><span id="L-398"><a href="#L-398"><span class="linenos">398</span></a>
-</span><span id="L-399"><a href="#L-399"><span class="linenos">399</span></a><span class="k">def</span> <span class="nf">_fill_table</span><span class="p">(</span><span class="n">table</span><span class="p">,</span>
+</span><span id="L-399"><a href="#L-399"><span class="linenos">399</span></a><span class="k">def</span><span class="w"> </span><span class="nf">_fill_table</span><span class="p">(</span><span class="n">table</span><span class="p">,</span>
 </span><span id="L-400"><a href="#L-400"><span class="linenos">400</span></a>                <span class="n">ds</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
 </span><span id="L-401"><a href="#L-401"><span class="linenos">401</span></a>                <span class="n">pred_year_start</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
 </span><span id="L-402"><a href="#L-402"><span class="linenos">402</span></a>                <span class="n">pred_year_end</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
@@ -515,7 +515,7 @@ defined in <code>options_m</code> dictionary.</p>
 
     </div>
     <a class="headerlink" href="#create"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="create-20"><a href="#create-20"><span class="linenos"> 20</span></a><span class="k">def</span> <span class="nf">create</span><span class="p">(</span><span class="n">prs</span><span class="p">:</span> <span class="n">Presentation</span><span class="p">,</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="create-20"><a href="#create-20"><span class="linenos"> 20</span></a><span class="k">def</span><span class="w"> </span><span class="nf">create</span><span class="p">(</span><span class="n">prs</span><span class="p">:</span> <span class="n">Presentation</span><span class="p">,</span>
 </span><span id="create-21"><a href="#create-21"><span class="linenos"> 21</span></a>           <span class="n">model</span><span class="p">:</span> <span class="s2">&quot;Model | list&quot;</span><span class="p">,</span>
 </span><span id="create-22"><a href="#create-22"><span class="linenos"> 22</span></a>           <span class="n">model_rep</span><span class="p">:</span> <span class="s2">&quot;ModelRep | list&quot;</span><span class="p">,</span>
 </span><span id="create-23"><a href="#create-23"><span class="linenos"> 23</span></a>           <span class="n">dt_pred</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="nb">list</span><span class="p">,</span>

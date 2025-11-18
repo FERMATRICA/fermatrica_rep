@@ -86,13 +86,13 @@ as input data.</p>
 </span><span id="L-14"><a href="#L-14"><span class="linenos"> 14</span></a><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="L-15"><a href="#L-15"><span class="linenos"> 15</span></a>
 </span><span id="L-16"><a href="#L-16"><span class="linenos"> 16</span></a>
-</span><span id="L-17"><a href="#L-17"><span class="linenos"> 17</span></a><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
-</span><span id="L-18"><a href="#L-18"><span class="linenos"> 18</span></a><span class="kn">import</span> <span class="nn">plotly.graph_objects</span> <span class="k">as</span> <span class="nn">go</span>
+</span><span id="L-17"><a href="#L-17"><span class="linenos"> 17</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+</span><span id="L-18"><a href="#L-18"><span class="linenos"> 18</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">plotly.graph_objects</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">go</span>
 </span><span id="L-19"><a href="#L-19"><span class="linenos"> 19</span></a>
-</span><span id="L-20"><a href="#L-20"><span class="linenos"> 20</span></a><span class="kn">from</span> <span class="nn">fermatrica_rep.meta_model.model_rep</span> <span class="kn">import</span> <span class="n">ModelRep</span>
+</span><span id="L-20"><a href="#L-20"><span class="linenos"> 20</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">fermatrica_rep.meta_model.model_rep</span><span class="w"> </span><span class="kn">import</span> <span class="n">ModelRep</span>
 </span><span id="L-21"><a href="#L-21"><span class="linenos"> 21</span></a>
 </span><span id="L-22"><a href="#L-22"><span class="linenos"> 22</span></a>
-</span><span id="L-23"><a href="#L-23"><span class="linenos"> 23</span></a><span class="k">def</span> <span class="nf">_curves_full_plot_worker</span><span class="p">(</span><span class="n">curves_full_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+</span><span id="L-23"><a href="#L-23"><span class="linenos"> 23</span></a><span class="k">def</span><span class="w"> </span><span class="nf">_curves_full_plot_worker</span><span class="p">(</span><span class="n">curves_full_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
 </span><span id="L-24"><a href="#L-24"><span class="linenos"> 24</span></a>                             <span class="p">,</span> <span class="n">model_rep</span><span class="p">:</span> <span class="s2">&quot;ModelRep&quot;</span>
 </span><span id="L-25"><a href="#L-25"><span class="linenos"> 25</span></a>                             <span class="p">,</span> <span class="n">title</span><span class="p">:</span> <span class="nb">str</span>
 </span><span id="L-26"><a href="#L-26"><span class="linenos"> 26</span></a>                             <span class="p">,</span> <span class="n">var</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
@@ -144,7 +144,7 @@ as input data.</p>
 </span><span id="L-72"><a href="#L-72"><span class="linenos"> 72</span></a>    <span class="k">return</span> <span class="n">fig</span>
 </span><span id="L-73"><a href="#L-73"><span class="linenos"> 73</span></a>
 </span><span id="L-74"><a href="#L-74"><span class="linenos"> 74</span></a>
-</span><span id="L-75"><a href="#L-75"><span class="linenos"> 75</span></a><span class="k">def</span> <span class="nf">curves_full_plot_short</span><span class="p">(</span><span class="n">curves_full_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="nb">list</span>
+</span><span id="L-75"><a href="#L-75"><span class="linenos"> 75</span></a><span class="k">def</span><span class="w"> </span><span class="nf">curves_full_plot_short</span><span class="p">(</span><span class="n">curves_full_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="nb">list</span>
 </span><span id="L-76"><a href="#L-76"><span class="linenos"> 76</span></a>                           <span class="p">,</span> <span class="n">model_rep</span><span class="p">:</span> <span class="s2">&quot;ModelRep | list&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
 </span><span id="L-77"><a href="#L-77"><span class="linenos"> 77</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="L-78"><a href="#L-78"><span class="linenos"> 78</span></a><span class="sd">        Wrapper</span>
@@ -170,7 +170,7 @@ as input data.</p>
 </span><span id="L-98"><a href="#L-98"><span class="linenos"> 98</span></a>    <span class="k">return</span> <span class="n">fig</span>
 </span><span id="L-99"><a href="#L-99"><span class="linenos"> 99</span></a>
 </span><span id="L-100"><a href="#L-100"><span class="linenos">100</span></a>
-</span><span id="L-101"><a href="#L-101"><span class="linenos">101</span></a><span class="k">def</span> <span class="nf">_curves_full_plot_short_worker</span><span class="p">(</span><span class="n">curves_full_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+</span><span id="L-101"><a href="#L-101"><span class="linenos">101</span></a><span class="k">def</span><span class="w"> </span><span class="nf">_curves_full_plot_short_worker</span><span class="p">(</span><span class="n">curves_full_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
 </span><span id="L-102"><a href="#L-102"><span class="linenos">102</span></a>                                   <span class="p">,</span> <span class="n">model_rep</span><span class="p">:</span> <span class="s2">&quot;ModelRep&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
 </span><span id="L-103"><a href="#L-103"><span class="linenos">103</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="L-104"><a href="#L-104"><span class="linenos">104</span></a><span class="sd">    Worker</span>
@@ -216,7 +216,7 @@ as input data.</p>
 </span><span id="L-144"><a href="#L-144"><span class="linenos">144</span></a>            <span class="s1">&#39;ROI&#39;</span><span class="p">:</span> <span class="n">fig_roi</span><span class="p">}</span>
 </span><span id="L-145"><a href="#L-145"><span class="linenos">145</span></a>
 </span><span id="L-146"><a href="#L-146"><span class="linenos">146</span></a>
-</span><span id="L-147"><a href="#L-147"><span class="linenos">147</span></a><span class="k">def</span> <span class="nf">curves_full_plot_long</span><span class="p">(</span><span class="n">curves_full_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="nb">list</span>
+</span><span id="L-147"><a href="#L-147"><span class="linenos">147</span></a><span class="k">def</span><span class="w"> </span><span class="nf">curves_full_plot_long</span><span class="p">(</span><span class="n">curves_full_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="nb">list</span>
 </span><span id="L-148"><a href="#L-148"><span class="linenos">148</span></a>                           <span class="p">,</span> <span class="n">model_rep</span><span class="p">:</span> <span class="s2">&quot;ModelRep | list&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
 </span><span id="L-149"><a href="#L-149"><span class="linenos">149</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="L-150"><a href="#L-150"><span class="linenos">150</span></a><span class="sd">        Wrapper</span>
@@ -241,7 +241,7 @@ as input data.</p>
 </span><span id="L-169"><a href="#L-169"><span class="linenos">169</span></a>    <span class="k">return</span> <span class="n">fig</span>
 </span><span id="L-170"><a href="#L-170"><span class="linenos">170</span></a>
 </span><span id="L-171"><a href="#L-171"><span class="linenos">171</span></a>
-</span><span id="L-172"><a href="#L-172"><span class="linenos">172</span></a><span class="k">def</span> <span class="nf">_curves_full_plot_long_worker</span><span class="p">(</span><span class="n">curves_full_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+</span><span id="L-172"><a href="#L-172"><span class="linenos">172</span></a><span class="k">def</span><span class="w"> </span><span class="nf">_curves_full_plot_long_worker</span><span class="p">(</span><span class="n">curves_full_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
 </span><span id="L-173"><a href="#L-173"><span class="linenos">173</span></a>                          <span class="p">,</span> <span class="n">model_rep</span><span class="p">:</span> <span class="s2">&quot;ModelRep&quot;</span><span class="p">):</span>
 </span><span id="L-174"><a href="#L-174"><span class="linenos">174</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="L-175"><a href="#L-175"><span class="linenos">175</span></a><span class="sd">    Worker</span>
@@ -299,7 +299,7 @@ as input data.</p>
 
     </div>
     <a class="headerlink" href="#curves_full_plot_short"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="curves_full_plot_short-76"><a href="#curves_full_plot_short-76"><span class="linenos">76</span></a><span class="k">def</span> <span class="nf">curves_full_plot_short</span><span class="p">(</span><span class="n">curves_full_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="nb">list</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="curves_full_plot_short-76"><a href="#curves_full_plot_short-76"><span class="linenos">76</span></a><span class="k">def</span><span class="w"> </span><span class="nf">curves_full_plot_short</span><span class="p">(</span><span class="n">curves_full_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="nb">list</span>
 </span><span id="curves_full_plot_short-77"><a href="#curves_full_plot_short-77"><span class="linenos">77</span></a>                           <span class="p">,</span> <span class="n">model_rep</span><span class="p">:</span> <span class="s2">&quot;ModelRep | list&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
 </span><span id="curves_full_plot_short-78"><a href="#curves_full_plot_short-78"><span class="linenos">78</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="curves_full_plot_short-79"><a href="#curves_full_plot_short-79"><span class="linenos">79</span></a><span class="sd">        Wrapper</span>
@@ -362,7 +362,7 @@ LHS effects are great etc.</p>
 
     </div>
     <a class="headerlink" href="#curves_full_plot_long"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="curves_full_plot_long-148"><a href="#curves_full_plot_long-148"><span class="linenos">148</span></a><span class="k">def</span> <span class="nf">curves_full_plot_long</span><span class="p">(</span><span class="n">curves_full_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="nb">list</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="curves_full_plot_long-148"><a href="#curves_full_plot_long-148"><span class="linenos">148</span></a><span class="k">def</span><span class="w"> </span><span class="nf">curves_full_plot_long</span><span class="p">(</span><span class="n">curves_full_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="nb">list</span>
 </span><span id="curves_full_plot_long-149"><a href="#curves_full_plot_long-149"><span class="linenos">149</span></a>                           <span class="p">,</span> <span class="n">model_rep</span><span class="p">:</span> <span class="s2">&quot;ModelRep | list&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
 </span><span id="curves_full_plot_long-150"><a href="#curves_full_plot_long-150"><span class="linenos">150</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="curves_full_plot_long-151"><a href="#curves_full_plot_long-151"><span class="linenos">151</span></a><span class="sd">        Wrapper</span>

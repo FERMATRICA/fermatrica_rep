@@ -73,22 +73,22 @@ Period to take into account could be set via OptionSettings object.</p>
 </span><span id="L-8"><a href="#L-8"><span class="linenos">  8</span></a>
 </span><span id="L-9"><a href="#L-9"><span class="linenos">  9</span></a><span class="sd">Beware! Multiprocessing calculation to be used by functions of this file.</span>
 </span><span id="L-10"><a href="#L-10"><span class="linenos"> 10</span></a><span class="sd">&quot;&quot;&quot;</span>
-</span><span id="L-11"><a href="#L-11"><span class="linenos"> 11</span></a><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+</span><span id="L-11"><a href="#L-11"><span class="linenos"> 11</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 </span><span id="L-12"><a href="#L-12"><span class="linenos"> 12</span></a>
-</span><span id="L-13"><a href="#L-13"><span class="linenos"> 13</span></a><span class="kn">from</span> <span class="nn">pptx.presentation</span> <span class="kn">import</span> <span class="n">Presentation</span>
-</span><span id="L-14"><a href="#L-14"><span class="linenos"> 14</span></a><span class="kn">from</span> <span class="nn">pptx.chart.data</span> <span class="kn">import</span> <span class="n">ChartData</span>
-</span><span id="L-15"><a href="#L-15"><span class="linenos"> 15</span></a><span class="kn">from</span> <span class="nn">pptx.util</span> <span class="kn">import</span> <span class="n">Pt</span>
-</span><span id="L-16"><a href="#L-16"><span class="linenos"> 16</span></a><span class="kn">from</span> <span class="nn">pptx.enum.chart</span> <span class="kn">import</span> <span class="n">XL_CHART_TYPE</span><span class="p">,</span> <span class="n">XL_LEGEND_POSITION</span>
-</span><span id="L-17"><a href="#L-17"><span class="linenos"> 17</span></a><span class="kn">from</span> <span class="nn">pptx.dml.color</span> <span class="kn">import</span> <span class="n">RGBColor</span>
-</span><span id="L-18"><a href="#L-18"><span class="linenos"> 18</span></a><span class="kn">import</span> <span class="nn">lxml.etree</span> <span class="k">as</span> <span class="nn">etree</span>
+</span><span id="L-13"><a href="#L-13"><span class="linenos"> 13</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">pptx.presentation</span><span class="w"> </span><span class="kn">import</span> <span class="n">Presentation</span>
+</span><span id="L-14"><a href="#L-14"><span class="linenos"> 14</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">pptx.chart.data</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChartData</span>
+</span><span id="L-15"><a href="#L-15"><span class="linenos"> 15</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">pptx.util</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pt</span>
+</span><span id="L-16"><a href="#L-16"><span class="linenos"> 16</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">pptx.enum.chart</span><span class="w"> </span><span class="kn">import</span> <span class="n">XL_CHART_TYPE</span><span class="p">,</span> <span class="n">XL_LEGEND_POSITION</span>
+</span><span id="L-17"><a href="#L-17"><span class="linenos"> 17</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">pptx.dml.color</span><span class="w"> </span><span class="kn">import</span> <span class="n">RGBColor</span>
+</span><span id="L-18"><a href="#L-18"><span class="linenos"> 18</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">lxml.etree</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">etree</span>
 </span><span id="L-19"><a href="#L-19"><span class="linenos"> 19</span></a>
-</span><span id="L-20"><a href="#L-20"><span class="linenos"> 20</span></a><span class="kn">from</span> <span class="nn">fermatrica_rep.export.basics</span> <span class="kn">import</span> <span class="n">set_chart_colors_line</span><span class="p">,</span> <span class="n">set_chart_dashes</span>
-</span><span id="L-21"><a href="#L-21"><span class="linenos"> 21</span></a><span class="kn">from</span> <span class="nn">fermatrica_rep.meta_model.model_rep</span> <span class="kn">import</span> <span class="n">ModelRep</span>
-</span><span id="L-22"><a href="#L-22"><span class="linenos"> 22</span></a><span class="kn">from</span> <span class="nn">fermatrica_rep.options.define</span> <span class="kn">import</span> <span class="n">OptionSettings</span>
-</span><span id="L-23"><a href="#L-23"><span class="linenos"> 23</span></a><span class="kn">from</span> <span class="nn">fermatrica_rep.options.calc_multi</span> <span class="kn">import</span> <span class="n">option_report_multi_post</span>
+</span><span id="L-20"><a href="#L-20"><span class="linenos"> 20</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">fermatrica_rep.export.basics</span><span class="w"> </span><span class="kn">import</span> <span class="n">set_chart_colors_line</span><span class="p">,</span> <span class="n">set_chart_dashes</span>
+</span><span id="L-21"><a href="#L-21"><span class="linenos"> 21</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">fermatrica_rep.meta_model.model_rep</span><span class="w"> </span><span class="kn">import</span> <span class="n">ModelRep</span>
+</span><span id="L-22"><a href="#L-22"><span class="linenos"> 22</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">fermatrica_rep.options.define</span><span class="w"> </span><span class="kn">import</span> <span class="n">OptionSettings</span>
+</span><span id="L-23"><a href="#L-23"><span class="linenos"> 23</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">fermatrica_rep.options.calc_multi</span><span class="w"> </span><span class="kn">import</span> <span class="n">option_report_multi_post</span>
 </span><span id="L-24"><a href="#L-24"><span class="linenos"> 24</span></a>
 </span><span id="L-25"><a href="#L-25"><span class="linenos"> 25</span></a>
-</span><span id="L-26"><a href="#L-26"><span class="linenos"> 26</span></a><span class="k">def</span> <span class="nf">create</span><span class="p">(</span><span class="n">prs</span><span class="p">:</span> <span class="n">Presentation</span><span class="p">,</span>
+</span><span id="L-26"><a href="#L-26"><span class="linenos"> 26</span></a><span class="k">def</span><span class="w"> </span><span class="nf">create</span><span class="p">(</span><span class="n">prs</span><span class="p">:</span> <span class="n">Presentation</span><span class="p">,</span>
 </span><span id="L-27"><a href="#L-27"><span class="linenos"> 27</span></a>           <span class="n">model</span><span class="p">:</span> <span class="s2">&quot;Model | list&quot;</span><span class="p">,</span>
 </span><span id="L-28"><a href="#L-28"><span class="linenos"> 28</span></a>           <span class="n">model_rep</span><span class="p">:</span> <span class="s2">&quot;ModelRep | list&quot;</span><span class="p">,</span>
 </span><span id="L-29"><a href="#L-29"><span class="linenos"> 29</span></a>           <span class="n">ds</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="nb">list</span><span class="p">,</span>
@@ -214,7 +214,7 @@ Period to take into account could be set via OptionSettings object.</p>
 </span><span id="L-149"><a href="#L-149"><span class="linenos">149</span></a>    <span class="k">return</span> <span class="n">prs</span>
 </span><span id="L-150"><a href="#L-150"><span class="linenos">150</span></a>
 </span><span id="L-151"><a href="#L-151"><span class="linenos">151</span></a>
-</span><span id="L-152"><a href="#L-152"><span class="linenos">152</span></a><span class="k">def</span> <span class="nf">_slide_vis_worker</span><span class="p">(</span><span class="n">slide</span><span class="p">,</span>
+</span><span id="L-152"><a href="#L-152"><span class="linenos">152</span></a><span class="k">def</span><span class="w"> </span><span class="nf">_slide_vis_worker</span><span class="p">(</span><span class="n">slide</span><span class="p">,</span>
 </span><span id="L-153"><a href="#L-153"><span class="linenos">153</span></a>                      <span class="n">model_rep</span><span class="p">:</span> <span class="s2">&quot;ModelRep&quot;</span><span class="p">,</span>
 </span><span id="L-154"><a href="#L-154"><span class="linenos">154</span></a>                      <span class="n">opt_set_crv</span><span class="p">:</span> <span class="s2">&quot;OptionSettings&quot;</span><span class="p">,</span>
 </span><span id="L-155"><a href="#L-155"><span class="linenos">155</span></a>                      <span class="n">curves_full_data</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
@@ -458,7 +458,7 @@ Period to take into account could be set via OptionSettings object.</p>
 </span><span id="L-393"><a href="#L-393"><span class="linenos">393</span></a>    <span class="k">return</span> <span class="n">slide</span>
 </span><span id="L-394"><a href="#L-394"><span class="linenos">394</span></a>
 </span><span id="L-395"><a href="#L-395"><span class="linenos">395</span></a>
-</span><span id="L-396"><a href="#L-396"><span class="linenos">396</span></a><span class="k">def</span> <span class="nf">_chart_data_worker</span><span class="p">(</span><span class="n">curves_full_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+</span><span id="L-396"><a href="#L-396"><span class="linenos">396</span></a><span class="k">def</span><span class="w"> </span><span class="nf">_chart_data_worker</span><span class="p">(</span><span class="n">curves_full_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
 </span><span id="L-397"><a href="#L-397"><span class="linenos">397</span></a>                       <span class="n">curve_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 </span><span id="L-398"><a href="#L-398"><span class="linenos">398</span></a>                       <span class="n">if_exact</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
 </span><span id="L-399"><a href="#L-399"><span class="linenos">399</span></a>                       <span class="n">n_years</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">):</span>
@@ -540,7 +540,7 @@ Period to take into account could be set via OptionSettings object.</p>
 </span><span id="L-475"><a href="#L-475"><span class="linenos">475</span></a>    <span class="k">return</span> <span class="n">chart_data</span>
 </span><span id="L-476"><a href="#L-476"><span class="linenos">476</span></a>
 </span><span id="L-477"><a href="#L-477"><span class="linenos">477</span></a>
-</span><span id="L-478"><a href="#L-478"><span class="linenos">478</span></a><span class="k">def</span> <span class="nf">_set_chart_axis</span><span class="p">(</span><span class="n">chart</span><span class="p">,</span>
+</span><span id="L-478"><a href="#L-478"><span class="linenos">478</span></a><span class="k">def</span><span class="w"> </span><span class="nf">_set_chart_axis</span><span class="p">(</span><span class="n">chart</span><span class="p">,</span>
 </span><span id="L-479"><a href="#L-479"><span class="linenos">479</span></a>                    <span class="n">model_rep</span><span class="p">:</span> <span class="s2">&quot;ModelRep&quot;</span><span class="p">,</span>
 </span><span id="L-480"><a href="#L-480"><span class="linenos">480</span></a>                    <span class="n">var</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 </span><span id="L-481"><a href="#L-481"><span class="linenos">481</span></a>                    <span class="n">year</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -611,7 +611,7 @@ Period to take into account could be set via OptionSettings object.</p>
 
     </div>
     <a class="headerlink" href="#create"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="create-27"><a href="#create-27"><span class="linenos"> 27</span></a><span class="k">def</span> <span class="nf">create</span><span class="p">(</span><span class="n">prs</span><span class="p">:</span> <span class="n">Presentation</span><span class="p">,</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="create-27"><a href="#create-27"><span class="linenos"> 27</span></a><span class="k">def</span><span class="w"> </span><span class="nf">create</span><span class="p">(</span><span class="n">prs</span><span class="p">:</span> <span class="n">Presentation</span><span class="p">,</span>
 </span><span id="create-28"><a href="#create-28"><span class="linenos"> 28</span></a>           <span class="n">model</span><span class="p">:</span> <span class="s2">&quot;Model | list&quot;</span><span class="p">,</span>
 </span><span id="create-29"><a href="#create-29"><span class="linenos"> 29</span></a>           <span class="n">model_rep</span><span class="p">:</span> <span class="s2">&quot;ModelRep | list&quot;</span><span class="p">,</span>
 </span><span id="create-30"><a href="#create-30"><span class="linenos"> 30</span></a>           <span class="n">ds</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="nb">list</span><span class="p">,</span>

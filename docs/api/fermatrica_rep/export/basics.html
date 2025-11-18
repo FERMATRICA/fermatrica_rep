@@ -82,20 +82,20 @@
 </span><span id="L-3"><a href="#L-3"><span class="linenos">  3</span></a><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="L-4"><a href="#L-4"><span class="linenos">  4</span></a>
 </span><span id="L-5"><a href="#L-5"><span class="linenos">  5</span></a>
-</span><span id="L-6"><a href="#L-6"><span class="linenos">  6</span></a><span class="kn">import</span> <span class="nn">re</span>
+</span><span id="L-6"><a href="#L-6"><span class="linenos">  6</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
 </span><span id="L-7"><a href="#L-7"><span class="linenos">  7</span></a>
-</span><span id="L-8"><a href="#L-8"><span class="linenos">  8</span></a><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
-</span><span id="L-9"><a href="#L-9"><span class="linenos">  9</span></a><span class="kn">from</span> <span class="nn">fermatrica_utils</span> <span class="kn">import</span> <span class="n">hex_to_rgb</span>
-</span><span id="L-10"><a href="#L-10"><span class="linenos"> 10</span></a><span class="kn">from</span> <span class="nn">pptx.dml.color</span> <span class="kn">import</span> <span class="n">RGBColor</span>
-</span><span id="L-11"><a href="#L-11"><span class="linenos"> 11</span></a><span class="kn">from</span> <span class="nn">pptx.enum.dml</span> <span class="kn">import</span> <span class="n">MSO_LINE_DASH_STYLE</span>
-</span><span id="L-12"><a href="#L-12"><span class="linenos"> 12</span></a><span class="kn">from</span> <span class="nn">pptx.enum.text</span> <span class="kn">import</span> <span class="n">PP_PARAGRAPH_ALIGNMENT</span>
-</span><span id="L-13"><a href="#L-13"><span class="linenos"> 13</span></a><span class="kn">from</span> <span class="nn">pptx.oxml.xmlchemy</span> <span class="kn">import</span> <span class="n">OxmlElement</span>
-</span><span id="L-14"><a href="#L-14"><span class="linenos"> 14</span></a><span class="kn">from</span> <span class="nn">pptx.util</span> <span class="kn">import</span> <span class="n">Cm</span><span class="p">,</span> <span class="n">Pt</span>
+</span><span id="L-8"><a href="#L-8"><span class="linenos">  8</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+</span><span id="L-9"><a href="#L-9"><span class="linenos">  9</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">fermatrica_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">hex_to_rgb</span>
+</span><span id="L-10"><a href="#L-10"><span class="linenos"> 10</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">pptx.dml.color</span><span class="w"> </span><span class="kn">import</span> <span class="n">RGBColor</span>
+</span><span id="L-11"><a href="#L-11"><span class="linenos"> 11</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">pptx.enum.dml</span><span class="w"> </span><span class="kn">import</span> <span class="n">MSO_LINE_DASH_STYLE</span>
+</span><span id="L-12"><a href="#L-12"><span class="linenos"> 12</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">pptx.enum.text</span><span class="w"> </span><span class="kn">import</span> <span class="n">PP_PARAGRAPH_ALIGNMENT</span>
+</span><span id="L-13"><a href="#L-13"><span class="linenos"> 13</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">pptx.oxml.xmlchemy</span><span class="w"> </span><span class="kn">import</span> <span class="n">OxmlElement</span>
+</span><span id="L-14"><a href="#L-14"><span class="linenos"> 14</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">pptx.util</span><span class="w"> </span><span class="kn">import</span> <span class="n">Cm</span><span class="p">,</span> <span class="n">Pt</span>
 </span><span id="L-15"><a href="#L-15"><span class="linenos"> 15</span></a>
-</span><span id="L-16"><a href="#L-16"><span class="linenos"> 16</span></a><span class="kn">from</span> <span class="nn">fermatrica_rep</span> <span class="kn">import</span> <span class="n">ModelRep</span>
+</span><span id="L-16"><a href="#L-16"><span class="linenos"> 16</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">fermatrica_rep</span><span class="w"> </span><span class="kn">import</span> <span class="n">ModelRep</span>
 </span><span id="L-17"><a href="#L-17"><span class="linenos"> 17</span></a>
 </span><span id="L-18"><a href="#L-18"><span class="linenos"> 18</span></a>
-</span><span id="L-19"><a href="#L-19"><span class="linenos"> 19</span></a><span class="k">def</span> <span class="nf">set_chart_colors_line</span><span class="p">(</span><span class="n">chart</span>
+</span><span id="L-19"><a href="#L-19"><span class="linenos"> 19</span></a><span class="k">def</span><span class="w"> </span><span class="nf">set_chart_colors_line</span><span class="p">(</span><span class="n">chart</span>
 </span><span id="L-20"><a href="#L-20"><span class="linenos"> 20</span></a>                          <span class="p">,</span> <span class="n">model_rep</span>  <span class="c1">#: &quot;ModelRep&quot;</span>
 </span><span id="L-21"><a href="#L-21"><span class="linenos"> 21</span></a>                          <span class="p">,</span> <span class="n">gridlines_color</span><span class="p">:</span> <span class="kc">None</span> <span class="o">|</span> <span class="n">RGBColor</span> <span class="o">=</span> <span class="kc">None</span>
 </span><span id="L-22"><a href="#L-22"><span class="linenos"> 22</span></a>                          <span class="p">):</span>
@@ -118,7 +118,7 @@
 </span><span id="L-39"><a href="#L-39"><span class="linenos"> 39</span></a>    <span class="k">return</span> <span class="n">chart</span>
 </span><span id="L-40"><a href="#L-40"><span class="linenos"> 40</span></a>
 </span><span id="L-41"><a href="#L-41"><span class="linenos"> 41</span></a>
-</span><span id="L-42"><a href="#L-42"><span class="linenos"> 42</span></a><span class="k">def</span> <span class="nf">set_chart_colors_fill</span><span class="p">(</span><span class="n">chart</span>
+</span><span id="L-42"><a href="#L-42"><span class="linenos"> 42</span></a><span class="k">def</span><span class="w"> </span><span class="nf">set_chart_colors_fill</span><span class="p">(</span><span class="n">chart</span>
 </span><span id="L-43"><a href="#L-43"><span class="linenos"> 43</span></a>                          <span class="p">,</span> <span class="n">model_rep</span>  <span class="c1">#: &quot;ModelRep&quot;</span>
 </span><span id="L-44"><a href="#L-44"><span class="linenos"> 44</span></a>                          <span class="p">,</span> <span class="n">gridlines_color</span><span class="p">:</span> <span class="kc">None</span> <span class="o">|</span> <span class="n">RGBColor</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
 </span><span id="L-45"><a href="#L-45"><span class="linenos"> 45</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
@@ -140,7 +140,7 @@
 </span><span id="L-61"><a href="#L-61"><span class="linenos"> 61</span></a>    <span class="k">return</span> <span class="n">chart</span>
 </span><span id="L-62"><a href="#L-62"><span class="linenos"> 62</span></a>
 </span><span id="L-63"><a href="#L-63"><span class="linenos"> 63</span></a>
-</span><span id="L-64"><a href="#L-64"><span class="linenos"> 64</span></a><span class="k">def</span> <span class="nf">_sub_element</span><span class="p">(</span><span class="n">parent</span>
+</span><span id="L-64"><a href="#L-64"><span class="linenos"> 64</span></a><span class="k">def</span><span class="w"> </span><span class="nf">_sub_element</span><span class="p">(</span><span class="n">parent</span>
 </span><span id="L-65"><a href="#L-65"><span class="linenos"> 65</span></a>                 <span class="p">,</span> <span class="n">tagname</span>
 </span><span id="L-66"><a href="#L-66"><span class="linenos"> 66</span></a>                 <span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 </span><span id="L-67"><a href="#L-67"><span class="linenos"> 67</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
@@ -159,7 +159,7 @@
 </span><span id="L-80"><a href="#L-80"><span class="linenos"> 80</span></a>    <span class="k">return</span> <span class="n">element</span>
 </span><span id="L-81"><a href="#L-81"><span class="linenos"> 81</span></a>
 </span><span id="L-82"><a href="#L-82"><span class="linenos"> 82</span></a>
-</span><span id="L-83"><a href="#L-83"><span class="linenos"> 83</span></a><span class="k">def</span> <span class="nf">set_cell_border</span><span class="p">(</span><span class="n">cell</span><span class="p">,</span>
+</span><span id="L-83"><a href="#L-83"><span class="linenos"> 83</span></a><span class="k">def</span><span class="w"> </span><span class="nf">set_cell_border</span><span class="p">(</span><span class="n">cell</span><span class="p">,</span>
 </span><span id="L-84"><a href="#L-84"><span class="linenos"> 84</span></a>                    <span class="n">border_color</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;FFFFFF&quot;</span><span class="p">,</span>
 </span><span id="L-85"><a href="#L-85"><span class="linenos"> 85</span></a>                    <span class="n">border_width</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">int</span> <span class="o">=</span> <span class="s1">&#39;12700&#39;</span><span class="p">,</span>
 </span><span id="L-86"><a href="#L-86"><span class="linenos"> 86</span></a>                    <span class="n">borders_positions</span><span class="p">:</span> <span class="nb">tuple</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">,</span> <span class="s1">&#39;top&#39;</span><span class="p">,</span> <span class="s1">&#39;bottom&#39;</span><span class="p">)):</span>
@@ -229,7 +229,7 @@
 </span><span id="L-150"><a href="#L-150"><span class="linenos">150</span></a>        <span class="n">lnB_tailEnd</span> <span class="o">=</span> <span class="n">_sub_element</span><span class="p">(</span><span class="n">lnB</span><span class="p">,</span> <span class="s1">&#39;a:tailEnd&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">,</span> <span class="n">w</span><span class="o">=</span><span class="s1">&#39;med&#39;</span><span class="p">,</span> <span class="nb">len</span><span class="o">=</span><span class="s1">&#39;med&#39;</span><span class="p">)</span>
 </span><span id="L-151"><a href="#L-151"><span class="linenos">151</span></a>
 </span><span id="L-152"><a href="#L-152"><span class="linenos">152</span></a>
-</span><span id="L-153"><a href="#L-153"><span class="linenos">153</span></a><span class="k">def</span> <span class="nf">set_table_border</span><span class="p">(</span><span class="n">table</span><span class="p">,</span>
+</span><span id="L-153"><a href="#L-153"><span class="linenos">153</span></a><span class="k">def</span><span class="w"> </span><span class="nf">set_table_border</span><span class="p">(</span><span class="n">table</span><span class="p">,</span>
 </span><span id="L-154"><a href="#L-154"><span class="linenos">154</span></a>                     <span class="n">border_color</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;595959&#39;</span><span class="p">,</span>
 </span><span id="L-155"><a href="#L-155"><span class="linenos">155</span></a>                     <span class="n">border_width</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;12700&#39;</span><span class="p">):</span>
 </span><span id="L-156"><a href="#L-156"><span class="linenos">156</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
@@ -254,7 +254,7 @@
 </span><span id="L-175"><a href="#L-175"><span class="linenos">175</span></a>                        <span class="n">borders_positions</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;bottom&#39;</span><span class="p">,))</span>
 </span><span id="L-176"><a href="#L-176"><span class="linenos">176</span></a>
 </span><span id="L-177"><a href="#L-177"><span class="linenos">177</span></a>
-</span><span id="L-178"><a href="#L-178"><span class="linenos">178</span></a><span class="k">def</span> <span class="nf">fill_table</span><span class="p">(</span><span class="n">table</span>
+</span><span id="L-178"><a href="#L-178"><span class="linenos">178</span></a><span class="k">def</span><span class="w"> </span><span class="nf">fill_table</span><span class="p">(</span><span class="n">table</span>
 </span><span id="L-179"><a href="#L-179"><span class="linenos">179</span></a>               <span class="p">,</span> <span class="n">ds</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">):</span>
 </span><span id="L-180"><a href="#L-180"><span class="linenos">180</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="L-181"><a href="#L-181"><span class="linenos">181</span></a><span class="sd">    Fill table (as Table from python_pptx package) with data from `ds` dataset.</span>
@@ -282,7 +282,7 @@
 </span><span id="L-203"><a href="#L-203"><span class="linenos">203</span></a>            <span class="n">table</span><span class="o">.</span><span class="n">cell</span><span class="p">(</span><span class="n">index</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span><span class="o">.</span><span class="n">margin_top</span> <span class="o">=</span> <span class="n">Pt</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
 </span><span id="L-204"><a href="#L-204"><span class="linenos">204</span></a>
 </span><span id="L-205"><a href="#L-205"><span class="linenos">205</span></a>
-</span><span id="L-206"><a href="#L-206"><span class="linenos">206</span></a><span class="k">def</span> <span class="nf">set_chart_dashes</span><span class="p">(</span><span class="n">chart</span>
+</span><span id="L-206"><a href="#L-206"><span class="linenos">206</span></a><span class="k">def</span><span class="w"> </span><span class="nf">set_chart_dashes</span><span class="p">(</span><span class="n">chart</span>
 </span><span id="L-207"><a href="#L-207"><span class="linenos">207</span></a>                     <span class="p">,</span> <span class="n">ptrn</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;_extrapolated&#39;</span><span class="p">):</span>
 </span><span id="L-208"><a href="#L-208"><span class="linenos">208</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="L-209"><a href="#L-209"><span class="linenos">209</span></a><span class="sd">    Filters series by `ptrn` regex pattern and set corresponding line type to dashed.</span>
@@ -299,7 +299,7 @@
 </span><span id="L-220"><a href="#L-220"><span class="linenos">220</span></a>    <span class="k">return</span> <span class="n">chart</span>
 </span><span id="L-221"><a href="#L-221"><span class="linenos">221</span></a>
 </span><span id="L-222"><a href="#L-222"><span class="linenos">222</span></a>
-</span><span id="L-223"><a href="#L-223"><span class="linenos">223</span></a><span class="k">def</span> <span class="nf">adjust_table_width</span><span class="p">(</span><span class="n">table</span><span class="p">,</span>
+</span><span id="L-223"><a href="#L-223"><span class="linenos">223</span></a><span class="k">def</span><span class="w"> </span><span class="nf">adjust_table_width</span><span class="p">(</span><span class="n">table</span><span class="p">,</span>
 </span><span id="L-224"><a href="#L-224"><span class="linenos">224</span></a>                       <span class="n">slide_width</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">float</span><span class="p">):</span>
 </span><span id="L-225"><a href="#L-225"><span class="linenos">225</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="L-226"><a href="#L-226"><span class="linenos">226</span></a><span class="sd">    Adjust table width to match slide width in PPTX.</span>
@@ -319,7 +319,7 @@
 </span><span id="L-240"><a href="#L-240"><span class="linenos">240</span></a>    <span class="k">return</span> <span class="n">table</span>
 </span><span id="L-241"><a href="#L-241"><span class="linenos">241</span></a>
 </span><span id="L-242"><a href="#L-242"><span class="linenos">242</span></a>
-</span><span id="L-243"><a href="#L-243"><span class="linenos">243</span></a><span class="k">def</span> <span class="nf">table_text_format</span><span class="p">(</span><span class="n">table</span>
+</span><span id="L-243"><a href="#L-243"><span class="linenos">243</span></a><span class="k">def</span><span class="w"> </span><span class="nf">table_text_format</span><span class="p">(</span><span class="n">table</span>
 </span><span id="L-244"><a href="#L-244"><span class="linenos">244</span></a>                      <span class="p">,</span> <span class="n">model_rep</span><span class="p">:</span> <span class="s2">&quot;ModelRep&quot;</span><span class="p">):</span>
 </span><span id="L-245"><a href="#L-245"><span class="linenos">245</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="L-246"><a href="#L-246"><span class="linenos">246</span></a><span class="sd">    Format text in table in PPTX.</span>
@@ -351,7 +351,7 @@
 
     </div>
     <a class="headerlink" href="#set_chart_colors_line"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="set_chart_colors_line-20"><a href="#set_chart_colors_line-20"><span class="linenos">20</span></a><span class="k">def</span> <span class="nf">set_chart_colors_line</span><span class="p">(</span><span class="n">chart</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="set_chart_colors_line-20"><a href="#set_chart_colors_line-20"><span class="linenos">20</span></a><span class="k">def</span><span class="w"> </span><span class="nf">set_chart_colors_line</span><span class="p">(</span><span class="n">chart</span>
 </span><span id="set_chart_colors_line-21"><a href="#set_chart_colors_line-21"><span class="linenos">21</span></a>                          <span class="p">,</span> <span class="n">model_rep</span>  <span class="c1">#: &quot;ModelRep&quot;</span>
 </span><span id="set_chart_colors_line-22"><a href="#set_chart_colors_line-22"><span class="linenos">22</span></a>                          <span class="p">,</span> <span class="n">gridlines_color</span><span class="p">:</span> <span class="kc">None</span> <span class="o">|</span> <span class="n">RGBColor</span> <span class="o">=</span> <span class="kc">None</span>
 </span><span id="set_chart_colors_line-23"><a href="#set_chart_colors_line-23"><span class="linenos">23</span></a>                          <span class="p">):</span>
@@ -401,7 +401,7 @@
 
     </div>
     <a class="headerlink" href="#set_chart_colors_fill"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="set_chart_colors_fill-43"><a href="#set_chart_colors_fill-43"><span class="linenos">43</span></a><span class="k">def</span> <span class="nf">set_chart_colors_fill</span><span class="p">(</span><span class="n">chart</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="set_chart_colors_fill-43"><a href="#set_chart_colors_fill-43"><span class="linenos">43</span></a><span class="k">def</span><span class="w"> </span><span class="nf">set_chart_colors_fill</span><span class="p">(</span><span class="n">chart</span>
 </span><span id="set_chart_colors_fill-44"><a href="#set_chart_colors_fill-44"><span class="linenos">44</span></a>                          <span class="p">,</span> <span class="n">model_rep</span>  <span class="c1">#: &quot;ModelRep&quot;</span>
 </span><span id="set_chart_colors_fill-45"><a href="#set_chart_colors_fill-45"><span class="linenos">45</span></a>                          <span class="p">,</span> <span class="n">gridlines_color</span><span class="p">:</span> <span class="kc">None</span> <span class="o">|</span> <span class="n">RGBColor</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
 </span><span id="set_chart_colors_fill-46"><a href="#set_chart_colors_fill-46"><span class="linenos">46</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
@@ -450,7 +450,7 @@
 
     </div>
     <a class="headerlink" href="#set_cell_border"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="set_cell_border-84"><a href="#set_cell_border-84"><span class="linenos"> 84</span></a><span class="k">def</span> <span class="nf">set_cell_border</span><span class="p">(</span><span class="n">cell</span><span class="p">,</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="set_cell_border-84"><a href="#set_cell_border-84"><span class="linenos"> 84</span></a><span class="k">def</span><span class="w"> </span><span class="nf">set_cell_border</span><span class="p">(</span><span class="n">cell</span><span class="p">,</span>
 </span><span id="set_cell_border-85"><a href="#set_cell_border-85"><span class="linenos"> 85</span></a>                    <span class="n">border_color</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;FFFFFF&quot;</span><span class="p">,</span>
 </span><span id="set_cell_border-86"><a href="#set_cell_border-86"><span class="linenos"> 86</span></a>                    <span class="n">border_width</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">int</span> <span class="o">=</span> <span class="s1">&#39;12700&#39;</span><span class="p">,</span>
 </span><span id="set_cell_border-87"><a href="#set_cell_border-87"><span class="linenos"> 87</span></a>                    <span class="n">borders_positions</span><span class="p">:</span> <span class="nb">tuple</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">,</span> <span class="s1">&#39;top&#39;</span><span class="p">,</span> <span class="s1">&#39;bottom&#39;</span><span class="p">)):</span>
@@ -554,7 +554,7 @@
 
     </div>
     <a class="headerlink" href="#set_table_border"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="set_table_border-154"><a href="#set_table_border-154"><span class="linenos">154</span></a><span class="k">def</span> <span class="nf">set_table_border</span><span class="p">(</span><span class="n">table</span><span class="p">,</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="set_table_border-154"><a href="#set_table_border-154"><span class="linenos">154</span></a><span class="k">def</span><span class="w"> </span><span class="nf">set_table_border</span><span class="p">(</span><span class="n">table</span><span class="p">,</span>
 </span><span id="set_table_border-155"><a href="#set_table_border-155"><span class="linenos">155</span></a>                     <span class="n">border_color</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;595959&#39;</span><span class="p">,</span>
 </span><span id="set_table_border-156"><a href="#set_table_border-156"><span class="linenos">156</span></a>                     <span class="n">border_width</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;12700&#39;</span><span class="p">):</span>
 </span><span id="set_table_border-157"><a href="#set_table_border-157"><span class="linenos">157</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
@@ -610,7 +610,7 @@
 
     </div>
     <a class="headerlink" href="#fill_table"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="fill_table-179"><a href="#fill_table-179"><span class="linenos">179</span></a><span class="k">def</span> <span class="nf">fill_table</span><span class="p">(</span><span class="n">table</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="fill_table-179"><a href="#fill_table-179"><span class="linenos">179</span></a><span class="k">def</span><span class="w"> </span><span class="nf">fill_table</span><span class="p">(</span><span class="n">table</span>
 </span><span id="fill_table-180"><a href="#fill_table-180"><span class="linenos">180</span></a>               <span class="p">,</span> <span class="n">ds</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">):</span>
 </span><span id="fill_table-181"><a href="#fill_table-181"><span class="linenos">181</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="fill_table-182"><a href="#fill_table-182"><span class="linenos">182</span></a><span class="sd">    Fill table (as Table from python_pptx package) with data from `ds` dataset.</span>
@@ -669,7 +669,7 @@ Use it when generating PPTX slides.</p>
 
     </div>
     <a class="headerlink" href="#set_chart_dashes"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="set_chart_dashes-207"><a href="#set_chart_dashes-207"><span class="linenos">207</span></a><span class="k">def</span> <span class="nf">set_chart_dashes</span><span class="p">(</span><span class="n">chart</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="set_chart_dashes-207"><a href="#set_chart_dashes-207"><span class="linenos">207</span></a><span class="k">def</span><span class="w"> </span><span class="nf">set_chart_dashes</span><span class="p">(</span><span class="n">chart</span>
 </span><span id="set_chart_dashes-208"><a href="#set_chart_dashes-208"><span class="linenos">208</span></a>                     <span class="p">,</span> <span class="n">ptrn</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;_extrapolated&#39;</span><span class="p">):</span>
 </span><span id="set_chart_dashes-209"><a href="#set_chart_dashes-209"><span class="linenos">209</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="set_chart_dashes-210"><a href="#set_chart_dashes-210"><span class="linenos">210</span></a><span class="sd">    Filters series by `ptrn` regex pattern and set corresponding line type to dashed.</span>
@@ -716,7 +716,7 @@ Use it when generating PPTX slides.</p>
 
     </div>
     <a class="headerlink" href="#adjust_table_width"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="adjust_table_width-224"><a href="#adjust_table_width-224"><span class="linenos">224</span></a><span class="k">def</span> <span class="nf">adjust_table_width</span><span class="p">(</span><span class="n">table</span><span class="p">,</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="adjust_table_width-224"><a href="#adjust_table_width-224"><span class="linenos">224</span></a><span class="k">def</span><span class="w"> </span><span class="nf">adjust_table_width</span><span class="p">(</span><span class="n">table</span><span class="p">,</span>
 </span><span id="adjust_table_width-225"><a href="#adjust_table_width-225"><span class="linenos">225</span></a>                       <span class="n">slide_width</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">float</span><span class="p">):</span>
 </span><span id="adjust_table_width-226"><a href="#adjust_table_width-226"><span class="linenos">226</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="adjust_table_width-227"><a href="#adjust_table_width-227"><span class="linenos">227</span></a><span class="sd">    Adjust table width to match slide width in PPTX.</span>
@@ -766,7 +766,7 @@ Use it when generating PPTX slides.</p>
 
     </div>
     <a class="headerlink" href="#table_text_format"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="table_text_format-244"><a href="#table_text_format-244"><span class="linenos">244</span></a><span class="k">def</span> <span class="nf">table_text_format</span><span class="p">(</span><span class="n">table</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="table_text_format-244"><a href="#table_text_format-244"><span class="linenos">244</span></a><span class="k">def</span><span class="w"> </span><span class="nf">table_text_format</span><span class="p">(</span><span class="n">table</span>
 </span><span id="table_text_format-245"><a href="#table_text_format-245"><span class="linenos">245</span></a>                      <span class="p">,</span> <span class="n">model_rep</span><span class="p">:</span> <span class="s2">&quot;ModelRep&quot;</span><span class="p">):</span>
 </span><span id="table_text_format-246"><a href="#table_text_format-246"><span class="linenos">246</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="table_text_format-247"><a href="#table_text_format-247"><span class="linenos">247</span></a><span class="sd">    Format text in table in PPTX.</span>

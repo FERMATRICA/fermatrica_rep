@@ -69,21 +69,21 @@
 </span><span id="L-4"><a href="#L-4"><span class="linenos">  4</span></a><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="L-5"><a href="#L-5"><span class="linenos">  5</span></a>
 </span><span id="L-6"><a href="#L-6"><span class="linenos">  6</span></a>
-</span><span id="L-7"><a href="#L-7"><span class="linenos">  7</span></a><span class="kn">import</span> <span class="nn">re</span>
-</span><span id="L-8"><a href="#L-8"><span class="linenos">  8</span></a><span class="kn">import</span> <span class="nn">itertools</span>
-</span><span id="L-9"><a href="#L-9"><span class="linenos">  9</span></a><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-</span><span id="L-10"><a href="#L-10"><span class="linenos"> 10</span></a><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
-</span><span id="L-11"><a href="#L-11"><span class="linenos"> 11</span></a><span class="kn">import</span> <span class="nn">copy</span>
-</span><span id="L-12"><a href="#L-12"><span class="linenos"> 12</span></a><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Callable</span>
+</span><span id="L-7"><a href="#L-7"><span class="linenos">  7</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+</span><span id="L-8"><a href="#L-8"><span class="linenos">  8</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">itertools</span>
+</span><span id="L-9"><a href="#L-9"><span class="linenos">  9</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+</span><span id="L-10"><a href="#L-10"><span class="linenos"> 10</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+</span><span id="L-11"><a href="#L-11"><span class="linenos"> 11</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
+</span><span id="L-12"><a href="#L-12"><span class="linenos"> 12</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span>
 </span><span id="L-13"><a href="#L-13"><span class="linenos"> 13</span></a>
-</span><span id="L-14"><a href="#L-14"><span class="linenos"> 14</span></a><span class="kn">from</span> <span class="nn">fermatrica_utils</span> <span class="kn">import</span> <span class="n">step_generator</span>
+</span><span id="L-14"><a href="#L-14"><span class="linenos"> 14</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">fermatrica_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">step_generator</span>
 </span><span id="L-15"><a href="#L-15"><span class="linenos"> 15</span></a>
-</span><span id="L-16"><a href="#L-16"><span class="linenos"> 16</span></a><span class="kn">from</span> <span class="nn">fermatrica_rep.options.define</span> <span class="kn">import</span> <span class="n">OptionSettings</span>
-</span><span id="L-17"><a href="#L-17"><span class="linenos"> 17</span></a><span class="kn">from</span> <span class="nn">fermatrica_rep.meta_model.model_rep</span> <span class="kn">import</span> <span class="n">ModelRep</span>
-</span><span id="L-18"><a href="#L-18"><span class="linenos"> 18</span></a><span class="kn">import</span> <span class="nn">fermatrica_rep.options.calc</span> <span class="k">as</span> <span class="nn">calc</span>
+</span><span id="L-16"><a href="#L-16"><span class="linenos"> 16</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">fermatrica_rep.options.define</span><span class="w"> </span><span class="kn">import</span> <span class="n">OptionSettings</span>
+</span><span id="L-17"><a href="#L-17"><span class="linenos"> 17</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">fermatrica_rep.meta_model.model_rep</span><span class="w"> </span><span class="kn">import</span> <span class="n">ModelRep</span>
+</span><span id="L-18"><a href="#L-18"><span class="linenos"> 18</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">fermatrica_rep.options.calc</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">calc</span>
 </span><span id="L-19"><a href="#L-19"><span class="linenos"> 19</span></a>
 </span><span id="L-20"><a href="#L-20"><span class="linenos"> 20</span></a>
-</span><span id="L-21"><a href="#L-21"><span class="linenos"> 21</span></a><span class="k">def</span> <span class="nf">opt_grid</span><span class="p">(</span><span class="n">translation</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+</span><span id="L-21"><a href="#L-21"><span class="linenos"> 21</span></a><span class="k">def</span><span class="w"> </span><span class="nf">opt_grid</span><span class="p">(</span><span class="n">translation</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
 </span><span id="L-22"><a href="#L-22"><span class="linenos"> 22</span></a>             <span class="p">,</span> <span class="n">budget_step</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">1</span>
 </span><span id="L-23"><a href="#L-23"><span class="linenos"> 23</span></a>             <span class="p">,</span> <span class="n">fixed_vars</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
 </span><span id="L-24"><a href="#L-24"><span class="linenos"> 24</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
@@ -150,7 +150,7 @@
 </span><span id="L-85"><a href="#L-85"><span class="linenos"> 85</span></a>    <span class="k">return</span> <span class="n">grid</span>
 </span><span id="L-86"><a href="#L-86"><span class="linenos"> 86</span></a>
 </span><span id="L-87"><a href="#L-87"><span class="linenos"> 87</span></a>
-</span><span id="L-88"><a href="#L-88"><span class="linenos"> 88</span></a><span class="k">def</span> <span class="nf">opt_grid_expand</span><span class="p">(</span><span class="n">borders</span><span class="p">:</span> <span class="nb">dict</span>
+</span><span id="L-88"><a href="#L-88"><span class="linenos"> 88</span></a><span class="k">def</span><span class="w"> </span><span class="nf">opt_grid_expand</span><span class="p">(</span><span class="n">borders</span><span class="p">:</span> <span class="nb">dict</span>
 </span><span id="L-89"><a href="#L-89"><span class="linenos"> 89</span></a>                    <span class="p">,</span> <span class="n">budget_step</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">1</span>
 </span><span id="L-90"><a href="#L-90"><span class="linenos"> 90</span></a>                    <span class="p">,</span> <span class="n">fixed_vars</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
 </span><span id="L-91"><a href="#L-91"><span class="linenos"> 91</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
@@ -196,7 +196,7 @@
 </span><span id="L-131"><a href="#L-131"><span class="linenos">131</span></a>    <span class="k">return</span> <span class="n">grid</span>
 </span><span id="L-132"><a href="#L-132"><span class="linenos">132</span></a>
 </span><span id="L-133"><a href="#L-133"><span class="linenos">133</span></a>
-</span><span id="L-134"><a href="#L-134"><span class="linenos">134</span></a><span class="k">def</span> <span class="nf">_opt_grid_summarize</span><span class="p">(</span><span class="n">model_rep</span><span class="p">:</span> <span class="s2">&quot;ModelRep&quot;</span>
+</span><span id="L-134"><a href="#L-134"><span class="linenos">134</span></a><span class="k">def</span><span class="w"> </span><span class="nf">_opt_grid_summarize</span><span class="p">(</span><span class="n">model_rep</span><span class="p">:</span> <span class="s2">&quot;ModelRep&quot;</span>
 </span><span id="L-135"><a href="#L-135"><span class="linenos">135</span></a>                        <span class="p">,</span> <span class="n">grid</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
 </span><span id="L-136"><a href="#L-136"><span class="linenos">136</span></a>                        <span class="p">,</span> <span class="n">opt_sum_fr</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
 </span><span id="L-137"><a href="#L-137"><span class="linenos">137</span></a>                        <span class="p">,</span> <span class="n">grid_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;curves&#39;</span>
@@ -259,7 +259,7 @@
 </span><span id="L-194"><a href="#L-194"><span class="linenos">194</span></a>    <span class="k">return</span> <span class="n">curves_full_df</span>
 </span><span id="L-195"><a href="#L-195"><span class="linenos">195</span></a>
 </span><span id="L-196"><a href="#L-196"><span class="linenos">196</span></a>
-</span><span id="L-197"><a href="#L-197"><span class="linenos">197</span></a><span class="k">def</span> <span class="nf">option_report_multi_post</span><span class="p">(</span><span class="n">model</span><span class="p">:</span> <span class="s2">&quot;Model | list&quot;</span>
+</span><span id="L-197"><a href="#L-197"><span class="linenos">197</span></a><span class="k">def</span><span class="w"> </span><span class="nf">option_report_multi_post</span><span class="p">(</span><span class="n">model</span><span class="p">:</span> <span class="s2">&quot;Model | list&quot;</span>
 </span><span id="L-198"><a href="#L-198"><span class="linenos">198</span></a>                             <span class="p">,</span> <span class="n">ds</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="nb">list</span>
 </span><span id="L-199"><a href="#L-199"><span class="linenos">199</span></a>                             <span class="p">,</span> <span class="n">model_rep</span><span class="p">:</span> <span class="s2">&quot;ModelRep | list&quot;</span>
 </span><span id="L-200"><a href="#L-200"><span class="linenos">200</span></a>                             <span class="p">,</span> <span class="n">opt_set</span><span class="p">:</span> <span class="s2">&quot;OptionSettings&quot;</span>
@@ -356,7 +356,7 @@
 
     </div>
     <a class="headerlink" href="#opt_grid"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="opt_grid-22"><a href="#opt_grid-22"><span class="linenos">22</span></a><span class="k">def</span> <span class="nf">opt_grid</span><span class="p">(</span><span class="n">translation</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="opt_grid-22"><a href="#opt_grid-22"><span class="linenos">22</span></a><span class="k">def</span><span class="w"> </span><span class="nf">opt_grid</span><span class="p">(</span><span class="n">translation</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
 </span><span id="opt_grid-23"><a href="#opt_grid-23"><span class="linenos">23</span></a>             <span class="p">,</span> <span class="n">budget_step</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">1</span>
 </span><span id="opt_grid-24"><a href="#opt_grid-24"><span class="linenos">24</span></a>             <span class="p">,</span> <span class="n">fixed_vars</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
 </span><span id="opt_grid-25"><a href="#opt_grid-25"><span class="linenos">25</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
@@ -461,7 +461,7 @@ all other tools are fixed.</p>
 
     </div>
     <a class="headerlink" href="#opt_grid_expand"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="opt_grid_expand-89"><a href="#opt_grid_expand-89"><span class="linenos"> 89</span></a><span class="k">def</span> <span class="nf">opt_grid_expand</span><span class="p">(</span><span class="n">borders</span><span class="p">:</span> <span class="nb">dict</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="opt_grid_expand-89"><a href="#opt_grid_expand-89"><span class="linenos"> 89</span></a><span class="k">def</span><span class="w"> </span><span class="nf">opt_grid_expand</span><span class="p">(</span><span class="n">borders</span><span class="p">:</span> <span class="nb">dict</span>
 </span><span id="opt_grid_expand-90"><a href="#opt_grid_expand-90"><span class="linenos"> 90</span></a>                    <span class="p">,</span> <span class="n">budget_step</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">1</span>
 </span><span id="opt_grid_expand-91"><a href="#opt_grid_expand-91"><span class="linenos"> 91</span></a>                    <span class="p">,</span> <span class="n">fixed_vars</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
 </span><span id="opt_grid_expand-92"><a href="#opt_grid_expand-92"><span class="linenos"> 92</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
@@ -545,7 +545,7 @@ for every budget size is 100 and number of algo iterations per budget size is 30
 
     </div>
     <a class="headerlink" href="#option_report_multi_post"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="option_report_multi_post-198"><a href="#option_report_multi_post-198"><span class="linenos">198</span></a><span class="k">def</span> <span class="nf">option_report_multi_post</span><span class="p">(</span><span class="n">model</span><span class="p">:</span> <span class="s2">&quot;Model | list&quot;</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="option_report_multi_post-198"><a href="#option_report_multi_post-198"><span class="linenos">198</span></a><span class="k">def</span><span class="w"> </span><span class="nf">option_report_multi_post</span><span class="p">(</span><span class="n">model</span><span class="p">:</span> <span class="s2">&quot;Model | list&quot;</span>
 </span><span id="option_report_multi_post-199"><a href="#option_report_multi_post-199"><span class="linenos">199</span></a>                             <span class="p">,</span> <span class="n">ds</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="nb">list</span>
 </span><span id="option_report_multi_post-200"><a href="#option_report_multi_post-200"><span class="linenos">200</span></a>                             <span class="p">,</span> <span class="n">model_rep</span><span class="p">:</span> <span class="s2">&quot;ModelRep | list&quot;</span>
 </span><span id="option_report_multi_post-201"><a href="#option_report_multi_post-201"><span class="linenos">201</span></a>                             <span class="p">,</span> <span class="n">opt_set</span><span class="p">:</span> <span class="s2">&quot;OptionSettings&quot;</span>
