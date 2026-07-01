@@ -32,6 +32,7 @@ class ModelRep(StableClass):
     option_translate_long: typing.Callable
     option_summary_adhoc: typing.Callable | None
     aud_coefs: pd.DataFrame | None
+    ssn_dict: dict | None
 
     def __init__(
             self
@@ -45,6 +46,7 @@ class ModelRep(StableClass):
             , adhoc_code: list | None = None
             , option_translate_long_fn: "typing.Callable | None" = None
             , option_summary_adhoc_fn: "typing.Callable | None" = None
+            , ssn_dict: dict | None = None
     ):
         """
         Initialise ModelRep instance.
@@ -78,7 +80,8 @@ class ModelRep(StableClass):
         self.option_translate_long = option_translate_long_fn
         self.option_summary_adhoc = option_summary_adhoc_fn
         self.aud_coefs = None
-
+        self.ssn_dict = ssn_dict
+        
     def set_language(self
                      , language: str):
         """

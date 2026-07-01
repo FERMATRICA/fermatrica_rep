@@ -7,14 +7,18 @@ defined in `options_m` dictionary.
 import copy
 import pandas as pd
 import numpy as np
+import warnings
 
 from pptx.presentation import Presentation
 from pptx.dml.color import RGBColor
 
 from fermatrica_rep.export.basics import set_table_border, adjust_table_width, table_text_format
+from fermatrica_rep.export.basics import _extract_options_data
 from fermatrica_rep.options.define import OptionSettings
 import fermatrica_rep.options.calc as calc
 
+
+warnings.simplefilter(action='ignore', category=UserWarning)
 
 def create(prs: Presentation,
            model: "Model | list",
@@ -69,7 +73,13 @@ def create(prs: Presentation,
         loc[(dt_pred['bs_key'].isin(bs_key_filter)) & (dt_pred['listed'].isin([2, 3, 4]))]. \
         groupby('year')[['observed', 'predicted', 'observed_val', 'predicted_val']].sum().reset_index()
 
-    pred_year_start = dt_pred_prep[dt_pred_prep['observed'] == 0]['year'].min()
+    if isinstance(opt_set, list) and hasattr(opt_set[0], 'date_start'):
+        pred_year_start = opt_set[0].date_start.year
+    elif isinstance(opt_set, OptionSettings) and hasattr(opt_set, 'date_start'):
+        pred_year_start = opt_set.date_start.year
+    else:
+        pred_year_start = dt_pred_prep[dt_pred_prep['observed'] == 0]['year'].min()
+
     pred_year_end = dt_pred_prep['year'].max()
 
     options_names = copy.deepcopy(options_m)
@@ -207,10 +217,118 @@ def create(prs: Presentation,
     return prs
 
 
+def _build_option_dataframes(options_data, 
+                            column_prefix: str, 
+                            col_name: str,
+                            hide_rows: list | tuple,
+                            is_list_mode: bool) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Build short and long DataFrames from options data.
+    
+    :param options_data: list of dicts (multi-year) or single dict (single period)
+    :param column_prefix: prefix for column names (e.g., 'zero', option name)
+    :param col_name: name for the first column (invest_col or 'tmp')
+    :param hide_rows: rows to filter out
+    :param is_list_mode: whether options_data is a list (multi-year mode)
+    :return: tuple of (df_short, df_long)
+    """
+    if is_list_mode:
+        df_short = pd.DataFrame.from_dict(options_data[0].items()).rename(
+            columns={0: col_name, 1: f'{column_prefix}_short'})
+        
+        df_long = pd.concat([pd.DataFrame.from_dict(x.items()).set_index(0) 
+                            for x in options_data], axis=1)
+        df_long.columns = [f'{column_prefix}_short_{k}' for k in range(len(options_data))]
+        df_long.reset_index(inplace=True)
+        df_long.rename(columns={0: col_name}, inplace=True)
+        
+        df_short = df_short[~df_short[col_name].isin(hide_rows)].reset_index().drop('index', axis=1)
+        df_long = df_long[~df_long[col_name].isin(hide_rows)].reset_index().drop('index', axis=1)
+    else:
+        df_short = pd.DataFrame.from_dict(options_data.items()).rename(
+            columns={0: col_name, 1: f'{column_prefix}_short'})
+        df_short = df_short[~df_short[col_name].isin(hide_rows)].reset_index().drop('index', axis=1)
+        df_long = df_short.copy()
+    
+    return df_short, df_long
+
+
+def _calculate_long_values(df: pd.DataFrame,
+                          df_long: pd.DataFrame,
+                          bdg_mask: pd.Series,
+                          cols_long: list,
+                          column_prefix: str,
+                          is_list_mode: bool,
+                          if_exact: bool,
+                          pred_year_start: int,
+                          pred_year_end: int):
+    """
+    Calculate long-term values for both budget and non-budget items.
+    
+    :param df: main DataFrame to update
+    :param df_long: long-format DataFrame with multi-year data
+    :param bdg_mask: boolean mask for budget rows
+    :param cols_long: columns in df_long to aggregate
+    :param column_prefix: prefix for the new long column
+    :param is_list_mode: whether in multi-year mode
+    :param if_exact: apply only to specific time period
+    :param pred_year_start: first prediction year
+    :param pred_year_end: last prediction year
+    """
+
+    # Round short values for budget items (only numeric values)
+    tmp_short = df.loc[bdg_mask, f'{column_prefix}_short']
+    num_short = pd.to_numeric(tmp_short, errors='coerce')
+    df.loc[bdg_mask, f'{column_prefix}_short'] = num_short.round(3).fillna(tmp_short)
+    
+    # Non-budget items: always average across years (only round numeric means)
+    mean_vals = df_long.loc[~bdg_mask, cols_long].mean(axis=1)
+    num_mean = pd.to_numeric(mean_vals, errors='coerce')
+    df.loc[~bdg_mask, f'{column_prefix}_long'] = num_mean.round(3).fillna(mean_vals)
+    
+    # Budget items: sum (list mode) or multiply/copy (single mode)
+    if is_list_mode:
+        df.loc[bdg_mask, f'{column_prefix}_long'] = df_long.loc[bdg_mask, cols_long].sum(axis=1)
+    else:
+        if if_exact:
+            df.loc[bdg_mask, f'{column_prefix}_long'] = df.loc[bdg_mask, f'{column_prefix}_short']
+        else:
+            df.loc[bdg_mask, f'{column_prefix}_long'] = df.loc[bdg_mask, f'{column_prefix}_short'] * (
+                pred_year_end - pred_year_start + 1)
+
+
+def _extract_budget_values(options_data, 
+                          is_list_mode: bool,
+                          if_exact: bool,
+                          pred_year_start: int,
+                          pred_year_end: int) -> tuple[float, float]:
+    """
+    Extract current and long-term budget values from options data.
+    
+    :param options_data: list of dicts (multi-year) or single dict
+    :param is_list_mode: whether options_data is a list
+    :param if_exact: apply only to specific time period
+    :param pred_year_start: first prediction year
+    :param pred_year_end: last prediction year
+    :return: tuple of (bdg_cur, bdg_long)
+    """
+    if is_list_mode:
+        bdg_cur = options_data[0]['bdg']
+        bdg_long = sum([x['bdg'] for x in options_data])
+    else:
+        bdg_cur = options_data['bdg']
+        if if_exact:
+            bdg_long = bdg_cur
+        else:
+            bdg_long = bdg_cur * (pred_year_end - pred_year_start + 1)
+    
+    return bdg_cur, bdg_long
+
+
 def _tables_data_worker(model: "Model | list",
                         model_rep: "ModelRep | list",
                         ds: pd.DataFrame | list,
-                        opt_set: "OptionSettings",
+                        opt_set: "OptionSettings | list[OptionSettings]",
                         options_m: dict,
                         options_names_subset: list,
                         pred_year_start: int,
@@ -242,33 +360,46 @@ def _tables_data_worker(model: "Model | list",
     else:
         model_rep_main = model_rep
 
+    is_list_mode = (
+        isinstance(opt_set, list) and
+        hasattr(opt_set[0], 'date_start') and hasattr(opt_set[0], 'date_end') and
+        not all(x.date_start == opt_set[0].date_start and x.date_end == opt_set[0].date_end for x in opt_set)
+    )
+    options_m_zero = _extract_options_data(options_m, 'zero', opt_set, is_list_mode)
+
     # ---------- options table ----------
 
     language = model_rep_main.language
 
     invest_col = model_rep_main.vis_dict.loc[(model_rep_main.vis_dict['section'] == 'option_compare') &
-                                        (model_rep_main.vis_dict['variable'] == 'costs_title'), model_rep_main.language].iloc[0]
+                                    (model_rep_main.vis_dict['variable'] == 'costs_title'), model_rep_main.language].iloc[0]    
 
-    options_df = pd.DataFrame.from_dict(options_m['zero'].items()).rename(columns={0: invest_col,
-                                                                                   1: 'zero_short'})
+    options_df, options_long = _build_option_dataframes(
+        options_m_zero, 'zero', invest_col, hide_rows, is_list_mode)
 
-    options_df = options_df[~options_df[invest_col].isin(hide_rows)].reset_index().drop('index', axis=1)
-    options_df = options_df[pd.to_numeric(options_df['zero_short'], errors='coerce').notnull()]
-    options_df['zero_long'] = [f"{x[1][1]:.0%}" if 'bdg' not in x[1][0]
-                               else str((pred_year_end - pred_year_start + 1) * x[1][1])
-                               for x in options_df.iterrows()]
-    options_df['zero_short'] = [f"{x[1][1]:.0%}" if 'bdg' not in x[1][0] else str(x[1][1])
-                                for x in options_df.iterrows()]
+    cols_long = [col for col in options_long if col.startswith('zero_short')]
+    options_df = options_df[options_long[cols_long].applymap(lambda x: pd.to_numeric(x, errors='coerce')).notnull().all(axis=1)]
+
+    bdg_mask = options_df[invest_col].str.contains(r'^bdg(_|$)', case=False, regex=True)
+
+    _calculate_long_values(
+        options_df, options_long, bdg_mask, cols_long, 'zero',
+        is_list_mode, if_exact, pred_year_start, pred_year_end)
 
     for option_name in options_names_subset:
-        tmp_df = pd.DataFrame.from_dict(options_m[option_name].items()).rename(columns={0: 'tmp',
-                                                                                        1: f'{option_name}_short'})
+
+        options_m_cur = _extract_options_data(options_m, option_name, opt_set)
+
+        tmp_df, tmp_long = _build_option_dataframes(
+            options_m_cur, option_name, 'tmp', hide_rows, is_list_mode)
+
+        tmp_cols_long = [col for col in tmp_long if col.startswith(f'{option_name}_short')]
+
         tmp_df = tmp_df[pd.to_numeric(tmp_df[f'{option_name}_short'], errors='coerce').notnull()]
-        tmp_df[f'{option_name}_long'] = [f"{x[1][1]:.0%}" if 'bdg' not in x[1][0]
-                                         else str((pred_year_end - pred_year_start + 1) * x[1][1])
-                                         for x in tmp_df.iterrows()]
-        tmp_df[f'{option_name}_short'] = [f"{x[1][1]:.0%}" if 'bdg' not in x[1][0] else str(x[1][1])
-                                          for x in tmp_df.iterrows()]
+
+        _calculate_long_values(
+            tmp_df, tmp_long, bdg_mask, tmp_cols_long, option_name,
+            is_list_mode, if_exact, pred_year_start, pred_year_end)
 
         options_df = options_df.merge(tmp_df, how='left', left_on=invest_col, right_on='tmp')
         options_df.drop('tmp', axis=1, inplace=True)
@@ -318,7 +449,7 @@ def _tables_data_worker(model: "Model | list",
     calc_df = pd.DataFrame(columns=[sales_col_name, sales_vol, sales_val, incr_sales, profit, romi, growth_vol])
     calc_df[sales_col_name] = list(options_df)[1:]
 
-    ds, dt_pred, opt_sum = calc.option_report(model, ds, model_rep, options_m['zero'],
+    ds, dt_pred, opt_sum = calc.option_report(model, ds, model_rep, options_m_zero,
                                                 opt_set, if_exact=if_exact)
 
     if isinstance(model_rep, list):
@@ -345,15 +476,19 @@ def _tables_data_worker(model: "Model | list",
 
     for option_name in options_names_subset:
 
-        ds, dt_pred, opt_sum = calc.option_report(model, ds, model_rep, options_m[option_name],
+        options_m_cur = _extract_options_data(options_m, option_name, opt_set)
+        bdg_cur, bdg_long = _extract_budget_values(
+            options_m_cur, is_list_mode, if_exact, pred_year_start, pred_year_end)
+
+        ds, dt_pred, opt_sum = calc.option_report(model, ds, model_rep, options_m_cur,
                                                     opt_set, if_exact=if_exact)
 
         if isinstance(model_rep, list):
             opt_sum = opt_sum[-1]
 
         incr_sales_short = opt_sum['pred_exact_0']['pred_exact_val'] - zero_val_short
-        profit_short = incr_sales_short - 1e6 * options_m[option_name]['bdg']
-        romi_short = incr_sales_short / (1e6 * options_m[option_name]['bdg'])
+        profit_short = incr_sales_short - 1e6 * bdg_cur
+        romi_short = incr_sales_short / (1e6 * bdg_cur)
 
         calc_df[calc_df[sales_col_name] == f'{option_name}_short'] = [f'{option_name}_short',
                                                                       opt_sum['pred_exact_0']['pred_exact_vol'],
@@ -364,8 +499,8 @@ def _tables_data_worker(model: "Model | list",
                                                                       opt_sum['growth_vol'] - 1]
 
         incr_sales_long = opt_sum['pred_long_val'] - zero_val_long
-        profit_long = incr_sales_long - 1e6 * options_m[option_name]['bdg'] * (pred_year_end - pred_year_start + 1)
-        romi_long = incr_sales_long / (1e6 * options_m[option_name]['bdg'] * (pred_year_end - pred_year_start + 1))
+        profit_long = incr_sales_long - 1e6 * bdg_long
+        romi_long = incr_sales_long / (1e6 * bdg_long)
 
         calc_df[calc_df[sales_col_name] == f'{option_name}_long'] = [f'{option_name}_long',
                                                                      opt_sum['pred_long_vol'],
@@ -390,7 +525,8 @@ def _tables_data_worker(model: "Model | list",
 
     apply_cols = list(calc_df)[1:]
     for col in calc_df[apply_cols]:
-        calc_df[col] = ['{:,.0f}'.format(x).replace(',', ' ') if isinstance(x, (float, np.float64))
+        calc_df[col] = ['{:,.0f}'.format(x).replace(',', ' ') if isinstance(x, (float, np.float64)) and abs(x) > 1000
+                        else '{:,.2f}'.format(x).replace(',', ' ') if isinstance(x, (float, np.float64))
                         else x for x in calc_df[col]]
 
     return options_df, calc_df
@@ -429,6 +565,8 @@ def _fill_table(table,
             for n, item in enumerate(row):
                 if isinstance(item, str):
                     table.cell(index + 1, n).text = item
+                elif isinstance(item, float):
+                    table.cell(index + 1, n).text = str(round(item, 2))
                 else:
                     table.cell(index + 1, n).text = str(int(item))
                 if index == len(ds) - 1:
@@ -438,6 +576,8 @@ def _fill_table(table,
             for n, item in enumerate(row):
                 if isinstance(item, str):
                     table.cell(index + 1, n).text = item
+                elif isinstance(item, float):
+                    table.cell(index + 1, n).text = str(round(item, 2))
                 else:
                     table.cell(index + 1, n).text = str(int(item))
     return table

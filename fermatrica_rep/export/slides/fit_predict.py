@@ -23,13 +23,140 @@ from fermatrica_rep.meta_model.model_rep import ModelRep
 from fermatrica_rep.options.define import OptionSettings
 
 
+def _prepare_fit_data(model: "Model",
+                      model_rep: "ModelRep",
+                      dt_pred: pd.DataFrame,
+                      opt_set: OptionSettings,
+                      option_name: str,
+                      option: dict | list | None = None,
+                      plot_type: str = 'brand',
+                      bs_key_filter: list | tuple | None = None
+                      ) -> dict:
+    """
+    Prepare all data needed by the fit-predict slide create() function.
+
+    Returns dict with keys:
+    - language, superbrand, units, axis_title_vol, axis_title_val
+    - chart_title_vol, chart_title_val
+    - dt_pred_prep_vol, dt_pred_prep_val (yearly table DataFrames)
+    - slide_title (str)
+    - vol_kpi, val_kpi (str)
+    """
+    language = model_rep.language
+    superbrand = model.conf.target_superbrand
+
+    if hasattr(model.conf, 'display_units'):
+        units = model.conf.display_units
+    else:
+        units = 'packs'
+
+    axis_title_vol = model_rep.vis_dict.loc[
+        (model_rep.vis_dict['section'] == "shared") & (model_rep.vis_dict['variable'] == units), language].iloc[0]
+    axis_title_val = model_rep.vis_dict.loc[
+        (model_rep.vis_dict['section'] == "shared") & (model_rep.vis_dict['variable'] == "rub_short"), language].iloc[0]
+    chart_title_vol = model_rep.vis_dict.loc[(model_rep.vis_dict['section'] == "plot_predict") & (
+                model_rep.vis_dict['variable'] == "volume_title_total"), language].iloc[0]
+    chart_title_vol = chart_title_vol.replace('***', model_rep.vis_dict.loc[
+        (model_rep.vis_dict['section'] == "shared") & (model_rep.vis_dict['variable'] == units), language].iloc[0])
+
+    chart_title_val = model_rep.vis_dict.loc[(model_rep.vis_dict['section'] == "plot_predict") & (
+                model_rep.vis_dict['variable'] == "value_title"), language].iloc[0]
+
+    # yearly table data
+    dt_pred_prep = \
+        dt_pred.assign(year=dt_pred['date'].dt.year, observed_val=dt_pred['observed'] * dt_pred[model.conf.price_var]
+                       , predicted_val=dt_pred['predicted'] * dt_pred[model.conf.price_var]). \
+            loc[(dt_pred['bs_key'].isin(bs_key_filter)) & (dt_pred['listed'].isin([2, 3, 4]))]. \
+            groupby('year')[['observed', 'predicted', 'observed_val', 'predicted_val']].sum().reset_index()
+    dt_pred_prep['err'] = dt_pred_prep['predicted'] / dt_pred_prep['observed'] - 1
+    dt_pred_prep['err'] = [f"{x:.1%}" if abs(x) != np.inf else '-' for x in dt_pred_prep['err']]
+    dt_pred_prep['err_val'] = dt_pred_prep['predicted_val'] / dt_pred_prep['observed_val'] - 1
+    dt_pred_prep['err_val'] = [f"{x:.1%}" if abs(x) != np.inf else '-' for x in dt_pred_prep['err_val']]
+
+    for col in dt_pred_prep[['observed', 'predicted', 'observed_val', 'predicted_val']]:
+        dt_pred_prep[col] = ['{:,.0f}'.format(x).replace(',', ' ') if x >= 0 else '0' for x in dt_pred_prep[col]]
+
+    dt_pred_prep_vol = dt_pred_prep[['year', 'observed', 'predicted', 'err']]. \
+        rename(columns={'year': model_rep.vis_dict.loc[model_rep.vis_dict['variable'] == 'year', language].iloc[0],
+                        'observed':
+                            model_rep.vis_dict.loc[model_rep.vis_dict['variable'] == 'observed', language].iloc[0],
+                        'predicted':
+                            model_rep.vis_dict.loc[model_rep.vis_dict['variable'] == 'predicted', language].iloc[0],
+                        'err': model_rep.vis_dict.loc[model_rep.vis_dict['variable'] == 'err', language].iloc[0]
+                        })
+
+    dt_pred_prep_val = dt_pred_prep[['year', 'observed_val', 'predicted_val', 'err_val']]. \
+        rename(columns={'year': model_rep.vis_dict.loc[model_rep.vis_dict['variable'] == 'year', language].iloc[0],
+                        'observed_val':
+                            model_rep.vis_dict.loc[model_rep.vis_dict['variable'] == 'observed', language].iloc[0],
+                        'predicted_val':
+                            model_rep.vis_dict.loc[model_rep.vis_dict['variable'] == 'predicted', language].iloc[0],
+                        'err_val': model_rep.vis_dict.loc[model_rep.vis_dict['variable'] == 'err', language].iloc[0]
+                        })
+
+    # slide title and KPI values
+    if isinstance(opt_set, list):
+        opt_set_cur = opt_set[0]
+    else:
+        opt_set_cur = opt_set
+
+    year_col = model_rep.vis_dict.loc[model_rep.vis_dict['variable'] == 'year', language].iloc[0]
+    pred_col = model_rep.vis_dict.loc[model_rep.vis_dict['variable'] == 'predicted', language].iloc[0]
+
+    if opt_set_cur.date_start.year in dt_pred_prep_vol[year_col].values:
+        vol_kpi = dt_pred_prep_vol[dt_pred_prep_vol[year_col] == opt_set_cur.date_start.year][pred_col].iloc[0]
+        vol_kpi = _num_kpi_prep(vol_kpi, model_rep)
+    else:
+        vol_kpi = '0'
+
+    if opt_set_cur.date_start.year in dt_pred_prep_val[year_col].values:
+        val_kpi = dt_pred_prep_val[dt_pred_prep_val[year_col] == opt_set_cur.date_start.year][pred_col].iloc[0]
+        val_kpi = _num_kpi_prep(val_kpi, model_rep)
+    else:
+        val_kpi = '0'
+
+    if plot_type in ['brand', 'sku']:
+        slide_title = model_rep.vis_dict.loc[(model_rep.vis_dict['section'] == 'option.detail.sales') &
+                                             (model_rep.vis_dict['variable'] == 'title'), language].iloc[0]
+    else:
+        slide_title = model_rep.vis_dict.loc[(model_rep.vis_dict['section'] == 'predict_table') &
+                                             (model_rep.vis_dict['variable'] == 'title'), language].iloc[0]
+
+    slide_title = slide_title.replace('***id', option_name)
+    slide_title = slide_title.replace('***year', str(opt_set_cur.date_start.year))
+    slide_title = slide_title.replace('***volume_sales', vol_kpi)
+    slide_title = slide_title.replace('***value_sales', val_kpi)
+    try:
+        units_label = model_rep.vis_dict.loc[
+            (model_rep.vis_dict['section'] == "shared") & (model_rep.vis_dict['variable'] == units), language].iloc[0]
+    except IndexError:
+        units_label = model_rep.vis_dict.loc[
+            (model_rep.vis_dict['section'] == "shared") & (model_rep.vis_dict['variable'] == 'units'), language].iloc[0]
+    slide_title = slide_title.replace('***units', units_label)
+
+    return {
+        'language': language,
+        'superbrand': superbrand,
+        'units': units,
+        'axis_title_vol': axis_title_vol,
+        'axis_title_val': axis_title_val,
+        'chart_title_vol': chart_title_vol,
+        'chart_title_val': chart_title_val,
+        'dt_pred_prep_vol': dt_pred_prep_vol,
+        'dt_pred_prep_val': dt_pred_prep_val,
+        'slide_title': slide_title,
+        'vol_kpi': vol_kpi,
+        'val_kpi': val_kpi,
+    }
+
+
 def create(prs: Presentation,
            model: "Model",
            model_rep: "ModelRep",
            dt_pred: pd.DataFrame,
            opt_set: OptionSettings,
            option_name: str,
-           option: dict | None = None,
+           option: dict | list | None = None,
            period: str = 'day',  # 'day', 'week', 'month', 'quarter', 'year'
            group_var: list | tuple = ('superbrand',),
            plot_type: str = 'brand',
@@ -55,7 +182,7 @@ def create(prs: Presentation,
     :param dt_pred: prediction data
     :param opt_set: OptionSetting object containing calculate settings
     :param option_name: name of the option to be reported. To be used only as title here, no impact on program behaviour
-    :param option: dictionary containing option to calculate or None for retro-analysis
+    :param option: dictionary containing option(s) or list of yearly dictionaries to calculate or None for retro-analysis
     :param period: time period / interval to group by: 'day', 'week', 'month', 'quarter', 'year'
     :param group_var: group entities by variables (list or tuple of strings)
     :param plot_type: 'retro', 'brand' or 'sku'. Used for naming only
@@ -104,6 +231,13 @@ def create(prs: Presentation,
                                                 , group_var=group_var
                                                 , bs_key_filter=bs_key_filter)
 
+    # prepare slide data (yearly table, option table, title strings)
+    slide_data = _prepare_fit_data(
+        model=model, model_rep=model_rep, dt_pred=dt_pred,
+        opt_set=opt_set, option_name=option_name, option=option,
+        plot_type=plot_type, bs_key_filter=bs_key_filter,
+    )
+
     # prepare slide in presentation
 
     slide_layout = model_rep.pptx_cnf['Blank_slide']
@@ -137,38 +271,10 @@ def create(prs: Presentation,
 
     # Tables
 
-    dt_pred_prep = \
-    dt_pred.assign(year=dt_pred['date'].dt.year, observed_val=dt_pred['observed'] * dt_pred[model.conf.price_var]
-                   , predicted_val=dt_pred['predicted'] * dt_pred[model.conf.price_var]). \
-        loc[(dt_pred['bs_key'].isin(bs_key_filter)) & (dt_pred['listed'].isin([2, 3, 4]))]. \
-        groupby('year')[['observed', 'predicted', 'observed_val', 'predicted_val']].sum().reset_index()
-    dt_pred_prep['err'] = dt_pred_prep['predicted'] / dt_pred_prep['observed'] - 1
-    dt_pred_prep['err'] = [f"{x:.1%}" if abs(x) != np.inf else '-' for x in dt_pred_prep['err']]
-    dt_pred_prep['err_val'] = dt_pred_prep['predicted_val'] / dt_pred_prep['observed_val'] - 1
-    dt_pred_prep['err_val'] = [f"{x:.1%}" if abs(x) != np.inf else '-' for x in dt_pred_prep['err_val']]
+    dt_pred_prep_vol = slide_data['dt_pred_prep_vol']
+    dt_pred_prep_val = slide_data['dt_pred_prep_val']
 
-    for col in dt_pred_prep[['observed', 'predicted', 'observed_val', 'predicted_val']]:
-        dt_pred_prep[col] = ['{:,.0f}'.format(x).replace(',', ' ') if x >= 0 else '0' for x in dt_pred_prep[col]]
-
-    dt_pred_prep_vol = dt_pred_prep[['year', 'observed', 'predicted', 'err']]. \
-        rename(columns={'year': model_rep.vis_dict.loc[model_rep.vis_dict['variable'] == 'year', language].iloc[0],
-                        'observed':
-                            model_rep.vis_dict.loc[model_rep.vis_dict['variable'] == 'observed', language].iloc[0],
-                        'predicted':
-                            model_rep.vis_dict.loc[model_rep.vis_dict['variable'] == 'predicted', language].iloc[0],
-                        'err': model_rep.vis_dict.loc[model_rep.vis_dict['variable'] == 'err', language].iloc[0]
-                        })
-
-    dt_pred_prep_val = dt_pred_prep[['year', 'observed_val', 'predicted_val', 'err_val']]. \
-        rename(columns={'year': model_rep.vis_dict.loc[model_rep.vis_dict['variable'] == 'year', language].iloc[0],
-                        'observed_val':
-                            model_rep.vis_dict.loc[model_rep.vis_dict['variable'] == 'observed', language].iloc[0],
-                        'predicted_val':
-                            model_rep.vis_dict.loc[model_rep.vis_dict['variable'] == 'predicted', language].iloc[0],
-                        'err_val': model_rep.vis_dict.loc[model_rep.vis_dict['variable'] == 'err', language].iloc[0]
-                        })
-
-    rows_pred = len(dt_pred_prep.index) + 1
+    rows_pred = len(dt_pred_prep_vol.index) + 1
     cell_width = round(1/12 * slide_width)
     cell_height = round(1/40 * slide_height)
 
@@ -246,39 +352,7 @@ def create(prs: Presentation,
 
     # Title
 
-    if opt_set.date_start.year in dt_pred_prep_vol[
-        model_rep.vis_dict.loc[model_rep.vis_dict['variable'] == 'year', language].iloc[0]].values:
-        vol_kpi = dt_pred_prep_vol[dt_pred_prep_vol[model_rep.vis_dict.loc[
-            model_rep.vis_dict['variable'] == 'year', language].iloc[0]] == opt_set.date_start.year][
-            model_rep.vis_dict.loc[model_rep.vis_dict['variable'] == 'predicted', language].iloc[0]].iloc[0]
-        vol_kpi = _num_kpi_prep(vol_kpi, model_rep)
-    else:
-        vol_kpi = '0'
-
-    if opt_set.date_start.year in dt_pred_prep_val[
-        model_rep.vis_dict.loc[model_rep.vis_dict['variable'] == 'year', language].iloc[0]].values:
-        val_kpi = dt_pred_prep_val[dt_pred_prep_val[model_rep.vis_dict.loc[
-            model_rep.vis_dict['variable'] == 'year', language].iloc[0]] == opt_set.date_start.year][
-            model_rep.vis_dict.loc[model_rep.vis_dict['variable'] == 'predicted', language].iloc[0]].iloc[0]
-        val_kpi = _num_kpi_prep(val_kpi, model_rep)
-    else:
-        val_kpi = '0'
-
-    if plot_type in ['brand', 'sku']:
-        slide_title = model_rep.vis_dict.loc[(model_rep.vis_dict['section'] == 'option.detail.sales') &
-                                             (model_rep.vis_dict['variable'] == 'title'), language].iloc[0]
-    else:
-        slide_title = model_rep.vis_dict.loc[(model_rep.vis_dict['section'] == 'predict_table') &
-                                             (model_rep.vis_dict['variable'] == 'title'), language].iloc[0]
-
-    slide_title = slide_title.replace('***id', option_name)
-    slide_title = slide_title.replace('***year', str(opt_set.date_start.year))
-    slide_title = slide_title.replace('***volume_sales', vol_kpi)
-    slide_title = slide_title.replace('***value_sales', val_kpi)
-    slide_title = slide_title.replace('***units', model_rep.vis_dict.loc[
-        (model_rep.vis_dict['section'] == "shared") & (model_rep.vis_dict['variable'] == units), language].iloc[0])
-
-    slide.shapes[0].text_frame.text = slide_title
+    slide.shapes[0].text_frame.text = slide_data['slide_title']
     slide.shapes[0].text_frame.paragraphs[0].font.size = model_rep.pptx_cnf['font_size_gross']
     slide.shapes[0].text_frame.paragraphs[0].font.name = model_rep.pptx_cnf['font_family_header']
 
@@ -410,7 +484,7 @@ def _fit_chart_create(slide,
 
 def _option_table_create(slide
                          , model_rep: "ModelRep"
-                         , option: dict
+                         , option: dict | list
                          , cell_width: int | float
                          , cell_height: int | float):
     """
@@ -419,7 +493,7 @@ def _option_table_create(slide
 
     :param slide: Slide object from python_pptx package
     :param model_rep: ModelRep object (reporting settings)
-    :param option: dictionary containing option to calculate or None for retro-analysis
+    :param option: dictionary containing option to calculate or list of yearly dictionaries or None for retro-analysis
     :param cell_width: width of the cell in the table
     :param cell_height: height of the cell in the table
     :return: Slide object from python_pptx package
@@ -430,6 +504,11 @@ def _option_table_create(slide
     slide_height = model_rep.pptx_cnf['slide_height']
     slide_width = model_rep.pptx_cnf['slide_width']
 
+    if isinstance(option, list):
+        option_cur = option[0]
+    else:
+        option_cur = option
+
     #
 
     bdg_col = model_rep.vis_dict.loc[(model_rep.vis_dict['section'] == 'predict_costs_table') &
@@ -437,12 +516,12 @@ def _option_table_create(slide
     invest_col = model_rep.vis_dict.loc[(model_rep.vis_dict['section'] == 'predict_costs_table') &
                                         (model_rep.vis_dict['variable'] == 'label'), language].iloc[0].replace(',', '')
 
-    option_df = pd.DataFrame.from_dict(option.items()).rename(columns={0: invest_col,
+    option_df = pd.DataFrame.from_dict(option_cur.items()).rename(columns={0: invest_col,
                                                                        1: bdg_col})
 
     option_df = option_df[option_df[invest_col] != "text_flags"].reset_index().drop('index', axis=1)
     option_df = option_df[pd.to_numeric(option_df[bdg_col], errors='coerce').notnull()]
-    option_df[bdg_col] = [f"{x[1][1]:.0%}" if 'bdg' not in x[1][0] else str(x[1][1]) for x in option_df.iterrows()]
+    option_df[bdg_col] = [f"{x[1][1]:.0%}" if 'bdg' not in x[1][0] else str(round(x[1][1], 2)) for x in option_df.iterrows()]
 
     option_df['tmp'] = option_df[invest_col].str.replace('bdg_', '')
     option_df = option_df.merge(

@@ -3,17 +3,20 @@ Basic utilities for PPTX export of FERMATRICA_REP modelling reporting.
 """
 
 
+import copy
 import re
-
 import pandas as pd
-from fermatrica_utils import hex_to_rgb
+
 from pptx.dml.color import RGBColor
 from pptx.enum.dml import MSO_LINE_DASH_STYLE
 from pptx.enum.text import PP_PARAGRAPH_ALIGNMENT
 from pptx.oxml.xmlchemy import OxmlElement
 from pptx.util import Cm, Pt
 
+from fermatrica_utils import hex_to_rgb
+
 from fermatrica_rep import ModelRep
+from fermatrica_rep.options.define import OptionSettings
 
 
 def set_chart_colors_line(chart
@@ -197,6 +200,8 @@ def fill_table(table
         for n, item in enumerate(row):
             if isinstance(item, str):
                 table.cell(index + 1, n).text = item
+            elif isinstance(item, float):
+                table.cell(index + 1, n).text = str(round(item, 2))
             else:
                 table.cell(index + 1, n).text = str(int(item))
             table.cell(index + 1, n).margin_bottom = Pt(0)
@@ -257,3 +262,23 @@ def table_text_format(table
             paragraph.alignment = PP_PARAGRAPH_ALIGNMENT.CENTER
 
     return table
+
+
+def _extract_options_data(options_m: dict
+                          , option_key: str
+                          , opt_set: "OptionSettings | list[OptionSettings]"
+                          , is_list_mode: bool = False):
+    """
+    Extract options data for a given option key, handling both list and single opt_set.
+
+    :param options_m: dictionary of dictionaries defining options
+    :param option_key: key to extract from options_m
+    :param opt_set: OptionSetting object or list of OptionSettings
+    :param is_list_mode: whether opt_set is a chronological list of OptionSettings
+    :return: list of dicts (if opt_set is list) or single dict
+    """
+    if isinstance(opt_set, list) and is_list_mode:
+        return [copy.deepcopy(x) for k, x in options_m[option_key].items()
+                if k in range(opt_set[0].date_start.year, opt_set[-1].date_end.year + 1)]
+    else:
+        return options_m[option_key]

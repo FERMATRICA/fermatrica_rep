@@ -1,0 +1,24 @@
+- description: "test_decompose_main_plot p01"
+  model_tag: "2026-06-18_124832"
+  sample: "p01"
+  function: "decompose_main_plot"
+  params:
+    brand: "brand_1"
+    period: "m"
+    show_future: true
+    contour_line: true
+  expected:
+    n_traces: 26
+    traces:
+    - name: "Base"
+      y_sum: 77845285.596271
+    - name: "Distribution"
+      y_sum: 48050371.049360
+    - name: "Relative price"
+      y_sum: -5451337.223864
+    - name: "TV"
+      y_sum: 11123928.334340
+    - name: "Digital_Performance"
+      y_sum: 3260272.822301
+    - name: "Seasonality"
+      y_sum: 29803017.686581

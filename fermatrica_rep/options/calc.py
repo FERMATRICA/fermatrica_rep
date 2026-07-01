@@ -21,10 +21,10 @@ import logging
 import numpy as np
 import multiprocessing
 
-from fermatrica_utils import import_module_from_string
+from fermatrica_utils import import_module_from_string, fermatrica_warner
 from fermatrica import fermatrica_error, Model, ModelConf, predict_ext, transform
 
-from fermatrica_rep.options.define import OptionSettings
+from fermatrica_rep.options.define import OptionSettings, media_ssn_apply
 from fermatrica_rep.options.translators import *
 
 
@@ -54,12 +54,29 @@ def _option_translate_exact(model_conf: "ModelConf"
 
     # prepare
 
-    if 'text_flags' in option_dict.keys():
+    if 'text_flags' in option_dict.keys() and pd.notna(option_dict['text_flags']):
         text_flags = option_dict['text_flags']
+        text_flags = str(text_flags).strip()
+        text_flags = text_flags.split(' ')
     else:
-        text_flags = {}
+        text_flags = []
 
     option_dict = {k: v for k, v in option_dict.items() if k not in ['text_flags', 'bdg']}
+
+    # if seasonality dictionary is provided via ModelRep, apply seasonality to the dataset
+
+    if hasattr(model_rep, 'ssn_dict') and pd.notna(model_rep.ssn_dict) and len(model_rep.ssn_dict) > 0 and\
+        len(text_flags) > 0 and any(re.match('name_', item) for item in text_flags):
+        
+        opt_name = next((item[5:] for item in text_flags if item.startswith('name_')), None)
+
+        if opt_name in model_rep.ssn_dict.keys():
+
+            dt_ssn = model_rep.ssn_dict[opt_name]
+            ds = media_ssn_apply(ds=ds
+                                 , dt_ssn=dt_ssn
+                                 , date_start=option_settings.date_start
+                                 , date_end=option_settings.date_end)
 
     # load adhoc code
 
@@ -222,6 +239,13 @@ def _option_report_worker(model: "Model"
     else:
         option_settings = _align_option_settings(option_settings)
 
+    # check price var
+
+    if hasattr(model_conf, 'price_var') and pd.notna(model_conf.price_var) and model_conf.price_var != '' and model_conf.price_var not in ds.columns:
+        ds[model_conf.price_var] = 1.0
+        fermatrica_warner.warning('Price variable `' + model_conf.price_var + '` from ModelConf is not present in the dataset. ' +
+                                  'It has been added with default value 1.0.')
+
     # translate budgets into ds
 
     if if_exact:
@@ -289,7 +313,7 @@ def option_report(model: "Model | list"
     # strategies / policies
 
     if (isinstance(option_dict, list) and not isinstance(option_settings, list)) or\
-        (not isinstance(option_dict, list) and isinstance(option_settings, list)):
+        (not isinstance(option_dict, list) and isinstance(option_settings, list) and not isinstance(model_rep, list)):
 
         fermatrica_error('Option could not be calculated. If you try to calculate complex option ' +
                          'with different splits for different periods, both `option_dict` and ' +
@@ -335,7 +359,7 @@ def option_report(model: "Model | list"
                                                                          , ds=ds[i]
                                                                          , model_rep=model_rep[i]
                                                                          , option_dict=option_dict
-                                                                         , option_settings=option_settings
+                                                                         , option_settings=option_settings[i] if (isinstance(option_settings, list) and not isinstance(option_dict, list)) else option_settings
                                                                          , targets_new=targets_new
                                                                          , allow_past=allow_past
                                                                          , if_exact=if_exact)
@@ -399,6 +423,21 @@ def option_summarize_exact(model_conf: "ModelConf"
             option_summary['pred_exact_val'] = dt_pred.loc[dt_mask, 'predicted'] * dt_pred.loc[
                 dt_mask, model_conf.price_var]
             option_summary['pred_exact_val'] = option_summary['pred_exact_val'].sum()
+
+    elif summary_type == 'mean':
+
+        dt_mask = True
+        for i, (apply_var, trgt) in enumerate(zip(option_settings.apply_vars, option_settings.target)):
+            dt_mask = dt_mask * (
+                    (dt_pred['listed'].isin([2, 3, 4])) & (dt_pred['date'] >= option_settings.date_start) & (
+                    dt_pred['date'] <= option_settings.date_end) & (dt_pred[apply_var].isin(trgt)))
+
+        option_summary['pred_exact_vol'] = dt_pred.loc[dt_mask, 'predicted'].mean()
+
+        if hasattr(model_conf, 'price_var') and pd.notna(model_conf.price_var) and model_conf.price_var != '':
+            option_summary['pred_exact_val'] = dt_pred.loc[dt_mask, 'predicted'] * dt_pred.loc[
+                dt_mask, model_conf.price_var]
+            option_summary['pred_exact_val'] = option_summary['pred_exact_val'].mean()
 
     elif summary_type == 'mean_fin':
 
@@ -501,6 +540,23 @@ def option_summarize(model_conf: "ModelConf"
                     dt_mask, model_conf.price_var]
                 option_summary['pred_long_val'] = option_summary['pred_long_val'].sum()
 
+        elif summary_type == 'mean':
+
+            dt_mask = True
+            for i, (apply_var, trgt) in enumerate(
+                    zip(option_settings_copy[0].apply_vars, option_settings_copy[0].target)):
+                dt_mask = dt_mask * (
+                        (dt_pred['listed'].isin([2, 3, 4])) & (
+                            dt_pred['date'] >= option_settings_copy[0].date_start) & (
+                            dt_pred[apply_var].isin(trgt)))
+
+            option_summary['pred_long_vol'] = dt_pred.loc[dt_mask, 'predicted'].mean()
+
+            if hasattr(model_conf, 'price_var') and pd.notna(model_conf.price_var) and model_conf.price_var != '':
+                option_summary['pred_long_val'] = dt_pred.loc[dt_mask, 'predicted'] * dt_pred.loc[
+                    dt_mask, model_conf.price_var]
+                option_summary['pred_long_val'] = option_summary['pred_long_val'].mean()
+
         elif summary_type == 'mean_fin':
 
             dt_mask = True
@@ -572,11 +628,11 @@ def option_summarize(model_conf: "ModelConf"
                     dt_pred['date'] <= option_settings_copy[0].ref_date_end) & (dt_pred[apply_var].isin(trgt)))
 
         option_summary['ref_vol'] = dt_pred.loc[dt_mask_obs, 'observed'].sum() + dt_pred.loc[
-            dt_mask_pred, 'observed'].sum()
+            dt_mask_pred, 'predicted'].sum()
 
         if hasattr(model_conf, 'price_var') and pd.notna(model_conf.price_var) and model_conf.price_var != '':
             tmp_1 = dt_pred.loc[dt_mask_obs, 'observed'] * dt_pred.loc[dt_mask_obs, model_conf.price_var]
-            tmp_2 = dt_pred.loc[dt_mask_pred, 'observed'] * dt_pred.loc[dt_mask_pred, model_conf.price_var]
+            tmp_2 = dt_pred.loc[dt_mask_pred, 'predicted'] * dt_pred.loc[dt_mask_pred, model_conf.price_var]
             option_summary['ref_val'] = tmp_1.sum() + tmp_2.sum()
 
     # growth
@@ -658,7 +714,7 @@ def option_report_multi_var(model: "Model | list"
                             , ds: pd.DataFrame | list
                             , model_rep  #: "ModelRep"
                             , option_dict_d: dict
-                            , option_settings: "OptionSettings"
+                            , option_settings: "OptionSettings | list"
                             , targets_new: dict | None = None
                             , allow_past: bool = False
                             , if_exact: bool = False

@@ -1,0 +1,15 @@
+- description: "test_fit_main_plot_vol_month p00"
+  model_tag: "2024-11-19_174649"
+  sample: "p00"
+  function: "fit_main_plot_vol"
+  params:
+    brand: "brand_x"
+    period: "month"
+    show_future: true
+  expected:
+    n_traces: 10
+    traces:
+    - name: "Predicted"
+      y_sum: 361466.474237
+    - name: "Error"
+      y_sum: -.inf

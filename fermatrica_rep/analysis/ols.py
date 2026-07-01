@@ -8,6 +8,8 @@ import pandas as pd
 
 import statsmodels.api as sm
 
+from fermatrica.model.transform import adbudg, adstock, adstockd, arl, gaussian, gompertz, lag, logistic, mar, softmax
+
 
 def get_model_ds(model: sm.regression.linear_model.RegressionResultsWrapper
                  , ds: pd.DataFrame) -> pd.DataFrame:

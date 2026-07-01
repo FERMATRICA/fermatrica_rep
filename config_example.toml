@@ -1,0 +1,13 @@
+[paths]
+# Path to the fermatrica core repository samples directory.
+# Example: "C:\\Users\\username\\fermatrica\\samples"
+samples = "/path/to/fermatrica/samples"
+
+# Path to the Python executable within the Conda environment.
+# Example: "C:\\Users\\username\\anaconda3\\envs\\my_fermatrica_env\\python.exe"
+python = "C:/path/to/anaconda3/envs/my_fermatrica_env/python.exe"
+
+[python]
+# Name of the Conda/virtual environment used for development with this repo.
+# Example: "my_fermatrica_env"
+env_name = "my_fermatrica_env"

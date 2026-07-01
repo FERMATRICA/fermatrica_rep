@@ -4,6 +4,8 @@ Basic / common utilities required by FERMATRICA_REP.
 
 
 import copy
+import gc
+from fermatrica.model.lhs_fun import pd
 import pandas as pd
 import re
 import colorcet as cc
@@ -109,5 +111,3 @@ def palette_fill(entities_old: dict
         units_total[u] = palette_base[i]
 
     return units_total
-
-

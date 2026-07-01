@@ -28,8 +28,10 @@ from fermatrica_rep.adstocks import adstocks_data
 from fermatrica_rep.transformation import transformation_plot
 from fermatrica_rep.options.calc import option_report, option_report_multi_var
 from fermatrica_rep.options.calc_multi import option_report_multi_post
-from fermatrica_rep.options.optim import optimize_budget_local_cobyla, optimize_target_local_cobyla
-from fermatrica_rep.options.define import OptionSettings, trans_dict_create, budget_dict_create, media_ssn_apply
+from fermatrica_rep.options.optim import (optimize_budget_local_cobyla, optimize_target_local_cobyla
+                                          , optimize_budget_local_ncma, optimize_target_local_ncma)
+from fermatrica_rep.options.define import (OptionSettings, option_settings_list_create, trans_dict_create
+                                           , budget_dict_create, media_ssn_apply, media_ssn_create, budget_ssn_create)
 from fermatrica_rep import options
 from fermatrica_rep.export import export_pptx
 from fermatrica_rep.meta_model.meta_model import MetaModel

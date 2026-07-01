@@ -34,6 +34,7 @@ def create(prs: Presentation,
            fixed_vars: dict | None = {'price': 1},
            adhoc_curves_max_costs: "None | Callable" = None,
            if_exact: bool = True,
+           if_volume: bool = False,
            cores: int = 4):
     """
     Generate efficiency curves slides (i.e. incremental KPI, profit, ROI) via full curves approach
@@ -52,7 +53,9 @@ def create(prs: Presentation,
     :param adhoc_curves_max_costs: adhoc function to set maximum observed values for every variable (optional)
     :param fixed_vars: translation variables with their values to be fixed across grid
     :param if_exact: apply only to the specific time period, without next years
+    :param if_volume: show volume or value KPI
     :param cores: number of processor cores to use in calculations; None sets to all computer logical cores - 1
+
     :return: Presentation object from python_pptx package
     """
 
@@ -106,6 +109,8 @@ def create(prs: Presentation,
 
     # prepare slide in presentation
 
+    opt_set_crv_vis = opt_set_crv[0] if isinstance(opt_set_crv, list) else opt_set_crv
+
     slide_layout = model_rep_main.pptx_cnf['Blank_slide']
 
     # prepare colors
@@ -124,12 +129,13 @@ def create(prs: Presentation,
 
     slide = _slide_vis_worker(slide,
                               model_rep=model_rep_main,
-                              opt_set_crv=opt_set_crv,
+                              opt_set_crv=opt_set_crv_vis,
                               curves_full_data=curves_full_data,
                               plot_type='short',
                               year_end=date_max,
                               budget_step=budget_step,
-                              bdg_max=bdg_max
+                              bdg_max=bdg_max,
+                              if_volume=if_volume,
                               )
 
     # ------------------ long effect ------------------
@@ -138,13 +144,15 @@ def create(prs: Presentation,
 
     slide = _slide_vis_worker(slide,
                               model_rep=model_rep_main,
-                              opt_set_crv=opt_set_crv,
+                              opt_set_crv=opt_set_crv_vis,
                               curves_full_data=curves_full_data,
                               plot_type='long',
                               year_end=date_max,
                               budget_step=budget_step,
                               bdg_max=bdg_max,
-                              if_exact=if_exact)
+                              if_exact=if_exact,
+                              if_volume=if_volume,
+                              )
 
     return prs
 
@@ -157,7 +165,8 @@ def _slide_vis_worker(slide,
                       year_end: int,
                       budget_step: int | float = 5,
                       bdg_max: int | float = 301,
-                      if_exact: bool = True
+                      if_exact: bool = True,
+                      if_volume: bool = False
                       ):
     """
     Create one after another of two slides for `fermatrica_rep.export.slides.incr_roi.create()`.
@@ -174,6 +183,8 @@ def _slide_vis_worker(slide,
     :param budget_step: budget iteration step in millions, defaults to 1 (i.e. 1M)
     :param bdg_max: maximum budget size (all options with larger budgets to be dropped)
     :param if_exact: apply only to the specific time period, without next years
+    :param if_volume: show volume or value KPI
+
     :return:
     """
 
@@ -212,7 +223,13 @@ def _slide_vis_worker(slide,
     textbox.text_frame.word_wrap = True
 
     # Incremental sales
-    chart_data = _chart_data_worker(curves_full_data, f'increment_value_{plot_type}', if_exact, n_years)
+
+    if if_volume:
+        plot_type_cur = 'increment_volume_' + plot_type
+    else:
+        plot_type_cur = 'increment_value_' + plot_type
+
+    chart_data = _chart_data_worker(curves_full_data, plot_type_cur, if_exact, n_years)
 
     x, y = (0.5 - 0.45) * slide_width, slide.shapes[1].top + slide.shapes[1].height
     cx, cy = 0.25 * slide_width, 0.5 * slide_height
@@ -225,9 +242,11 @@ def _slide_vis_worker(slide,
     chart = graphic_frame.chart
     chart = set_chart_dashes(chart, '_extrapolated')
 
+    var_type = 'incr_sales_cum_axis_y' if if_exact and plot_type == 'long' else 'incr_sales_axis_y'
+
     chart.has_legend = False
     chart = _set_chart_axis(chart, model_rep,
-                            var='incr_sales_axis_y',
+                            var=var_type,
                             year=axis_years,
                             plot_type=plot_type,
                             bdg_max=bdg_max,
@@ -297,9 +316,11 @@ def _slide_vis_worker(slide,
 
     chart.has_legend = False
 
+    var_type = 'profit_cum_axis_y' if if_exact and plot_type == 'long' else 'profit_axis_y'
+
     chart = _set_chart_axis(chart
                             , model_rep,
-                            var='profit_axis_y',
+                            var=var_type,
                             year=axis_years,
                             if_exact=if_exact,
                             plot_type=plot_type,
@@ -446,11 +467,17 @@ def _chart_data_worker(curves_full_df: pd.DataFrame,
 
     tmp = curves_full_df.groupby('option').agg({'value': 'nunique'})
     opts = tmp.loc[tmp['value'] > 1].reset_index().option.tolist()
+    
     for opt in opts:
+        
         tmp = curves_full_df.loc[(curves_full_df['option'] == opt)].copy()
-        tmp.loc[-1] = 0
+
+        cols = [x for x in tmp.columns.tolist() if x not in ['option']]
+        tmp.loc[-1, cols] = 0
+
         if "ROI" in curve_type:
-            tmp.loc[-1] = "#N/A"
+            cols = [x for x in tmp.columns.tolist() if x not in ['option', 'max_obs_budg', 'bdg']]
+            tmp.loc[-1, cols] = "#N/A"
 
         tmp.index = tmp.index + 1
         tmp.sort_index(inplace=True)
@@ -510,7 +537,7 @@ def _set_chart_axis(chart,
                     model_rep.vis_dict['variable'] == 'axis_x_if_exact_true'), model_rep.language].iloc[0]
 
         year = year[-4:]
-    elif (~if_exact) & (plot_type == 'long'):
+    elif (not if_exact) & (plot_type == 'long'):
         category_axis_title = model_rep.vis_dict.loc[(model_rep.vis_dict['section'] == f'efficiency_{plot_type}') & (
                 model_rep.vis_dict['variable'] == 'axis_x_if_exact_false'), model_rep.language].iloc[0]
     else:

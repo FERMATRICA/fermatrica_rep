@@ -98,8 +98,13 @@ def create(prs: Presentation,
                                                      (model_rep.vis_dict['variable'] == 'title'), language].iloc[0]
 
     slide_title = slide_title.replace('***id', option_name)
-    slide_title = slide_title.replace('***units', model_rep.vis_dict.loc[
-        (model_rep.vis_dict['section'] == "shared") & (model_rep.vis_dict['variable'] == units), language].iloc[0])
+    try:
+        units_label = model_rep.vis_dict.loc[
+            (model_rep.vis_dict['section'] == "shared") & (model_rep.vis_dict['variable'] == units), language].iloc[0]
+    except IndexError:
+        units_label = model_rep.vis_dict.loc[
+            (model_rep.vis_dict['section'] == "shared") & (model_rep.vis_dict['variable'] == 'units'), language].iloc[0]
+    slide_title = slide_title.replace('***units', units_label)
 
     slide.shapes[0].text_frame.text = slide_title
     slide.shapes[0].text_frame.paragraphs[0].font.size = model_rep.pptx_cnf['font_size_gross']

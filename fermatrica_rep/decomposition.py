@@ -5,6 +5,8 @@ This module describes dynamic decomposition, for waterfall decomposition see `fe
 """
 
 
+import copy
+import gc
 import re
 
 from line_profiler_pycharm import profile
@@ -16,13 +18,72 @@ import plotly.express as px
 import plotly.io as pio
 import plotly.graph_objs as go
 
-from fermatrica_utils import groupby_eff
+from fermatrica_utils import groupby_eff, pandas_force_materialize, pandas_force_materialize_series
 
 from fermatrica import params_to_dict, fermatrica_error, Model, ModelConf
 from fermatrica.model.lhs_fun import *  # to run LHS
 from fermatrica_rep.meta_model.model_rep import ModelRep
 
 pio.templates.default = 'ggplot2'
+
+
+"""
+Helpers
+"""
+
+def _transform_lhs_generate_part(fn_src: str
+                                 , fn_name: str):
+    """
+    Creates part of LHS transformation function from source
+
+    :param fn_src: pandas DataFrame containing order, type and source code of LHS transformations
+    :param fn_name: function name to generate
+    :return:
+    """
+
+    fn_src = \
+'''
+def ''' + fn_name + '''(ds: pd.DataFrame
+                        , coef: "DotDict"
+                        , y=None):
+    rtrn = ''' + fn_src + \
+'''
+    return rtrn
+'''
+
+    d = {}
+
+    if not isinstance(fn_src, str):
+        fn_src = ''.join(fn_src)
+
+    exec(fn_src, globals(), d)
+
+    return d[fn_name]
+
+
+def _debug_print_sum(data, var_name, ds, color='31', threshold=None, use_abs=False):
+    """
+    Helper function for debug printing DataFrame/Series sums filtered by listed==2.
+    
+    :param data: DataFrame or Series to check
+    :param var_name: Variable name to display
+    :param ds: Original dataset with 'listed' column
+    :param color: ANSI color code (31=red, 33=yellow, 36=cyan, 32=green)
+    :param threshold: Optional threshold for breakpoint (e.g., 1.0)
+    :param use_abs: If True, use abs() for threshold comparison
+    """
+    mask_deb = ds.reset_index()['listed']
+    if isinstance(data, pd.Series):
+        sum_val = data[mask_deb == 2].sum()
+    else:  # DataFrame
+        sum_val = data[mask_deb == 2].sum().sum()
+    
+    print(f'\033[{color}m_ {var_name} {sum_val}\033[0m')
+    
+    if threshold is not None:
+        check_val = abs(sum_val) if use_abs else sum_val
+        if check_val < threshold:
+            breakpoint()
 
 
 """
@@ -33,13 +94,13 @@ Extract RHS effects from specific model types
 def decompose_basic(model_cur: statsmodels.regression.linear_model.OLS | statsmodels.regression.linear_model.OLSResults | list
                     , ds: pd.DataFrame | list):
     """
-        Wrapper
-        Simplistic decomposition from OLS statsmodels object. If possible, use `extract_effects` instead.
+    Wrapper
+    Simplistic decomposition from OLS statsmodels object. If possible, use `extract_effects` instead.
 
-        :param model_cur: OLS statsmodels object or list of OLS statsmodels object
-        :param ds: dataset or list of datasets
-        :return: table of effects (impacts) or list of tables of effects
-        """
+    :param model_cur: OLS statsmodels object or list of OLS statsmodels object
+    :param ds: dataset or list of datasets
+    :return: table of effects (impacts) or list of tables of effects
+    """
 
     if isinstance(model_cur, list):
         ret = [None]*len(model_cur)
@@ -73,7 +134,8 @@ def _rhs_effects_lme(model_conf: "ModelConf"
                      , model_cur
                      , ds: pd.DataFrame
                      , id_vars: list | tuple
-                     , if_detail) -> pd.DataFrame:
+                     , if_detail
+                     , if_debug: bool = False) -> pd.DataFrame:
     """
     The function extract effects (impacts) from RHS.
 
@@ -97,7 +159,8 @@ def _rhs_effects_lme(model_conf: "ModelConf"
     :param ds: dataset
     :param id_vars: index (dimension) variables. Mostly ['date'], not very important
     :param if_detail: expand tokens
-    :return:
+    :param if_debug: enable debug mode
+    :return: DataFrame of effects
 
     """
 
@@ -106,10 +169,12 @@ def _rhs_effects_lme(model_conf: "ModelConf"
 
     random = model_cur.random_effects
 
-    ds = ds.copy()
+    ds = ds.copy(deep=True)
+    
     ds['intercept'] = 1
 
-    split_m = select_eff(ds, id_vars)
+    split_m = ds[id_vars]
+    split_m = pandas_force_materialize(split_m)
 
     for i, j in fixed.reset_index(name='value').iterrows():
 
@@ -159,9 +224,17 @@ def _rhs_effects_lme(model_conf: "ModelConf"
 
             for cl in cols:
                 if re.search(r'[*( \-+:]', cl):
-                    split_m[cl] = ds.eval(cl) * j['value']
+                    eval_result = ds.eval(cl, engine='python')
+                    eval_result = pandas_force_materialize_series(pd.Series(eval_result) if not isinstance(eval_result, pd.Series) else eval_result)
+                    split_m[cl] = (eval_result.values * j['value']).copy()
+                    split_m[cl] = pandas_force_materialize_series(split_m[cl])
                 else:
-                    split_m[cl] = ds[cl] * j['value']
+                    ds_col = ds[cl].copy(deep=True)
+                    ds_col = pandas_force_materialize_series(ds_col)
+                    split_m[cl] = (ds_col.values * j['value']).copy()
+                    split_m[cl] = pandas_force_materialize_series(split_m[cl])
+            # Materialize after each parameter
+            split_m = split_m.copy(deep=True)
         else:
 
             if re.search(r'[*( \-+:]', cols):
@@ -170,23 +243,49 @@ def _rhs_effects_lme(model_conf: "ModelConf"
                 cols_splt = re.split(r' *[*() \-+:] *', cols)
                 cols_splt = [x for x in cols_splt if x in cols_all]
 
-                split_m[j['index']] = select_eff(ds, cols_splt).eval(cols) * j['value']
+                # CRITICAL: Extract only needed columns, materialize minimally
+                ds_cur = ds[cols_splt].copy(deep=True)
+                
+                # Now eval should work on clean DataFrame
+                eval_result = ds_cur.eval(cols, engine='python').values.copy()
+                eval_result = (eval_result * j['value']).copy()
+
+                # eval_result = eval_result.copy(deep=True)
+                split_m[j['index']] = eval_result
 
             else:
-                split_m[j['index']] = ds[cols] * j['value']
+                ds_col = ds[cols].copy(deep=True)
+                ds_col = pandas_force_materialize_series(ds_col)
+                split_m[j['index']] = (ds_col.values * j['value']).copy()
+                
+            # Materialize after each parameter
+            split_m[j['index']] = pandas_force_materialize_series(split_m[j['index']])
+            split_m = split_m.copy(deep=True)
+            
+    # Materialize after loop
+    split_m = pandas_force_materialize(split_m)
 
     ft = model_conf.fixed_effect_var
 
     j = pd.DataFrame(random).T.reset_index()
     j.columns = [ft, ft + '_' + 'intercept']
-    split_m[ft] = ds[ft]
+    j.iloc[0, 0] = j.iloc[0, 0]  # materialize
+    j = j.copy(deep=True)
+    
+    split_m[ft] = ds[ft].values.copy()
+    split_m[ft] = pandas_force_materialize_series(split_m[ft])
 
     split_m = split_m.merge(j, how='left', on=ft)
-    split_m[ft + '_' + 'intercept'] = split_m[ft + '_' + 'intercept']  # * split_m['Intercept']
+    split_m = split_m.reset_index(drop=True)  # break index references
+    split_m = pandas_force_materialize(split_m)
+    
+    split_m[ft + '_' + 'intercept'] = split_m[ft + '_' + 'intercept'].values.copy()  # * split_m['Intercept']
+    split_m[ft + '_' + 'intercept'] = pandas_force_materialize_series(split_m[ft + '_' + 'intercept'])
 
     del split_m[ft]
 
     split_m.drop(id_vars, axis=1, inplace=True)
+    split_m = pandas_force_materialize(split_m)
 
     return split_m
 
@@ -225,10 +324,10 @@ def _rhs_effects_ols(model_cur: statsmodels.regression.linear_model.OLS | statsm
     params = model_cur.params
     params.rename(index={'Intercept': 'intercept'}, inplace=True)
 
-    ds = ds.copy()
+    ds = ds.copy(deep=True)
     ds['intercept'] = 1
 
-    split_m = select_eff(ds, id_vars)
+    split_m = ds[id_vars].copy(deep=True)
 
     for i, j in params.reset_index(name='value').iterrows():
 
@@ -265,15 +364,23 @@ def _rhs_effects_ols(model_cur: statsmodels.regression.linear_model.OLS | statsm
                         break
             cols = cols.split("+")
             for i in cols:
-                split_m[i] = ds.eval(i) * j['value']
+                split_m[i] = (ds.eval(i, engine='python') * j['value']).values.copy()
+                split_m[i] = pandas_force_materialize_series(split_m[i])
+            # Materialize after each parameter
+            split_m = split_m.copy(deep=True)
         else:
             if "np.log1p" in cols:
                 cols = cols.replace("np.log1p", "")
-                split_m[j['index']] = np.log1p(ds.eval(cols)) * j['value']
+                split_m[j['index']] = np.log1p(ds.eval(cols, engine='python')).values * j['value']
+                split_m[j['index']] = pandas_force_materialize_series(split_m[j['index']])
             else:
-                split_m[j['index']] = ds.eval(cols) * j['value']
+                split_m[j['index']] = (ds.eval(cols, engine='python') * j['value']).values.copy()
+                split_m[j['index']] = pandas_force_materialize_series(split_m[j['index']])
+            # Materialize after each parameter
+            split_m = split_m.copy(deep=True)
 
     split_m.drop(id_vars, axis=1, inplace=True)
+    split_m = pandas_force_materialize(split_m)
 
     return split_m
 
@@ -283,7 +390,8 @@ def rhs_effects(model_conf: "ModelConf"
                 , model_cur
                 , ds: pd.DataFrame
                 , id_vars
-                , if_detail) -> pd.DataFrame:
+                , if_detail
+                , if_debug: bool = False) -> pd.DataFrame:
     """
     Extract RHS effects from different type statsmodels models (at least LME ans OLS are supported).
 
@@ -298,9 +406,19 @@ def rhs_effects(model_conf: "ModelConf"
     if model_conf.model_type == 'OLS':
         rtrn = _rhs_effects_ols(model_cur, ds, id_vars, if_detail)
     elif model_conf.model_type == 'LME':
-        rtrn = _rhs_effects_lme(model_conf, model_cur, ds, id_vars, if_detail)
+        rtrn = _rhs_effects_lme(model_conf=model_conf
+                                , model_cur=model_cur
+                                , ds=ds
+                                , id_vars=id_vars
+                                , if_detail=if_detail
+                                , if_debug=if_debug)
     elif model_conf.model_type == 'LMEA':
-        rtrn = _rhs_effects_lme(model_conf, model_cur, ds, id_vars, if_detail)
+        rtrn = _rhs_effects_lme(model_conf=model_conf
+                                , model_cur=model_cur
+                                , ds=ds
+                                , id_vars=id_vars
+                                , if_detail=if_detail
+                                , if_debug=if_debug)
     else:
         rtrn = None
         fermatrica_error('Unknown model type in model decomposition: ' + model_conf.model_type)
@@ -318,7 +436,8 @@ def extract_effect(model: "Model | list"
                    , ds: pd.DataFrame | list
                    , model_rep: "ModelRep | list"
                    , if_detail: bool = False
-                   , listed_filter: tuple | list = (2, 3, 4)) -> pd.DataFrame | list:
+                   , listed_filter: tuple | list = (2, 3, 4)
+                   , if_debug: bool = False) -> pd.DataFrame | list:
     """
         Wrapper
         Decompose complex model / extract effects (impacts) of all types.
@@ -328,6 +447,7 @@ def extract_effect(model: "Model | list"
         :param model_rep: ModelRep object (export settings) or list of ModelRep objects
         :param if_detail: expand tokens
         :param listed_filter: filter listed values to culaculate splits
+        :param if_debug: enable debug mode
         :return: table with column per every extracted effect / impact or list of tables with columns per every extracted effect
         """
 
@@ -338,13 +458,15 @@ def extract_effect(model: "Model | list"
                                                   , ds=ds[i]
                                                   , model_rep=model_rep[i]
                                                   , if_detail=if_detail
-                                                  , listed_filter=listed_filter)
+                                                  , listed_filter=listed_filter
+                                                  , if_debug=if_debug)
     else:
         split_m_m = _extract_effect_worker(model=model
                                            , ds=ds
                                            , model_rep=model_rep
                                            , if_detail=if_detail
-                                           , listed_filter=listed_filter)
+                                           , listed_filter=listed_filter
+                                           , if_debug=if_debug)
 
     return split_m_m
 
@@ -354,7 +476,8 @@ def _extract_effect_worker(model: "Model"
                            , ds: pd.DataFrame
                            , model_rep: "ModelRep"
                            , if_detail: bool = False
-                           , listed_filter: tuple | list = (2, 3, 4)) -> pd.DataFrame:
+                           , listed_filter: tuple | list = (2, 3, 4)
+                           , if_debug: bool = False) -> pd.DataFrame:
     """
     Worker
     Decompose complex model / extract effects (impacts) of all types.
@@ -367,151 +490,342 @@ def _extract_effect_worker(model: "Model"
     :return: table with column per every extracted effect / impact
     """
 
+    ds = pandas_force_materialize(ds, if_hard=False)
+
     language = model_rep.language
     model_conf = model.conf
 
     split_m = rhs_effects(model.conf, model.obj.models['main'], ds, ['date'], if_detail)
 
+    split_m = pandas_force_materialize(split_m)
+
     lhs = model_conf.model_lhs
 
     if lhs is not None:
         to_original = True
+        
+        # Fetch coef once for all LHS transformations
+        coef = model_conf.params[((model_conf.params['variable'] == '') | (model_conf.params['variable'].isna())) &
+                                (model_conf.params['fun'] == 'coef')][['arg', 'value']]
+        if not coef.empty:
+            coef = params_to_dict(coef)
+        
         # free_before type LHS transformations
         mask = '^free_before$'
 
         if ((lhs['if_active'] == 1) & (lhs['type'].str.match(mask))).sum() > 0:
 
+            lhs_free_before = lhs.loc[(lhs['if_active'] == 1) & (lhs['type'].str.match(mask))]
+
+            lhs_free_before_funs = []
+            for token in lhs_free_before.token:
+                fun_cur = _transform_lhs_generate_part(token, 'fn_cur')
+                lhs_free_before_funs.append(fun_cur)
+
             y = split_m.sum(axis=1)
+            y = pandas_force_materialize_series(y)
 
-            for i in range(sum((lhs['if_active'] == 1) & (lhs['type'].str.match(mask)))):
-                y_new = eval(lhs.loc[(lhs['if_active'] == 1) & (lhs['type'].str.match(mask)), 'token'].iloc[i])
+            for fn_cur, col_name in zip(lhs_free_before_funs, lhs_free_before.name):
+                y_new = fn_cur(ds=ds, coef=coef)
 
-                split_m[lhs.loc[(lhs['if_active'] == 1) & (lhs['type'].str.match(mask)), 'name'].iloc[i]] = y_new - y
+                split_m[col_name] = copy.deepcopy(y_new) - y
+                split_m[col_name] = pandas_force_materialize_series(split_m[col_name])
                 y = y_new
+            
+            split_m = pandas_force_materialize(split_m)
 
         # multiplicators
-        lhs_mult = lhs
 
-        if lhs['type'].str.match('^multiplicative$').sum() > 0:
-            lhs_mult = lhs.loc[(lhs['if_active'] == 1) & (lhs['type'].str.match('^multiplicative$'))]
+        mask = '^multiplicative$'
+
+        if ((lhs['if_active'] == 1) & (lhs['type'].str.match(mask))).sum() > 0:
+            
+            lhs_mult = lhs.loc[(lhs['if_active'] == 1) & (lhs['type'].str.match(mask))]
+
+            lhs_funs = []
+            for i in lhs_mult.token:
+                fun_cur = _transform_lhs_generate_part(i, 'fn_cur')
+                lhs_funs.append(fun_cur)
 
             rowsums = split_m.sum(axis=1)
-
-            coef = model_conf.params[((model_conf.params['variable'] == '') | (model_conf.params['variable'].isna())) &
-                                    (model_conf.params['fun'] == 'coef')][['arg', 'value']]
-
-            coef = params_to_dict(coef)
+            rowsums = pandas_force_materialize_series(rowsums)
 
             # y = [rowsums / eval(compile(i, '<string>', 'eval'), globals(), locals()) - rowsums for i in lhs_mult.token]
-            y = pd.DataFrame()
-            for i in lhs_mult.token:
-                y_tmp = rowsums / eval(compile(i, '<string>', 'eval'), globals(), locals()).array - rowsums
-                y = pd.concat([y, y_tmp], ignore_index=True, axis=1)
+            y_list = []
+            for i, fn_cur in zip(lhs_mult.token, lhs_funs):
+                res_cur = fn_cur(ds=ds, coef=coef)
+                y_tmp = rowsums / res_cur.values - rowsums
+                y_list.append(y_tmp)
+            y = pd.concat(y_list, ignore_index=True, axis=1, copy=True)
+            y = pandas_force_materialize(y)
 
             # y = y.T
-            y_pos = pd.DataFrame()
-            for i in lhs_mult.token:
-                y_tmp = 1 / eval(compile(i, '<string>', 'eval'), globals(), locals()).array - 1
-                y_pos = pd.concat([y_pos, pd.DataFrame(y_tmp)], ignore_index=True, axis=1)
+            y_pos_list = []
+            for i, fn_cur in zip(lhs_mult.token, lhs_funs):
+                res_cur = fn_cur(ds=ds, coef=coef)
+                y_tmp = 1 / res_cur.values - 1
+                y_pos_list.append(pd.DataFrame(y_tmp))
+            y_pos = pd.concat(y_pos_list, ignore_index=True, axis=1, copy=True)
+            y_pos = pandas_force_materialize(y_pos)
+
+            if if_debug:
+                _debug_print_sum(y_pos, 'y_pos', ds, color='31')
 
             # y_pos = y_pos.T
-            y_pos = y_pos.fillna(0)
-            y_pos[y_pos <= 0] = 0
-            y_pos[y_pos > 0] = 1
+            # Use numpy directly to avoid fillna() view corruption
+            y_pos_index = y_pos.index.copy()
+            y_pos_columns = y_pos.columns.copy()
+            y_pos_values = y_pos.values.copy()  # Extract to numpy ONCE
+            
+            # Replace NaN with 0 using numpy (avoid pandas fillna)
+            y_pos_values = np.nan_to_num(y_pos_values, nan=0.0, copy=False)
+            
+            # Apply mask to numpy array
+            mask_values = y_pos_values > 0.0
+            y_pos_values[mask_values] = 1.0
+            y_pos_values[~mask_values] = 0.0
+            
+            # Rebuild from numpy - breaks ALL references
+            y_pos = pandas_force_materialize(pd.DataFrame(y_pos_values, index=y_pos_index, columns=y_pos_columns))
+            
+            if if_debug:
+                _debug_print_sum(y_pos, 'y_pos', ds, color='31', threshold=1.0)
 
-            y_dnm = pd.DataFrame()
-            for i in lhs_mult.token:
-                y_tmp = 1 / eval(compile(i, '<string>', 'eval'), globals(), locals()).array - 1
-                y_dnm = pd.concat([y_dnm, pd.DataFrame(y_tmp)], ignore_index=True, axis=1)
+            y_dnm_list = []
+            for i, fn_cur in zip(lhs_mult.token, lhs_funs):
+                res_cur = fn_cur(ds=ds, coef=coef)
+                y_tmp = 1 / res_cur.values - 1
+                y_dnm_list.append(pd.DataFrame(y_tmp))
+            y_dnm = pd.concat(y_dnm_list, ignore_index=True, axis=1, copy=True)
+            y_dnm = pandas_force_materialize(y_dnm)
 
             # y_dnm = y_dnm.T
-            y_dnm *= y_pos
-            y_dnm = y_dnm.sum(axis=1)
+            # Single-step: multiply → sum → materialize final Series
+            # Use pure numpy to avoid pandas multiplication issues
+            y_dnm_np = y_dnm.values.copy()
+            y_pos_np = y_pos.values.copy()
+            y_dnm_mult_np = np.multiply(y_dnm_np, y_pos_np, dtype=np.float64)
+            y_dnm_mult = pd.DataFrame(y_dnm_mult_np, index=y_dnm.index.copy(), columns=y_dnm.columns.copy())
+            y_dnm_mult = pandas_force_materialize(y_dnm_mult)
+            y_dnm = pandas_force_materialize_series(y_dnm_mult.sum(axis=1))
 
-            y_num = pd.DataFrame()
-            for i in lhs_mult.token:
-                y_tmp = 1 / eval(compile(i, '<string>', 'eval'), globals(), locals()).array
-                y_num = pd.concat([y_num, pd.DataFrame(y_tmp)], ignore_index=True, axis=1)
+            if if_debug:
+                _debug_print_sum(y_dnm, 'y_dnm', ds, color='31', threshold=1.0)
 
-            y_num *= y_pos
+            y_num_list = []
+            for i, fn_cur in zip(lhs_mult.token, lhs_funs):
+                res_cur = fn_cur(ds=ds, coef=coef)
+                y_tmp = 1 / res_cur.values
+                y_num_list.append(pd.DataFrame(y_tmp))
+            y_num = pd.concat(y_num_list, ignore_index=True, axis=1, copy=True)
+            y_num = pandas_force_materialize(y_num)
 
-            y_num.replace(0, np.nan, inplace=True)
-            y_num = y_num.prod(skipna=True, axis=1)
-            y_num -= 1
+            if if_debug:
+                _debug_print_sum(y_num, 'y_num', ds, color='31', threshold=1.0)
 
-            y_pos = y * y_pos.mul((y_num / y_dnm), axis=0)
-            y_pos.fillna(0, inplace=True)
+            # Single-step: multiply → replace → prod → subtract → materialize final Series
+            # Use pure numpy to avoid pandas multiplication issues
+            y_num_np = y_num.values.copy()
+            y_pos_np = y_pos.values.copy()
+            y_num_mult_np = np.multiply(y_num_np, y_pos_np, dtype=np.float64)
+            y_num_mult = pd.DataFrame(y_num_mult_np, index=y_num.index.copy(), columns=y_num.columns.copy())
+            y_num_mult = pandas_force_materialize(y_num_mult, if_hard=True, if_soft=False)
+            y_num = pandas_force_materialize_series(y_num_mult.replace(0, np.nan).prod(skipna=True, axis=1) - 1)
+
+            if if_debug:
+                _debug_print_sum(y_num, 'y_num', ds, color='31', threshold=1.0)
+
+            # Single-step: ratio → mul → multiply → fillna → materialize
+            ratio = pandas_force_materialize_series(y_num / y_dnm)
+            # Use numpy broadcasting to avoid .mul() view issues
+            y_pos_np = y_pos.values.copy()
+            ratio_np = ratio.values.reshape(-1, 1)  # Reshape for broadcasting
+            y_pos_adjusted_np = np.multiply(y_pos_np, ratio_np, dtype=np.float64)
+            y_pos_adjusted = pd.DataFrame(y_pos_adjusted_np, index=y_pos.index.copy(), columns=y_pos.columns.copy())
+            y_pos_adjusted = pandas_force_materialize(y_pos_adjusted)
+                
+            # Use pure numpy to avoid pandas multiplication issues
+            y_np = y.values.astype(np.float64, copy=True)
+            y_pos_adjusted_np = y_pos_adjusted.values.astype(np.float64, copy=True)
+            y_pos_mult_np = np.multiply(y_np, y_pos_adjusted_np, dtype=np.float64)
+            # Replace NaN with 0 using numpy (avoid pandas fillna)
+            y_pos_mult_np = np.nan_to_num(y_pos_mult_np, nan=0.0, copy=False)
+            y_pos = pd.DataFrame(y_pos_mult_np, index=y.index.copy(), columns=y.columns.copy())
+            y_pos = pandas_force_materialize(y_pos)
+
+            if if_debug:
+                _debug_print_sum(y_pos, 'y_pos', ds, color='31', threshold=1.0, use_abs=True)
 
             # neg
-            y_neg = pd.DataFrame()
-            for i in lhs_mult.token:
-                y_tmp = 1 / eval(compile(i, '<string>', 'eval'), globals(), locals()).array - 1
-                y_neg = pd.concat([y_neg, pd.DataFrame(y_tmp)], ignore_index=True, axis=1)
+            y_neg_list = []
+            for i, fn_cur in zip(lhs_mult.token, lhs_funs):
+                res_cur = fn_cur(ds=ds, coef=coef)
+                y_tmp = 1 / res_cur.values - 1
+                y_neg_list.append(pd.DataFrame(y_tmp))
+            y_neg = pd.concat(y_neg_list, ignore_index=True, axis=1, copy=True)
+            y_neg = pandas_force_materialize(y_neg)
 
-            # y_pos = y_pos.T
-            y_neg = y_neg.fillna(0)
-            y_neg[y_neg >= 0] = 0
-            y_neg[y_neg < 0] = 1
+            # y_neg = y_neg.T
+            # Use numpy directly to avoid fillna() view corruption
+            y_neg_index = y_neg.index.copy()
+            y_neg_columns = y_neg.columns.copy()
+            y_neg_values = y_neg.values.copy()  # Extract to numpy ONCE
+            
+            # Replace NaN with 0 using numpy (avoid pandas fillna)
+            y_neg_values = np.nan_to_num(y_neg_values, nan=0.0, copy=False)
 
-            y_dnm = pd.DataFrame()
-            for i in lhs_mult.token:
-                y_tmp = 1 / eval(compile(i, '<string>', 'eval'), globals(), locals()).array - 1
-                y_dnm = pd.concat([y_dnm, pd.DataFrame(y_tmp)], ignore_index=True, axis=1)
+            # Apply mask to numpy array
+            mask_neg_values = y_neg_values < 0.0
+            y_neg_values[mask_neg_values] = 1.0
+            y_neg_values[~mask_neg_values] = 0.0
+            
+            # Rebuild from numpy - breaks ALL references
+            y_neg = pandas_force_materialize(pd.DataFrame(y_neg_values, index=y_neg_index, columns=y_neg_columns))
+
+            if if_debug:
+                _debug_print_sum(y_neg, 'y_neg', ds, color='33', threshold=1.0, use_abs=True)
+
+            y_dnm_list = []
+            for i, fn_cur in zip(lhs_mult.token, lhs_funs):
+                res_cur = fn_cur(ds=ds, coef=coef)
+                y_tmp = 1 / res_cur.values - 1
+                y_dnm_list.append(pd.DataFrame(y_tmp))
+            y_dnm = pd.concat(y_dnm_list, ignore_index=True, axis=1, copy=True)
+            y_dnm = pandas_force_materialize(y_dnm)
 
             # y_dnm = y_dnm.T
-            y_dnm *= y_neg
-            y_dnm = y_dnm.sum(axis=1)
+            # Single-step: multiply → sum → materialize final Series
+            # Use pure numpy to avoid pandas multiplication issues
+            y_dnm_np = y_dnm.values.copy()
+            y_neg_np = y_neg.values.copy()
+            y_dnm_mult_np = np.multiply(y_dnm_np, y_neg_np, dtype=np.float64)
+            y_dnm_mult = pd.DataFrame(y_dnm_mult_np, index=y_dnm.index.copy(), columns=y_dnm.columns.copy())
+            y_dnm_mult = pandas_force_materialize(y_dnm_mult)
+            y_dnm = pandas_force_materialize_series(y_dnm_mult.sum(axis=1))
 
-            y_num = pd.DataFrame()
-            for i in lhs_mult.token:
-                y_tmp = 1 / eval(compile(i, '<string>', 'eval'), globals(), locals()).array
-                y_num = pd.concat([y_num, pd.DataFrame(y_tmp)], ignore_index=True, axis=1)
+            if if_debug:
+                _debug_print_sum(y_dnm, 'y_dnm', ds, color='33', threshold=1.0, use_abs=True)
 
-            y_num *= y_neg
+            y_num_list = []
+            for i, fn_cur in zip(lhs_mult.token, lhs_funs):
+                res_cur = fn_cur(ds=ds, coef=coef)
+                y_tmp = 1 / res_cur.values
+                y_num_list.append(pd.DataFrame(y_tmp))
+            y_num = pd.concat(y_num_list, ignore_index=True, axis=1, copy=True)
+            y_num = pandas_force_materialize(y_num)
 
-            y_num = y_num.replace(0, np.nan)
-            y_num = y_num.prod(skipna=True, axis=1)
-            y_num -= 1
+            # Single-step: multiply → replace → prod → subtract → materialize final Series
+            # Use pure numpy to avoid pandas multiplication issues
+            y_num_np = y_num.values.copy()
+            y_neg_np = y_neg.values.copy()
+            y_num_mult_np = np.multiply(y_num_np, y_neg_np, dtype=np.float64)
+            y_num_mult = pd.DataFrame(y_num_mult_np, index=y_num.index.copy(), columns=y_num.columns.copy())
+            y_num_mult = pandas_force_materialize(y_num_mult)
+            y_num = pandas_force_materialize_series(y_num_mult.replace(0, np.nan).prod(skipna=True, axis=1) - 1)
 
-            y_neg = y * y_neg.mul((y_num / y_dnm), axis=0)
-            y_neg.fillna(0, inplace=True)
+            if if_debug:
+                _debug_print_sum(y_num, 'y_num', ds, color='33', threshold=1.0, use_abs=True)
 
-            y = y_neg.mul((rowsums + y_pos.sum(axis=1)), axis=0).div(rowsums, axis=0) + y_pos
+            # Single-step: ratio → mul → multiply → fillna → materialize
+            ratio = pandas_force_materialize_series(y_num / y_dnm)
+            # Use numpy broadcasting to avoid .mul() view issues
+            y_neg_np = y_neg.values.copy()
+            ratio_np = ratio.values.reshape(-1, 1)  # Reshape for broadcasting
+            y_neg_adjusted_np = np.multiply(y_neg_np, ratio_np, dtype=np.float64)
+            y_neg_adjusted = pd.DataFrame(y_neg_adjusted_np, index=y_neg.index.copy(), columns=y_neg.columns.copy())
+            y_neg_adjusted = pandas_force_materialize(y_neg_adjusted)
+
+            if if_debug:
+                _debug_print_sum(y_neg_adjusted, 'y_neg_adjusted', ds, color='33', threshold=1.0, use_abs=True)
+
+            # Use pure numpy to avoid pandas multiplication issues
+            y_np = y.values.astype(np.float64, copy=True)
+            y_neg_adjusted_np = y_neg_adjusted.values.astype(np.float64, copy=True)
+            y_neg_mult_np = np.multiply(y_np, y_neg_adjusted_np, dtype=np.float64)
+
+            # Replace NaN with 0 using numpy (avoid pandas fillna)
+            y_neg_mult_np = np.nan_to_num(y_neg_mult_np, nan=0.0, copy=False)
+            y_neg = pd.DataFrame(y_neg_mult_np, index=y.index.copy(), columns=y.columns.copy())
+            y_neg = pandas_force_materialize(y_neg)
+
+            if if_debug:
+                _debug_print_sum(y_neg, 'y_neg', ds, color='36')
+                _debug_print_sum(y_pos, 'y_pos', ds, color='36')
+                _debug_print_sum(rowsums, 'rowsums', ds, color='36')
+
+            # Use numpy to avoid chained .mul().div() view issues
+            # Explicit dtype conversion to avoid object dtype issues
+            y_neg_np = y_neg.values.astype(np.float64, copy=True)
+            y_pos_np = y_pos.values.astype(np.float64, copy=True)
+            rowsums_np = rowsums.values.astype(np.float64, copy=True).reshape(-1, 1)  # Reshape for broadcasting
+            y_pos_sum_np = y_pos_np.sum(axis=1, keepdims=True)
+            
+            numerator_np = np.multiply(y_neg_np, (rowsums_np + y_pos_sum_np), dtype=np.float64)
+            y_final_np = np.divide(numerator_np, rowsums_np, dtype=np.float64) + y_pos_np
+            y = pd.DataFrame(y_final_np, index=y_neg.index.copy(), columns=y_neg.columns.copy())
+            y = pandas_force_materialize(y)
 
             y.columns = lhs_mult.name
 
             split_m = pd.concat([split_m, y], axis=1)
+            split_m = pandas_force_materialize(split_m)
+
+            if if_debug:
+                _debug_print_sum(split_m, 'split_m_m', ds, color='32')
 
         # free_after type LHS transformations
         mask = '^free_after'
 
         if ((lhs['if_active'] == 1) & (lhs['type'].str.match(mask))).sum() > 0:
 
+            lhs_free_after = lhs.loc[(lhs['if_active'] == 1) & (lhs['type'].str.match(mask))]
+
+            lhs_free_after_funs = []
+            for token in lhs_free_after.token:
+                fun_cur = _transform_lhs_generate_part(token, 'fn_cur')
+                lhs_free_after_funs.append(fun_cur)
+
             y = split_m.sum(axis=1).array
+            y = y.copy()
 
-            for i in range(sum((lhs['if_active'] == 1) & (lhs['type'].str.match(mask)))):
-                y_new = eval(lhs.loc[(lhs['if_active'] == 1) & (lhs['type'].str.match(mask)), 'token'].iloc[i]).array
+            for fn_cur, col_name in zip(lhs_free_after_funs, lhs_free_after.name):
+                y_new = fn_cur(ds=ds, coef=coef, y=y).array
 
-                split_m[lhs.loc[(lhs['if_active'] == 1) & (lhs['type'].str.match(mask)), 'name'].iloc[i]] = y_new - y
+                split_m[col_name] = y_new - y
+                split_m[col_name] = pandas_force_materialize_series(split_m[col_name])
                 y = y_new
+            
+            split_m = pandas_force_materialize(split_m)
 
     cln_id = ["date", "pack_key", "bs_key", "listed", model_conf.price_var] + model_conf.bs_key
-    cln_id = [x for x in cln_id if x in ds.columns.tolist()]
+    cln_id = [x for x in cln_id if x in ds.columns.copy()]
 
-    split_m = pd.concat([select_eff(ds, cln_id).reset_index(names=['tmp1____']), split_m.reset_index(names=['tmp2____'])], axis=1)
+    # Materialize select_eff result immediately
+    sel_eff_df = select_eff(ds, cln_id).reset_index(names=['tmp1____'])
+    sel_eff_df = sel_eff_df.copy(deep=True)
+    
+    split_m_reset = split_m.reset_index(names=['tmp2____'])
+    split_m_reset = split_m_reset.copy(deep=True)
+    
+    split_m = pd.concat([sel_eff_df, split_m_reset], axis=1)
     del split_m['tmp1____']
     del split_m['tmp2____']
+    split_m = pandas_force_materialize(split_m)
 
     cln_sort = [x for x in cln_id if x in ['superbrand', 'bs_key', 'master', 'date']]
 
     split_m_m = split_m.melt(id_vars=cln_id)
     split_m_m = split_m_m[~split_m_m['value'].isna()]
+    split_m_m = split_m_m.reset_index(drop=True)  # break index references
+    split_m_m = split_m_m.copy(deep=True)
 
     split_m_m = split_m_m.groupby(cln_id + ['variable'])['value'].\
         sum().\
         reset_index()
+    split_m_m = pandas_force_materialize(split_m_m)
 
-    split_m_m['value_rub'] = split_m_m['value'] * split_m_m[model_conf.price_var]
+    split_m_m['value_rub'] = split_m_m['value'].values * split_m_m[model_conf.price_var].values
+    split_m_m['value_rub'] = pandas_force_materialize_series(split_m_m['value_rub'])
 
     pattern = re.compile(r'^[0-9]+_')
 
@@ -522,9 +836,29 @@ def _extract_effect_worker(model: "Model"
         for name in split_m_m.variable.unique():
 
             if 'ntercept' in name:
-                rename_dict[name] = '01_' +\
-                    model_rep.vis_dict.loc[(model_rep.vis_dict['variable'] == 'base') &
-                                 (model_rep.vis_dict['section'].isin(['factor_decomposition', 'costs_type'])), language].iloc[0]
+                disp_name_base = getattr(model_conf, 'display_var_base', 'base')
+
+                if disp_name_base in model_conf.model_rhs.display_var.values:
+                    disp_name = disp_name_base
+
+                    if pattern.match(disp_name) is None:
+                        ptrn = ''
+                    else:
+                        ptrn = pattern.match(disp_name)[0]
+
+                    if pattern.sub('', disp_name) in model_rep.vis_dict.loc[model_rep.vis_dict['section'].isin(['factor_decomposition', 'costs_type']), 'variable'].array:
+                        rename_dict[name] = ptrn + \
+                            model_rep.vis_dict.loc[(model_rep.vis_dict['variable'] == pattern.sub('', disp_name)) &
+                            (model_rep.vis_dict['section'].isin(['factor_decomposition', 'costs_type'])), language].iloc[0]
+                    else:
+                        rename_dict[name] = ptrn + pattern.sub('', disp_name)
+                else:
+                    if disp_name_base in model_rep.vis_dict.loc[model_rep.vis_dict['section'].isin(['factor_decomposition', 'costs_type']), 'variable'].array:
+                        rename_dict[name] = '01_' +\
+                            model_rep.vis_dict.loc[(model_rep.vis_dict['variable'] == disp_name_base) &
+                                         (model_rep.vis_dict['section'].isin(['factor_decomposition', 'costs_type'])), language].iloc[0]
+                    else:
+                        rename_dict[name] = '01_' + disp_name_base
 
             elif model_conf.model_lhs is not None and name in model_conf.model_lhs.name.values:
 
@@ -562,18 +896,35 @@ def _extract_effect_worker(model: "Model"
                 else:
                     rename_dict[name] = ptrn + pattern.sub('', disp_name)
 
-        split_m_m['variable'].replace(rename_dict, inplace=True)
+        split_m_m['variable'] = split_m_m['variable'].replace(rename_dict)
+        split_m_m['variable'] = pandas_force_materialize_series(split_m_m['variable'])
+        split_m_m = split_m_m.copy(deep=True)
 
         mask = split_m_m['listed'].isin(listed_filter)
 
         split_m_m = groupby_eff(split_m_m, cln_id + ['variable'], ['value', 'value_rub'], mask) \
             .agg({'value': 'sum', 'value_rub': 'sum'}) \
             .reset_index()
+        split_m_m = pandas_force_materialize(split_m_m)
 
         split_m_m['variable'] = split_m_m['variable'].astype('category')
+        split_m_m['variable'] = pandas_force_materialize_series(split_m_m['variable'])
+        split_m_m = split_m_m.copy(deep=True)
 
     split_m_m = split_m_m.sort_values(['variable'] + cln_sort, axis=0, ascending=True)
+    split_m_m = split_m_m.reset_index(drop=True)  # break index references after sort
     split_m_m['variable'] = split_m_m['variable'].str.replace(pattern, '', regex=True)
+    split_m_m['variable'] = pandas_force_materialize_series(split_m_m['variable'])
+    split_m_m = split_m_m.copy(deep=True)
+
+    # prevent inconsistence due to lazy loading in later functions
+
+    split_m_m = pandas_force_materialize(split_m_m)
+
+    # enforce data types to avoid issues in later functions
+
+    split_m_m['value'] = split_m_m['value'].astype(float)
+    split_m_m['value_rub'] = split_m_m['value_rub'].astype(float)
 
     # update palettes
 

@@ -13,7 +13,7 @@ from pptx.util import Pt
 from pptx.enum.chart import XL_CHART_TYPE, XL_LEGEND_POSITION, XL_TICK_LABEL_POSITION
 from pptx.dml.color import RGBColor
 
-from fermatrica_utils import groupby_eff
+from fermatrica_utils import groupby_eff, pandas_force_materialize
 
 from fermatrica.model.model import Model
 
@@ -63,6 +63,8 @@ def create(prs: Presentation,
     else:
         units = 'packs'
 
+    split_m_m = pandas_force_materialize(split_m_m, if_hard=False)
+
     # prepare slide in presentation
 
     slide_layout = model_rep.pptx_cnf['Blank_slide']
@@ -97,8 +99,13 @@ def create(prs: Presentation,
                                                      (model_rep.vis_dict['variable'] == 'title'), language].iloc[0]
 
     slide_title = slide_title.replace('***id', option_name)
-    slide_title = slide_title.replace('***units', model_rep.vis_dict.loc[
-        (model_rep.vis_dict['section'] == "shared") & (model_rep.vis_dict['variable'] == units), language].iloc[0])
+    try:
+        units_label = model_rep.vis_dict.loc[
+            (model_rep.vis_dict['section'] == "shared") & (model_rep.vis_dict['variable'] == units), language].iloc[0]
+    except IndexError:
+        units_label = model_rep.vis_dict.loc[
+            (model_rep.vis_dict['section'] == "shared") & (model_rep.vis_dict['variable'] == 'units'), language].iloc[0]
+    slide_title = slide_title.replace('***units', units_label)
 
     slide.shapes[0].text_frame.text = slide_title
     slide.shapes[0].text_frame.paragraphs[0].font.size = model_rep.pptx_cnf['font_size_gross']
@@ -170,8 +177,13 @@ def create(prs: Presentation,
     else:
         text_frame.text = f"{sku}: {model_rep.vis_dict.loc[(model_rep.vis_dict['section'] == 'plot_efficiency') & (model_rep.vis_dict['variable'] == 'factors_title_val'), language].iloc[0]}"
 
-    text_frame.text = text_frame.text.replace('***units', model_rep.vis_dict.loc[
-        (model_rep.vis_dict['section'] == "shared") & (model_rep.vis_dict['variable'] == units), language].iloc[0])
+    try:
+        units_label = model_rep.vis_dict.loc[
+            (model_rep.vis_dict['section'] == "shared") & (model_rep.vis_dict['variable'] == units), language].iloc[0]
+    except IndexError:
+        units_label = model_rep.vis_dict.loc[
+            (model_rep.vis_dict['section'] == "shared") & (model_rep.vis_dict['variable'] == 'units'), language].iloc[0]
+    text_frame.text = text_frame.text.replace('***units', units_label)
     text_frame.paragraphs[0].font.size = model_rep.pptx_cnf['font_size_main']
 
     return prs

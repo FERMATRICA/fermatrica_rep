@@ -51,7 +51,7 @@ def basic(md: "ModelConf"
     else:
         media_price = 1.0
 
-    ssn_name = re.sub(r'^bdg_', 'opt_media_ssn_', var_key)
+    ssn_name = re.sub(r'^(no)*bdg_', 'opt_media_ssn_', var_key)
 
     # find seasonality correction
 

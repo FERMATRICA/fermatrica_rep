@@ -1,0 +1,26 @@
+- description: "test_decompose_main_plot p00"
+  model_tag: "2024-11-19_174649"
+  sample: "p00"
+  function: "decompose_main_plot"
+  params:
+    brand: "brand_x"
+    period: "m"
+    show_future: true
+    contour_line: true
+  expected:
+    n_traces: 30
+    traces:
+    - name: "Base"
+      y_sum: 294717.870941
+    - name: "Context"
+      y_sum: 8859.880707
+    - name: "Display"
+      y_sum: 5208.750758
+    - name: "NatTV"
+      y_sum: 6387.362118
+    - name: "Price_Index"
+      y_sum: -7920.489007
+    - name: "Radio"
+      y_sum: 1663.609558
+    - name: "Seasonal_Sales"
+      y_sum: 26510.347567

@@ -49,6 +49,9 @@ def opt_grid(translation: pd.DataFrame
     zero["option"] = "zero"
     grid = copy.copy(zero)
 
+    if 'max_obs_budg' in translation.columns:
+        grid['max_obs_budg'] = 9999999
+
     for opt in zero.columns[zero.columns.str.match('bdg')]:
         tmp_opt = zero.iloc[0, :].replace('zero', opt)
 
@@ -58,6 +61,13 @@ def opt_grid(translation: pd.DataFrame
 
         tmp = pd.DataFrame([tmp_opt] * len(list_bdg))
         tmp[opt] = list_bdg
+
+        if 'max_obs_budg' in translation.columns:
+            max_obs_budg = translation.loc[translation.index == opt, "max_obs_budg"].iloc[0]
+            if not np.isnan(max_obs_budg):
+                tmp['max_obs_budg'] = max_obs_budg
+            else:
+                tmp['max_obs_budg'] = 99999
 
         tmp["option"] = opt
 
@@ -69,7 +79,7 @@ def opt_grid(translation: pd.DataFrame
 
     # total budget
 
-    cols = [x for x in grid.columns.tolist() if x not in ['option']]
+    cols = [x for x in grid.columns.tolist() if x not in ['option', 'max_obs_budg']]
 
     grid['bdg'] = 0
 
@@ -115,7 +125,7 @@ def opt_grid_expand(borders: dict
 
     # total budget
 
-    cols = [x for x in grid.columns.tolist() if x not in ['option']]
+    cols = [x for x in grid.columns.tolist() if x not in ['option', 'max_obs_budg']]
 
     grid['bdg'] = 0
 
@@ -197,7 +207,7 @@ def _opt_grid_summarize(model_rep: "ModelRep"
 def option_report_multi_post(model: "Model | list"
                              , ds: pd.DataFrame | list
                              , model_rep: "ModelRep | list"
-                             , opt_set: "OptionSettings"
+                             , opt_set: "OptionSettings | list"
                              , translation: pd.DataFrame | None = None
                              , adhoc_curves_max_costs: "None | Callable" = None
                              , budget_step: int | float = 1
@@ -217,7 +227,7 @@ def option_report_multi_post(model: "Model | list"
     :param model: Model object or list of Model objects
     :param ds: dataset or list of datasets
     :param model_rep: ModelRep object (export settings) or list of ModelRep objects
-    :param opt_set: OptionSettings object (option setting: target period etc.)
+    :param opt_set: OptionSettings object (option setting: target period etc.) or list of OptionSettings objects (one per model)
     :param translation: translation dataframe (from files like `options.xlsx`, `translation` sheet) or None
         (i.e. defaults to trans_dict attribute of `model_rep` argument)
     :param adhoc_curves_max_costs: adhoc function to set maximum observed values for every variable (optional)

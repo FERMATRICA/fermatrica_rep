@@ -1,0 +1,138 @@
+- description: test_budget_ssn_create_simple_monthly testing case 0
+  test_data:
+    simple_monthly:
+      month: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+      year: [2024, 2024, 2024, 2024, 2024, 2024, 2024, 2024, 2024, 2024, 2024, 2024]
+      nobdg_factor: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+      bdg_channel_x: [100.0, 200.0, 300.0, 400.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0]
+  vat_rate: 0.0
+  use_path: True
+  exp_err: False
+  expected_budget:
+    simple_monthly:
+      2024:
+        bdg_channel_x: 1800.0
+        nobdg_factor: 1.0
+        bdg: 1800.0
+        text_flags: 'name_simple_monthly'
+  expected_seasonality:
+    simple_monthly:
+      columns: ['month', 'year', 'channel_x', 'factor']
+      data:
+        month: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+        year: [2024, 2024, 2024, 2024, 2024, 2024, 2024, 2024, 2024, 2024, 2024, 2024]
+        channel_x: [0.05556, 0.11111, 0.16667, 0.22222, 0.05556, 0.05556, 0.05556, 0.05556, 0.05556, 0.05556, 0.05556, 0.05556]
+        factor: [2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0]
+
+- description: test_budget_ssn_create_multi_year_weekly testing case 1
+  test_data:
+    multi_year_weekly:
+      week_number: [1, 2, 1, 2]
+      year: [2023, 2023, 2024, 2024]
+      nobdg_metric: [1.5, 2.0, 1.5, 2.0]
+      bdg_media_a: [100.0, 300.0, 200.0, 600.0]
+      bdg_media_b: [200.0, 200.0, 400.0, 400.0]
+  vat_rate: 0.0
+  use_path: True
+  exp_err: False
+  expected_budget:
+    multi_year_weekly:
+      2023:
+        bdg_media_a: 400.0
+        bdg_media_b: 400.0
+        nobdg_metric: 2.0
+        bdg: 800.0
+        text_flags: 'name_multi_year_weekly'
+      2024:
+        bdg_media_a: 800.0
+        bdg_media_b: 800.0
+        nobdg_metric: 2.0
+        bdg: 1600.0
+        text_flags: 'name_multi_year_weekly'
+  expected_seasonality:
+    multi_year_weekly:
+      columns: ['week_number', 'year', 'media_a', 'media_b', 'metric']
+      data:
+        week_number: [1, 2, 1, 2]
+        year: [2023, 2023, 2024, 2024]
+        media_a: [0.25, 0.75, 0.25, 0.75]
+        media_b: [0.5, 0.5, 0.5, 0.5]
+        metric: [2.5, 3.0, 2.5, 3.0]
+
+- description: test_budget_ssn_create_with_vat testing case 2
+  test_data:
+    simple_monthly:
+      month: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+      year: [2024, 2024, 2024, 2024, 2024, 2024, 2024, 2024, 2024, 2024, 2024, 2024]
+      nobdg_factor: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+      bdg_channel_x: [100.0, 200.0, 300.0, 400.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0]
+  vat_rate: 0.2
+  use_path: True
+  exp_err: False
+  expected_budget:
+    simple_monthly:
+      2024:
+        bdg_channel_x: 2160.0
+        nobdg_factor: 1.0
+        bdg: 2160.0
+        text_flags: 'name_simple_monthly'
+  expected_seasonality:
+    simple_monthly:
+      columns: ['month', 'year', 'channel_x', 'factor']
+      data:
+        month: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+        year: [2024, 2024, 2024, 2024, 2024, 2024, 2024, 2024, 2024, 2024, 2024, 2024]
+        channel_x: [0.05556, 0.11111, 0.16667, 0.22222, 0.05556, 0.05556, 0.05556, 0.05556, 0.05556, 0.05556, 0.05556, 0.05556]
+        factor: [2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0]
+
+- description: test_budget_ssn_create_from_dict testing case 3
+  test_data:
+    test_option:
+      month: [1, 2, 3, 4]
+      year: [2025, 2025, 2025, 2025]
+      nobdg_index: [0.9, 1.0, 1.1, 1.0]
+      bdg_activity: [250.0, 250.0, 250.0, 250.0]
+  vat_rate: 0.0
+  use_path: False
+  exp_err: False
+  expected_budget:
+    test_option:
+      2025:
+        bdg_activity: 1000.0
+        nobdg_index: 1.1
+        bdg: 1000.0
+        text_flags: 'name_test_option'
+  expected_seasonality:
+    test_option:
+      columns: ['month', 'year', 'activity', 'index']
+      data:
+        month: [1, 2, 3, 4]
+        year: [2025, 2025, 2025, 2025]
+        activity: [0.25, 0.25, 0.25, 0.25]
+        index: [1.9, 2.0, 2.1, 2.0]
+
+- description: test_budget_ssn_create_zero_handling testing case 4
+  test_data:
+    zero_test:
+      week_number: [1, 2, 3, 4]
+      year: [2024, 2024, 2024, 2024]
+      bdg_item: [0.0, 100.0, 200.0, 0.0]
+      nobdg_param: [5.0, 5.0, 5.0, 5.0]
+  vat_rate: 0.0
+  use_path: False
+  exp_err: False
+  expected_budget:
+    zero_test:
+      2024:
+        bdg_item: 300.0
+        nobdg_param: 5.0
+        bdg: 300.0
+        text_flags: 'name_zero_test'
+  expected_seasonality:
+    zero_test:
+      columns: ['week_number', 'year', 'item', 'param']
+      data:
+        week_number: [1, 2, 3, 4]
+        year: [2024, 2024, 2024, 2024]
+        item: [0.0, 0.33333, 0.66667, 0.0]
+        param: [6.0, 6.0, 6.0, 6.0]

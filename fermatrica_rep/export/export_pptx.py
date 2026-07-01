@@ -46,12 +46,14 @@ from pptx.util import Pt
 from lxml import etree
 
 from fermatrica import Model
+from fermatrica_utils import pandas_force_materialize
 
 from fermatrica_rep.meta_model.model_rep import ModelRep
 from fermatrica_rep.decomposition import extract_effect
 from fermatrica_rep.options.define import OptionSettings
 import fermatrica_rep.export.slides as slides
 import fermatrica_rep.options.calc as calc
+from fermatrica_rep.export.basics import _extract_options_data
 
 
 """
@@ -338,7 +340,8 @@ def export_option_detail(prs,
                          if_sku_decompose: bool = True,
                          if_sku_waterfall: bool = True,
                          custom_extract_effect=None,
-                         show_pretrain: bool = False
+                         show_pretrain: bool = False,
+                         if_debug: bool = False
                          ):
     """
     Export detailing report per every option in `options_m` dictionary.
@@ -380,8 +383,12 @@ def export_option_detail(prs,
     if options_m is None:
         options_m = {'': None}
 
-    target_var = opt_set.target
-    group_var = opt_set.apply_vars
+    if isinstance(opt_set, list):        
+        target_var = opt_set[0].target
+        group_var = opt_set[0].apply_vars
+    else:
+        target_var = opt_set.target
+        group_var = opt_set.apply_vars
 
     model_start = model
     ds_start = copy.deepcopy(ds)
@@ -394,11 +401,15 @@ def export_option_detail(prs,
         # if option is None = no options or retroanalysis
 
         if option is not None:
-            ds, dt_pred, opt_sum = calc.option_report(model_start, ds_start, model_rep_start, option, opt_set,
+
+            option_cur = _extract_options_data(options_m, option_name, opt_set)
+
+            ds, dt_pred, opt_sum = calc.option_report(model_start, ds_start, model_rep_start, option_cur, opt_set,
                                                         if_exact=if_exact)
             opt_title = option_name + '. ' + ' '.join(sum(target_var, [])).title()
             if_retro = False
         else:
+            option_cur = option
             opt_title = ' '.join(sum(target_var, [])).title()
             if_retro = True
 
@@ -408,11 +419,13 @@ def export_option_detail(prs,
             dt_pred = dt_pred[-1]
             model_rep = model_rep_start[-1]
 
+        ds = pandas_force_materialize(ds, if_hard=False, if_soft=True)
+
         if custom_extract_effect is None:
             listed_filter = (2, 3, 4)
             if show_pretrain:
                 listed_filter = (1, 2, 3, 4)
-            split_m_m = extract_effect(model, ds, model_rep, listed_filter=listed_filter)
+            split_m_m = extract_effect(model, ds, model_rep, listed_filter=listed_filter, if_debug=if_debug)
         else:
             split_m_m = custom_extract_effect(model, ds, model_rep)
 
@@ -423,7 +436,7 @@ def export_option_detail(prs,
                                      model=model,
                                      model_rep=model_rep,
                                      dt_pred=dt_pred,
-                                     option=option,
+                                     option=option_cur,
                                      option_name=opt_title,
                                      opt_set=opt_set,
                                      period=period,
@@ -451,11 +464,19 @@ def export_option_detail(prs,
                                            (split_m_m['superbrand'] == superbrand), 'bs_key'].unique())
 
         if if_waterfall:
+
+            if isinstance(opt_set, list):
+                date_start = opt_set[0].date_start
+                date_end = opt_set[-1].date_end
+            else:
+                date_start = opt_set.date_start
+                date_end = opt_set.date_end
+
             prs = slides.waterfall(prs=prs,
                                    model=model,
                                    model_rep=model_rep,
-                                   date_start=str(opt_set.date_start),
-                                   date_end=str(opt_set.date_end),
+                                   date_start=str(date_start),
+                                   date_end=str(date_end),
                                    option_name=opt_title,
                                    brands=[superbrand],
                                    absolute_sort=False,
@@ -483,7 +504,7 @@ def export_option_detail(prs,
                                              model=model,
                                              dt_pred=dt_pred,
                                              model_rep=model_rep,
-                                             option=option,
+                                             option=option_cur,
                                              option_name=opt_title,
                                              opt_set=opt_set,
                                              period=period,
@@ -512,8 +533,8 @@ def export_option_detail(prs,
                     prs = slides.waterfall(prs=prs,
                                            model=model,
                                            model_rep=model_rep,
-                                           date_start=str(opt_set.date_start),
-                                           date_end=str(opt_set.date_end),
+                                           date_start=str(date_start),
+                                           date_end=str(date_end),
                                            option_name=opt_title,
                                            brands=[superbrand],
                                            split_m_m=split_m_m,
@@ -530,14 +551,15 @@ def export_curves(prs,
                   model: "Model | list",
                   model_rep: "ModelRep | list",
                   ds: pd.DataFrame | list,
-                  opt_set_crv: "OptionSettings",
+                  opt_set_crv: "OptionSettings | list",
                   trans_dict: dict | pd.DataFrame | None = None,
                   budget_step: int | float = 5,
                   bdg_max: int | float = 301,
                   fixed_vars: dict | None = {'price': 1},
                   cores: int = 10,
                   if_exact: bool = False,
-                  adhoc_curves_max_costs=None
+                  adhoc_curves_max_costs=None,
+                  if_volume: bool = False
                   ):
     """
     Export efficiency curves (i.e. incremental KPI, profit, ROI) via full curves approach
@@ -550,7 +572,7 @@ def export_curves(prs,
     :param model: Model object or list of Model objects
     :param model_rep: ModelRep object (export settings) or list of ModelRep objects
     :param ds: dataset or list of datasets
-    :param opt_set_crv: OptionSetting object containing calculate settings
+    :param opt_set_crv: OptionSetting object containing calculate settings or list of OptionSettings objects (one per model)
     :param trans_dict: translation dictionary (how to "translate" options into independent variables) or None,
         (i.e. defaults to trans_dict attribute of `model_rep` argument)
     :param budget_step: budget iteration step in millions, defaults to 1 (i.e. 1M) (to calculate curves)
@@ -560,6 +582,8 @@ def export_curves(prs,
         None sets to all computer logical cores - 1
     :param if_exact: apply only to the specific time period, without next years
     :param adhoc_curves_max_costs: adhoc function to set maximum observed values for every variable (optional)
+    :param if_volume: show volume or value KPI
+
     :return: Presentation object from python_pptx package
     """
 
@@ -574,6 +598,7 @@ def export_curves(prs,
                           fixed_vars=fixed_vars,
                           adhoc_curves_max_costs=adhoc_curves_max_costs,
                           if_exact=if_exact,
+                          if_volume=if_volume,
                           cores=cores)
 
     return prs
