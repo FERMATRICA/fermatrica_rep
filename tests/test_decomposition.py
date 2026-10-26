@@ -5,7 +5,7 @@ import statsmodels.api as sm
 from statsmodels.formula.api import ols
 from fermatrica_utils import select_eff
 
-from fermatrica_rep.decomposition import decompose_basic, extract_effect
+from fermatrica_rep.analysis.decomposition import decompose_basic, extract_effect, _rhs_effects_ols
 from fermatrica_rep.meta_model.model_rep import ModelRep
 
 
@@ -222,3 +222,150 @@ class TestExtractEffect:
         model.conf = conf
         result = extract_effect(model, ds, model_rep, if_detail=True)
         assert np.all(np.isfinite(result['value']))
+
+
+class TestWholeGraphChain:
+    """Multi-hop whole-DAG expansion (A -> B -> C) on synthetic OLS models."""
+
+    @staticmethod
+    def _make_node(ds, y, formula, tokens, displays):
+        from fermatrica_rep.meta_model.meta_model import MetaModel
+        from fermatrica_rep.meta_model.node import ModelNode
+
+        fit = ols(formula, data=ds).fit()
+        conf = MockModelConf()
+        conf.model_type = 'OLS'
+        conf.model_rhs = pd.DataFrame({
+            'token': tokens, 'display_var': displays, 'if_active': [1] * len(tokens),
+        })
+        conf.model_lhs = None
+        conf.price_var = 'price_dummy'
+        conf.bs_key = ['superbrand']
+        conf.Y_var = y
+        conf.params = pd.DataFrame({
+            'variable': [''], 'fun': ['coef'], 'arg': [''], 'value': [0.0],
+        })
+        conf.display_var_base = 'base'
+        model = MockModel()
+        model.conf = conf
+        model.obj = type('Obj', (), {'models': {'main': fit}})()
+        pred = ds[['date', 'superbrand', 'bs_key', 'listed']].copy()
+        pred['predicted'] = fit.fittedvalues
+        return ModelNode(model=model, ds=ds.copy(),
+                         model_rep=ModelRep(ds, language='english'), dt_pred=pred)
+
+    @staticmethod
+    def _merge(col):
+        def merge_fn(ds_cur, dt_pred_prev, allow_past=False):
+            tmp = dt_pred_prev.loc[:, ['date', 'predicted']]
+            ds_cur = pd.merge(ds_cur, tmp, how='left', on='date', sort=False)
+            if allow_past:
+                mask = ds_cur['predicted'].notna()
+            else:
+                mask = (ds_cur['listed'] == 4) & ds_cur['predicted'].notna()
+            ds_cur.loc[mask, col] = ds_cur.loc[mask, 'predicted']
+            del ds_cur['predicted']
+            return ds_cur
+        return merge_fn
+
+    @pytest.fixture
+    def chain(self):
+        from fermatrica_rep.meta_model.meta_model import MetaModel
+
+        np.random.seed(7)
+        n = 12
+        dates = pd.date_range('2024-01-01', periods=n, freq='MS')
+        base = pd.DataFrame({
+            'date': dates, 'superbrand': ['brand_1'] * n, 'bs_key': [1] * n,
+            'listed': [2] * n, 'price_dummy': [1.0] * n,
+        })
+
+        dsA = base.copy()
+        dsA['x_a1'] = np.random.uniform(1, 10, n)
+        dsA['x_a2'] = np.random.uniform(1, 10, n)
+        dsA['y_a'] = 3 * dsA['x_a1'] + 0.5 * dsA['x_a2'] + 5 + np.random.normal(0, .1, n)
+        nodeA = self._make_node(dsA, 'y_a', 'y_a ~ x_a1 + x_a2', ['x_a1', 'x_a2'], ['02_A1', '03_A2'])
+
+        dsB = base.copy()
+        dsB['a_pred'] = nodeA.dt_pred['predicted'].values
+        dsB['y_b'] = 2 * dsB['a_pred'] + 1 + np.random.normal(0, .1, n)
+        nodeB = self._make_node(dsB, 'y_b', 'y_b ~ a_pred', ['a_pred'], ['01_ALink'])
+
+        dsC = base.copy()
+        dsC['b_pred'] = nodeB.dt_pred['predicted'].values
+        dsC['y_c'] = 0.5 * dsC['b_pred'] + 2 + np.random.normal(0, .1, n)
+        nodeC = self._make_node(dsC, 'y_c', 'y_c ~ b_pred', ['b_pred'], ['01_BLink'])
+
+        mm = MetaModel(
+            nodes={'A': nodeA, 'B': nodeB, 'C': nodeC},
+            edges=[('A', 'B', self._merge('a_pred')), ('B', 'C', self._merge('b_pred'))],
+        )
+        return mm
+
+    def test_multi_hop_leaves_flatten_through_both_links(self, chain):
+        """C's split carries two-dot leaves flattening A -> B -> C."""
+        split = extract_effect(chain, whole_graph=True)['C']
+        variables = split['variable'].unique()
+
+        assert not any(v == 'BLink' for v in variables)
+        leaves = [v for v in variables if isinstance(v, str) and v.startswith('BLink.')]
+        assert any(v.startswith('BLink.ALink.A1') for v in leaves)
+        assert any(v.startswith('BLink.ALink.Base') for v in leaves)
+        assert 'BLink.ALink.A1' in leaves
+
+    def test_multi_hop_sums_equal_prediction(self, chain):
+        """C's whole-DAG decomposition sums equal its prediction per period."""
+        split = extract_effect(chain, whole_graph=True)['C']
+        summed = split.groupby('date')['value'].sum()
+        pred = chain.nodes['C'].dt_pred.groupby('date')['predicted'].sum()
+        np.testing.assert_allclose(summed.values, pred.values, rtol=1e-8)
+
+    def test_multi_hop_leaf_sum_equals_single_link(self, chain):
+        """BLink.<leaf> rows sum to the old single BLink contribution."""
+        old = extract_effect(chain)['C']
+        new = extract_effect(chain, whole_graph=True)['C']
+        old_link = old.loc[old['variable'] == 'BLink', 'value'].sum()
+        new_link = new.loc[new['variable'].astype(str).str.startswith('BLink.'), 'value'].sum()
+        assert abs(old_link - new_link) < 1e-8
+
+    def test_middle_node_target_name(self, chain):
+        """whole_graph='B' returns B's expanded split (one link deep)."""
+        split = extract_effect(chain, whole_graph='B')
+        variables = split['variable'].unique()
+        assert not any(v == 'ALink' for v in variables)
+        assert any(isinstance(v, str) and v.startswith('ALink.') for v in variables)
+
+
+class TestRhsEffectsOlsDetail:
+
+    @pytest.fixture
+    def i_interaction_model_ds(self):
+        np.random.seed(42)
+        n = 40
+        ds = pd.DataFrame({
+            'tv': np.random.uniform(1, 10, n),
+            'b1': np.random.uniform(1, 10, n),
+            'b2': np.random.uniform(1, 10, n),
+            'date': pd.date_range('2024-01-01', periods=n, freq='D'),
+        })
+        ds['y'] = 2.0 * ds['tv'] * (ds['b1'] + ds['b2']) + 1.0 + np.random.normal(0, 0.1, n)
+        return ols('y ~ tv:I(b1 + b2)', data=ds).fit(), ds
+
+    def test_detail_unbrackets_multiplier_on_left(self, i_interaction_model_ds):
+        fit, ds = i_interaction_model_ds
+        coef = fit.params['tv:I(b1 + b2)']
+        split = _rhs_effects_ols(fit, ds, ['date'], if_detail=True)
+
+        def get_col(name):
+            match = [c for c in split.columns if c.replace(' ', '') == name]
+            assert len(match) == 1, split.columns
+            return split[match[0]]
+
+        assert not any('(' in c or ')' in c for c in split.columns)
+        np.testing.assert_allclose(get_col('b1*tv').values,
+                                   coef * ds['tv'].values * ds['b1'].values, rtol=1e-8)
+        np.testing.assert_allclose(get_col('b2*tv').values,
+                                   coef * ds['tv'].values * ds['b2'].values, rtol=1e-8)
+        np.testing.assert_allclose(get_col('b1*tv').values + get_col('b2*tv').values,
+                                   coef * ds['tv'].values * (ds['b1'].values + ds['b2'].values),
+                                   rtol=1e-8)

@@ -5,7 +5,7 @@ Basic / common utilities required by FERMATRICA_REP.
 
 import copy
 import gc
-from fermatrica.model.lhs_fun import pd
+import logging
 import pandas as pd
 import re
 import colorcet as cc
@@ -13,6 +13,65 @@ import colorcet as cc
 """
 Data utilities
 """
+
+
+def _merge_filters(brands: list | tuple | None = None
+                   , brands_var: str = 'superbrand'
+                   , filters: dict | None = None) -> dict:
+    """
+    Collapse the simple (`brands` on `brands_var`) and complex (`filters`)
+    filter parameters into one ``{column: [values]}`` dict. User filters are
+    applied first, then `brands` overwrite the same key (simple filter wins
+    on its own variable).
+
+    :param brands: simple filter values (e.g. list of umbrella brands or bs_keys)
+    :param brands_var: column the simple filter values apply to
+    :param filters: complex filter ``{column: [values]}``
+    :return: merged ``{column: [values]}`` dict
+    """
+
+    out = dict(filters) if filters else {}
+    if brands is not None:
+        out[brands_var] = list(brands)
+    return out
+
+
+def _filter_df(df: pd.DataFrame
+               , brands: list | tuple | None = None
+               , brands_var: str = 'superbrand'
+               , filters: dict | None = None) -> pd.DataFrame:
+    """
+    Apply all filters as AND masks. Missing filter columns are skipped with
+    a warning (consistent with the legacy `scope_filters` behaviour).
+
+    :param df: dataframe to filter
+    :param brands: simple filter values (e.g. list of umbrella brands or bs_keys)
+    :param brands_var: column the simple filter values apply to
+    :param filters: complex filter ``{column: [values]}``
+    :return: filtered copy of `df`
+    """
+
+    for col, values in _merge_filters(brands=brands, brands_var=brands_var, filters=filters).items():
+        if col in df.columns:
+            df = df[df[col].isin(values)]
+        else:
+            logging.warning(f"Filter column '{col}' not in data — skipping")
+    return df
+
+
+def _auto_brand_bs_keys(dt_pred: pd.DataFrame
+                        , model) -> list:
+    """
+    Derive the bs_keys belonging to ``model.conf.target_superbrand`` from a
+    prediction dataframe. Centralizes the target-brand bs_key derivation
+    previously duplicated across the export layer.
+
+    :param dt_pred: prediction data
+    :param model: Model object (with `conf.target_superbrand`)
+    :return: list of bs_key values
+    """
+
+    return dt_pred.loc[(dt_pred['superbrand'] == model.conf.target_superbrand), 'bs_key'].unique()
 
 
 def coef_var_align(params: pd.DataFrame

@@ -244,3 +244,100 @@ class TestP01Pipeline:
         assert set(forecast["listed"].unique()).issubset({4}), (
             f"Forecast rows should be listed=4, got {forecast['listed'].unique()}"
         )
+
+
+@pytest.mark.integration
+class TestP01NewApi:
+    """New-API (Option/OptionScope/ModelNode/MetaModel) tests against p01_sample.
+
+    Regression coverage for the refactored reporting flow: per-scope option
+    computation via MetaModel.compute and full-horizon seasonality on weekly data
+    (monthly seasonality merged through the `period` column — the p01-specific trap).
+    """
+
+    BRAND = "brand_1"
+    SCOPES = ["brand_1_2025", "brand_1_2026", "brand_1_2025_retro"]
+
+    @pytest.fixture
+    def p01_new_setup(self, p01_model_ds, samples_path):
+        """Build a single-node MetaModel from context.xlsx (function-scoped)."""
+        import fermatrica_rep as fmr
+        import code_py.adhoc.translators
+
+        model, ds = p01_model_ds
+
+        root = samples_path / "p01_sample"
+        opt_path = str(root / "code_py" / "model_data" / "options" / "context.xlsx")
+
+        scopes = fmr.scopes_read(opt_path)
+        options = fmr.Option.from_excel_all(opt_path)
+        ssn_dict = fmr.seasonality_read(path=opt_path)
+        trans_dict = fmr.trans_dict_create(path=opt_path, sheet="translation")
+
+        node = fmr.ModelNode(model=model, ds=ds, trans_dict=trans_dict,
+                             adhoc_code=[code_py.adhoc.translators],
+                             language='english', ssn_dict=ssn_dict,
+                             scope_names={s.scope_name for s in scopes})
+        mm = fmr.MetaModel(nodes=node)
+
+        return {"mm": mm, "scopes": scopes, "options": options, "node": node}
+
+    def test_context_parse(self, p01_new_setup):
+        """context.xlsx parses into 3 scopes and zero/predefined options."""
+        scopes = p01_new_setup["scopes"]
+        options = p01_new_setup["options"]
+
+        assert len(scopes) == 3
+        assert {s.scope_name for s in scopes} == set(self.SCOPES)
+        assert set(options.keys()) == {"zero", "predefined"}
+
+        for s in scopes:
+            assert s.filters["superbrand"] == [self.BRAND]
+            items = options["predefined"].budget_for_scope(s.scope_name)
+            assert items, f"no budget items for {s.scope_name}"
+
+    def test_meta_model_compute_per_scope(self, p01_new_setup):
+        """MetaModel.compute yields per-scope pred_exact_vol > 0 and finite."""
+        mm = p01_new_setup["mm"]
+        scopes = p01_new_setup["scopes"]
+        options = p01_new_setup["options"]
+
+        result = mm.compute(options["predefined"], scopes=scopes, allow_past=True)["model"]
+
+        for s in scopes:
+            summary = result[s.scope_name]
+            assert summary["pred_exact_vol"] > 0, (
+                f"{s.scope_name} pred_exact_vol must be > 0, got {summary['pred_exact_vol']}"
+            )
+            assert np.isfinite(summary["pred_exact_vol"])
+            assert np.isfinite(summary["pred_long_vol"])
+
+    def test_seasonality_covers_horizon(self, p01_new_setup):
+        """No NaN opt_media_ssn for listed==4 rows (monthly seasonality on weekly data)."""
+        mm = p01_new_setup["mm"]
+        scopes = p01_new_setup["scopes"]
+        options = p01_new_setup["options"]
+
+        mm.compute(options["predefined"], scopes=scopes, allow_past=True)
+        node = mm.nodes["model"]
+
+        ssn_cols = [c for c in node.ds.columns if c.startswith("opt_media_ssn")]
+        assert ssn_cols, "no opt_media_ssn columns after compute"
+
+        future = node.ds[node.ds["listed"] == 4]
+        assert future[ssn_cols].isna().sum().sum() == 0, (
+            "NaN media seasonality inside the forecast horizon"
+        )
+
+        beyond_plan_year = future[future["date"].dt.year > 2026]
+        assert len(beyond_plan_year) > 0
+        assert beyond_plan_year[ssn_cols].isna().sum().sum() == 0, (
+            "NaN media seasonality beyond the plan year"
+        )
+
+        # historical years before the plan horizon must stay NaN
+        # (no year-invariance stamping over history)
+        historical = node.ds[node.ds["listed"].isin([1, 2])]
+        assert historical[ssn_cols].isna().all().all(), (
+            "historical years must keep NaN seasonality"
+        )

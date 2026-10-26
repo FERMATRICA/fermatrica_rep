@@ -77,15 +77,11 @@ def rhs_comparison(model_init: sm.regression.linear_model.RegressionResultsWrapp
     :return: table with comparison between models
     """
 
-    ds_upd = pd.read_html(model_upd.summary().tables[1].as_html(), header=0, index_col=0)[0]
-    ds_upd.reset_index(inplace=True)
-    ds_upd.rename(columns={"coef": "coeff_upd"}, inplace=True)
-
-    ds_init = pd.read_html(model_init.summary().tables[1].as_html(), header=0, index_col=0)[0]
-    ds_init.reset_index(inplace=True)
-    ds_init.rename(columns={"coef": "coeff_init"}, inplace=True)
-
-    comparison = ds_init[['index', 'coeff_init']].merge(ds_upd[['index', 'coeff_upd']], on='index', how='left')
+    comparison = pd.DataFrame({
+        'index': model_init.params.index,
+        'coeff_init': model_init.params.values,
+        'coeff_upd': model_upd.params.values,
+    })
     comparison['coeff_diff_prc'] = round(
         (comparison['coeff_upd'] - comparison['coeff_init']) / comparison['coeff_init'] * 100, 3)
     comparison['sign_change'] = np.where(comparison['coeff_upd'] * comparison['coeff_init'] > 0, 'OK',

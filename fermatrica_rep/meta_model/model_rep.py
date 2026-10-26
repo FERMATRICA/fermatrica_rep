@@ -33,6 +33,7 @@ class ModelRep(StableClass):
     option_summary_adhoc: typing.Callable | None
     aud_coefs: pd.DataFrame | None
     ssn_dict: dict | None
+    media_prices: dict | None
 
     def __init__(
             self
@@ -63,6 +64,8 @@ class ModelRep(StableClass):
             function is used)
         :param option_summary_adhoc_fn: adhoc function to summarize options (by default built-in
             function is used)
+        :param ssn_dict: seasonality dictionary keyed by scope name, used by translators
+            to distribute budgets over time periods
         """
 
         if vis_dict is None:
@@ -80,8 +83,50 @@ class ModelRep(StableClass):
         self.option_translate_long = option_translate_long_fn
         self.option_summary_adhoc = option_summary_adhoc_fn
         self.aud_coefs = None
+        self.media_prices = None
         self.ssn_dict = ssn_dict
-        
+
+    def __repr__(self) -> str:
+        trans_keys = list(self.trans_dict.get('function', {}).keys()) if self.trans_dict else []
+        sbr_count = len(self.palette_sbr) if self.palette_sbr else 0
+        tool_count = len(self.palette_tools) if self.palette_tools else 0
+        has_ssn = self.ssn_dict is not None and len(self.ssn_dict) > 0 if self.ssn_dict else False
+        has_mp = self.media_prices is not None and len(self.media_prices) > 0 if self.media_prices else False
+        parts = [f"lang={self.language}"]
+        if trans_keys:
+            parts.append(f"trans={trans_keys}")
+        parts.append(f"sbr={sbr_count}")
+        parts.append(f"tools={tool_count}")
+        if has_ssn:
+            parts.append("ssn+")
+        if has_mp:
+            parts.append("mp+")
+        if self.option_summary_adhoc is not None:
+            parts.append("summary_adhoc+")
+        return f"ModelRep({', '.join(parts)})"
+
+    def __str__(self) -> str:
+        lines = [f"ModelRep:"]
+        lines.append(f"  language: {self.language}")
+        lines.append(f"  vis_dict: {self.vis_dict.shape[0]} rows x {self.vis_dict.shape[1]} cols")
+        if self.trans_dict:
+            trans_fns = self.trans_dict.get('function', {})
+            lines.append(f"  trans_dict: {len(trans_fns)} keys ({list(trans_fns.keys())})")
+        else:
+            lines.append(f"  trans_dict: (none)")
+        lines.append(f"  palette_sbr: {len(self.palette_sbr) if self.palette_sbr else 0} colours")
+        lines.append(f"  palette_tools: {len(self.palette_tools) if self.palette_tools else 0} colours")
+        if self.adhoc_code_src:
+            lines.append(f"  adhoc_code: {list(self.adhoc_code_src.keys())}")
+        lines.append(f"  option_translate_long: {getattr(self.option_translate_long, '__name__', self.option_translate_long)}")
+        if self.option_summary_adhoc is not None:
+            lines.append(f"  option_summary_adhoc: {getattr(self.option_summary_adhoc, '__name__', self.option_summary_adhoc)}")
+        if self.ssn_dict is not None and len(self.ssn_dict) > 0:
+            lines.append(f"  ssn_dict: {len(self.ssn_dict)} keys ({list(self.ssn_dict.keys())})")
+        if self.media_prices is not None and len(self.media_prices) > 0:
+            lines.append(f"  media_prices: {len(self.media_prices)} keys ({list(self.media_prices.keys())})")
+        return "\n".join(lines)
+
     def set_language(self
                      , language: str):
         """
@@ -110,7 +155,7 @@ class ModelRep(StableClass):
         :param ds: main dataset
         :param tools_list: list of marketing tools to be reported
         :param palette_sbr_names: `colorcet` palettes to be used for umbrella brands (string name)
-        :param palette_tool_names: `colorcet` palettes to be used for martketing tools (string name)
+        :param palette_tool_names: `colorcet` palettes to be used for marketing tools (string name)
         :return: void
         """
 
@@ -143,6 +188,7 @@ class ModelRep(StableClass):
                            , entities_new: dict | list
                            , palette_names: list | tuple = ('glasbey',)):
         """
+        Fill marketing tool colour palette names.
 
         :param entities_new: dictionary or list with elements to be checked with entities_old and added to it
             if not yet
@@ -161,7 +207,7 @@ class ModelRep(StableClass):
         Extract source code from the adhoc modules and keep it as string dictionary.
 
         :param adhoc_code: adhoc code (Python loaded modules) required by model to be reported
-        :return:
+        :return: void
         """
 
         self.adhoc_code_src = {}

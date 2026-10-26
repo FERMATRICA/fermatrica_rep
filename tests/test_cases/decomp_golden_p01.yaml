@@ -1,5 +1,5 @@
 - description: "test_decompose_main_plot p01"
-  model_tag: "2026-06-18_124832"
+  model_tag: "2026-08-04_204155"
   sample: "p01"
   function: "decompose_main_plot"
   params:

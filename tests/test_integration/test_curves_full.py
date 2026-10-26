@@ -47,7 +47,7 @@ class TestP00CurvesFull:
         """Full curves pipeline produces dict of plotly figures."""
         import plotly.graph_objects as go
         from fermatrica_rep.options.calc_multi import option_report_multi_post
-        from fermatrica_rep.curves_full import curves_full_plot_short, curves_full_plot_long
+        from fermatrica_rep.analysis.curves_full import curves_full_plot_short, curves_full_plot_long
 
         curves_full_df = option_report_multi_post(
             model=setup["model"],
@@ -130,7 +130,7 @@ class TestP01CurvesFull:
         """Full curves pipeline produces dict of plotly figures."""
         import plotly.graph_objects as go
         from fermatrica_rep.options.calc_multi import option_report_multi_post
-        from fermatrica_rep.curves_full import curves_full_plot_short, curves_full_plot_long
+        from fermatrica_rep.analysis.curves_full import curves_full_plot_short, curves_full_plot_long
 
         curves_full_df = option_report_multi_post(
             model=setup["model"],

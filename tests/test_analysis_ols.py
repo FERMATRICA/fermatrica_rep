@@ -11,7 +11,7 @@ import statsmodels.api as sm
 from fermatrica_rep.analysis.ols import get_model_ds, trans, rhs_comparison, impacts_comparison
 
 
-P00_MODEL_TAG = "2024-11-19_174649"
+P00_MODEL_TAG = "2026-08-04_222911"
 
 
 class TestGetModelDs:
@@ -19,11 +19,16 @@ class TestGetModelDs:
     @pytest.fixture(scope="class")
     def model_and_ds(self, samples_path):
         import fermatrica as fm
+        from pathlib import Path
+        from tests.test_integration.conftest import _find_latest_model
 
         root = samples_path / "p00_sample"
-        model_path = str(root / "code_py" / "model_data" / f"model_{P00_MODEL_TAG}")
+        model_dir = root / "code_py" / "model_data"
+        model_path = model_dir / f"model_{P00_MODEL_TAG}"
+        if not model_path.is_dir():
+            model_path = Path(_find_latest_model(model_dir))
 
-        model, ds, _ = fm.model_load_ext(model_path, missed_stop=True)
+        model, ds, _ = fm.model_load_ext(str(model_path), missed_stop=True)
         return model, ds
 
     @pytest.fixture

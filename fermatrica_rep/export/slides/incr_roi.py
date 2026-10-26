@@ -17,54 +17,57 @@ from pptx.enum.chart import XL_CHART_TYPE, XL_LEGEND_POSITION
 from pptx.dml.color import RGBColor
 import lxml.etree as etree
 
-from fermatrica_rep.export.basics import set_chart_colors_line, set_chart_dashes
+from fermatrica import ModelConf
+
+from fermatrica_rep.export import wording
+from fermatrica_rep.export.basics import _resolve_slide_layout, set_chart_colors_line, set_chart_dashes
 from fermatrica_rep.meta_model.model_rep import ModelRep
-from fermatrica_rep.options.define import OptionSettings
-from fermatrica_rep.options.calc_multi import option_report_multi_post
+from fermatrica_rep.meta_model.node import ModelNode
+from fermatrica_rep.meta_model.meta_model import MetaModel, _last_node_name
+from fermatrica_rep.options.scope import OptionScope
+from fermatrica_rep.options.option import Option
+from fermatrica_rep.options.parallel import compute_grid
+from fermatrica_rep.options.define import _enrich_trans_dict_from_model
 
 
 def create(prs: Presentation,
-           model: "Model | list",
-           model_rep: "ModelRep | list",
-           ds: pd.DataFrame | list,
-           opt_set_crv,
-           translation: dict | pd.DataFrame | None = None,
-           budget_step: int | float = 5,
-           bdg_max: int | float = 301,
-           fixed_vars: dict | None = {'price': 1},
-           adhoc_curves_max_costs: "None | Callable" = None,
-           if_exact: bool = True,
-           if_volume: bool = False,
-           cores: int = 4):
+            meta_model: MetaModel,
+            *,
+            scopes: list,
+            translation: dict | pd.DataFrame | None = None,
+            budget_step: int | float = 5,
+            bdg_max: int | float | None = 301,
+            fixed_vars: dict | None = {'price': 1},
+            if_exact: bool = True,
+            if_volume: bool = False,
+            cores: int = 4,
+            background_option: dict | Option | None = None,
+            ):
     """
-    Generate efficiency curves slides (i.e. incremental KPI, profit, ROI) via full curves approach
-    (row of options to be calculated): short and long term effects. 2 slides should be generated
-    with short and long term curves respectively. 
+    Generate efficiency curves slides via full curves approach.
 
     :param prs: Presentation object from python_pptx package
-    :param model: Model object or list of Model objects
-    :param model_rep: ModelRep object (export settings) or list of ModelRep objects
-    :param ds: dataset or list of datasets
-    :param opt_set_crv: OptionSetting object containing calculate settings
-    :param translation: translation dict (from files like `options.xlsx`, `translation` sheet) or None,
-        (i.e. defaults to trans_dict attribute of `model_rep` argument)
-    :param budget_step: budget iteration step in millions, defaults to 1 (i.e. 1M)
-    :param bdg_max: maximum budget size (all options with larger budgets to be dropped)
-    :param adhoc_curves_max_costs: adhoc function to set maximum observed values for every variable (optional)
+    :param meta_model: MetaModel DAG
+    :param scopes: list of OptionScope objects
+    :param translation: translation dict or DataFrame
+    :param budget_step: budget iteration step in millions
+    :param bdg_max: maximum budget size; None = no cap (axis tick skip derived from grid max)
     :param fixed_vars: translation variables with their values to be fixed across grid
-    :param if_exact: apply only to the specific time period, without next years
+    :param if_exact: apply only to the specific time period
     :param if_volume: show volume or value KPI
-    :param cores: number of processor cores to use in calculations; None sets to all computer logical cores - 1
+    :param cores: number of processor cores
+    :param background_option: background budget additions for compute_grid: None (default),
+        a raw dict {scope_name: {item: value}}, or an Option (base budget scenario)
+        whose per-scope cross-scope diff supplies the additions. See compute_grid().
 
     :return: Presentation object from python_pptx package
     """
 
-    if isinstance(model_rep, list):
-        model_rep_main = model_rep[-1]
-        date_max = ds[-1]['date'].dt.year.max()
-    else:
-        model_rep_main = model_rep
-        date_max = ds['date'].dt.year.max()
+    summary_node = _last_node_name(meta_model)
+    model_rep_main = meta_model.nodes[summary_node].model_rep
+    model_conf = meta_model.nodes[summary_node].model.conf
+
+    date_max = meta_model.nodes[summary_node].ds['date'].dt.year.max()
 
     if isinstance(translation, dict):
         translation = pd.DataFrame(translation)
@@ -73,45 +76,164 @@ def create(prs: Presentation,
     slide_width = model_rep_main.pptx_cnf['slide_width']
     slide_height = model_rep_main.pptx_cnf['slide_height']
 
-    # fix for evading problem with pickling python-pptx object
+    curves_full_data = compute_grid(
+        meta_model=meta_model,
+        scopes=scopes,
+        translation=translation,
+        budget_step=budget_step,
+        bdg_max=bdg_max,
+        fixed_vars=fixed_vars,
+        cores=cores,
+        if_exact=if_exact,
+        background_option=background_option,
+    )[summary_node]
+
+    slide_layout = _resolve_slide_layout(prs, model_rep_main.pptx_cnf['Blank_slide'])
+
+    tmp = curves_full_data.groupby('option').agg({'pred_long_val': 'nunique'})
+    lst = tmp.loc[tmp["pred_long_val"] > 1].reset_index().option.tolist()
+    lst.sort()
+
+    model_rep_main.fill_colours_tools(lst)
+
+    for i in lst:
+        model_rep_main.palette_tools[i + "_extrapolated"] = model_rep_main.palette_tools[i]
+
+    scope = scopes[0] if scopes else None
+
+    # short effect
+    slide = prs.slides.add_slide(slide_layout)
+    slide = _slide_vis_worker(slide, model_rep=model_rep_main,
+                              model_conf=model_conf,
+                              scope=scope,
+                              curves_full_data=curves_full_data,
+                              plot_type='short', year_end=date_max,
+                              budget_step=budget_step, bdg_max=bdg_max,
+                              if_volume=if_volume)
+
+    # long effect
+    slide = prs.slides.add_slide(slide_layout)
+    slide = _slide_vis_worker(slide, model_rep=model_rep_main,
+                              model_conf=model_conf,
+                              scope=scope,
+                              curves_full_data=curves_full_data,
+                              plot_type='long', year_end=date_max,
+                              budget_step=budget_step, bdg_max=bdg_max,
+                              if_exact=if_exact, if_volume=if_volume)
+
+    return prs
+
+
+def create_legacy(prs: Presentation,
+                  model = None,
+                  model_rep = None,
+                  ds = None,
+                  opt_set_crv = None,
+                  translation: dict | pd.DataFrame | None = None,
+                  *,
+                  budget_step: int | float = 5,
+                  bdg_max: int | float | None = 301,
+                  fixed_vars: dict | None = {'price': 1},
+                  adhoc_curves_max_costs = None,
+                  if_exact: bool = True,
+                  if_volume: bool = False,
+                  cores: int = 4,
+                  scopes = None,
+                  background_option: dict | Option | None = None,
+                  ):
+    import warnings
+    warnings.warn(
+        "Passing Model, ModelRep, ds, opt_set_crv to slides.incr_roi is deprecated. "
+        "Use MetaModel and OptionScope instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+
+    if scopes is not None:
+        if not isinstance(model, MetaModel):
+            node = ModelNode(model=model, ds=ds, model_rep=model_rep)
+            meta_model = MetaModel(nodes=node)
+        else:
+            meta_model = model
+        return create(prs, meta_model,
+                      scopes=scopes,
+                      translation=translation,
+                      budget_step=budget_step,
+                      bdg_max=bdg_max,
+                      fixed_vars=fixed_vars,
+                      if_exact=if_exact,
+                      if_volume=if_volume,
+                      cores=cores,
+                      background_option=background_option)
+
+    if opt_set_crv is not None or model is not None:
+        return _create_old(prs, model, model_rep, ds, opt_set_crv, translation,
+                           budget_step, bdg_max, fixed_vars, adhoc_curves_max_costs,
+                           if_exact, if_volume, cores, background_option)
+
+    from fermatrica.basics.basics import fermatrica_error
+    fermatrica_error("Either (model, scopes) for new API or (model, opt_set_crv) for old API must be provided.")
+
+
+def _create_old(prs, model, model_rep, ds, opt_set_crv, translation,
+                budget_step, bdg_max, fixed_vars, adhoc_curves_max_costs,
+                if_exact, if_volume, cores, background_option=None):
+    """Old API implementation (deprecated, kept for backward compatibility)."""
 
     if isinstance(model_rep, list):
-        tmp = [None] * len(model_rep)
-        for i, mdr in enumerate(model_rep):
-            tmp[i] = model_rep[i].pptx_cnf['Blank_slide']
-            model_rep[i].pptx_cnf['Blank_slide'] = 0
+        model_rep_main = model_rep[-1]
+        date_max = ds[-1]['date'].dt.year.max()
+        model_conf = model[-1].conf
     else:
-        tmp = model_rep.pptx_cnf['Blank_slide']
-        model_rep.pptx_cnf['Blank_slide'] = 0
+        model_rep_main = model_rep
+        date_max = ds['date'].dt.year.max()
+        model_conf = model.conf
 
-    # load data
-    curves_full_data = option_report_multi_post(model=model,
-                                                ds=ds,
-                                                model_rep=model_rep,
-                                                opt_set=opt_set_crv,
-                                                translation=translation,
-                                                adhoc_curves_max_costs=adhoc_curves_max_costs,
-                                                budget_step=budget_step,
-                                                bdg_max=bdg_max,
-                                                fixed_vars=fixed_vars,
-                                                if_exact=if_exact,
-                                                cores=cores)
+    if isinstance(translation, dict):
+        translation = pd.DataFrame(translation)
 
-    if isinstance(curves_full_data, list):
-        curves_full_data = curves_full_data[-1]
-
-    if isinstance(model_rep, list):
-
-        for i, mdr in enumerate(model_rep):
-            model_rep[i].pptx_cnf['Blank_slide'] = tmp[i]
-    else:
-        model_rep.pptx_cnf['Blank_slide'] = tmp
+    language = model_rep_main.language
+    slide_width = model_rep_main.pptx_cnf['slide_width']
+    slide_height = model_rep_main.pptx_cnf['slide_height']
 
     # prepare slide in presentation
 
+    if isinstance(model_rep, list):
+        node = ModelNode(model=model[-1], ds=ds[-1], model_rep=model_rep[-1])
+        _enrich_trans_dict_from_model(model[-1].conf, node.model_rep.trans_dict)
+    else:
+        node = ModelNode(model=model, ds=ds, model_rep=model_rep)
+        _enrich_trans_dict_from_model(model.conf, node.model_rep.trans_dict)
+
+    meta_model = MetaModel(nodes=node)
+
+    opt_set_crv_scope = opt_set_crv[0] if isinstance(opt_set_crv, list) else opt_set_crv
+    scope = OptionScope(
+        scope_name="crv_scope",
+        date_start=opt_set_crv_scope.date_start,
+        date_end=opt_set_crv_scope.date_end,
+        ref_date_start=opt_set_crv_scope.ref_date_start,
+        ref_date_end=opt_set_crv_scope.ref_date_end,
+        filters={k: [v] if not isinstance(v, list) else v
+                 for k, v in zip(opt_set_crv_scope.apply_vars, opt_set_crv_scope.target)},
+        plan_period=opt_set_crv_scope.plan_period,
+    )
+
+    curves_full_data = compute_grid(
+        meta_model=meta_model,
+        scopes=[scope],
+        translation=translation,
+        budget_step=budget_step,
+        bdg_max=bdg_max,
+        fixed_vars=fixed_vars,
+        cores=cores,
+        if_exact=if_exact,
+        background_option=background_option,
+    )["model"]
+
     opt_set_crv_vis = opt_set_crv[0] if isinstance(opt_set_crv, list) else opt_set_crv
 
-    slide_layout = model_rep_main.pptx_cnf['Blank_slide']
+    slide_layout = _resolve_slide_layout(prs, model_rep_main.pptx_cnf['Blank_slide'])
 
     # prepare colors
     tmp = curves_full_data.groupby('option').agg({'pred_long_val': 'nunique'})
@@ -129,7 +251,8 @@ def create(prs: Presentation,
 
     slide = _slide_vis_worker(slide,
                               model_rep=model_rep_main,
-                              opt_set_crv=opt_set_crv_vis,
+                              model_conf=model_conf,
+                              scope=scope,
                               curves_full_data=curves_full_data,
                               plot_type='short',
                               year_end=date_max,
@@ -144,7 +267,8 @@ def create(prs: Presentation,
 
     slide = _slide_vis_worker(slide,
                               model_rep=model_rep_main,
-                              opt_set_crv=opt_set_crv_vis,
+                              model_conf=model_conf,
+                              scope=scope,
                               curves_full_data=curves_full_data,
                               plot_type='long',
                               year_end=date_max,
@@ -159,24 +283,26 @@ def create(prs: Presentation,
 
 def _slide_vis_worker(slide,
                       model_rep: "ModelRep",
-                      opt_set_crv: "OptionSettings",
+                      scope: "OptionScope",
                       curves_full_data: pd.DataFrame,
                       plot_type: str,
                       year_end: int,
                       budget_step: int | float = 5,
-                      bdg_max: int | float = 301,
+                      bdg_max: int | float | None = 301,
                       if_exact: bool = True,
-                      if_volume: bool = False
+                      if_volume: bool = False,
+                      model_conf: "ModelConf | None" = None
                       ):
     """
-    Create one after another of two slides for `fermatrica_rep.export.slides.incr_roi.create()`.
-    Calculations are already done, so this function works as visualiser only.
+    Render the incremental curves chart on `slide`, plus the profit and ROI charts
+    when the model conf declares value output (`if_value_applicable`). Calculations
+    are already done, so this function works as visualiser only.
     
     This function calls minor workers to fill current file.
 
     :param slide: Slide object (from python_pptx package) to be filled
     :param model_rep: ModelRep object (reporting settings)
-    :param opt_set_crv: OptionSetting object containing calculate settings
+    :param scope: OptionScope object with date_start and date_end
     :param curves_full_data:
     :param plot_type: 'short' or 'long'
     :param year_end: final year of the calculations; to be used in naming only
@@ -184,20 +310,30 @@ def _slide_vis_worker(slide,
     :param bdg_max: maximum budget size (all options with larger budgets to be dropped)
     :param if_exact: apply only to the specific time period, without next years
     :param if_volume: show volume or value KPI
+    :param model_conf: model conf (KPI/currency facts) for wording resolution
 
     :return:
     """
 
+    bdg_max = bdg_max if bdg_max is not None else float(curves_full_data["bdg"].max())
+
+    f = wording.facts(model_conf)
+
+    # Mean-aggregated KPIs report an average per period, not a cumulative total,
+    # so the long-term axis must not be labelled as a sum even on the exact path.
+    summary_type = getattr(model_conf, "summary_type", "sum")
+    cumulative = if_exact and plot_type == 'long' and summary_type not in ("mean", "mean_fin")
+
     if plot_type == 'long':
-        n_years = year_end - opt_set_crv.date_start.year + 1
-        axis_years = str(opt_set_crv.date_start.year) + '-' + str(year_end)
-        slide_title = model_rep.vis_dict.loc[(model_rep.vis_dict['section'] == 'efficiency.3.year') &
-                                             (model_rep.vis_dict['variable'] == 'title'), model_rep.language].iloc[0]
+        n_years = year_end - scope.date_start.year + 1
+        axis_years = str(scope.date_start.year) + '-' + str(year_end)
+        title_section = 'efficiency.3.year'
     else:
         n_years = 1
-        axis_years = str(opt_set_crv.date_start.year)
-        slide_title = model_rep.vis_dict.loc[(model_rep.vis_dict['section'] == 'efficiency.1.year') &
-                                             (model_rep.vis_dict['variable'] == 'title'), model_rep.language].iloc[0]
+        axis_years = str(scope.date_start.year)
+        title_section = 'efficiency.1.year'
+
+    slide_title = wording.text(model_rep, model_conf, section=title_section, variable='title')
 
     slide_height = model_rep.pptx_cnf['slide_height']
     slide_width = model_rep.pptx_cnf['slide_width']
@@ -231,8 +367,12 @@ def _slide_vis_worker(slide,
 
     chart_data = _chart_data_worker(curves_full_data, plot_type_cur, if_exact, n_years)
 
-    x, y = (0.5 - 0.45) * slide_width, slide.shapes[1].top + slide.shapes[1].height
-    cx, cy = 0.25 * slide_width, 0.5 * slide_height
+    if f["if_value_applicable"]:
+        x, y = (0.5 - 0.45) * slide_width, slide.shapes[1].top + slide.shapes[1].height
+        cx, cy = 0.25 * slide_width, 0.5 * slide_height
+    else:
+        x, y = 0.05 * slide_width, slide.shapes[1].top + slide.shapes[1].height
+        cx, cy = 0.9 * slide_width, 0.5 * slide_height
 
     x, y, cx, cy = int(round(x)), int(round(y)), int(round(cx)), int(round(cy))
 
@@ -242,10 +382,19 @@ def _slide_vis_worker(slide,
     chart = graphic_frame.chart
     chart = set_chart_dashes(chart, '_extrapolated')
 
-    var_type = 'incr_sales_cum_axis_y' if if_exact and plot_type == 'long' else 'incr_sales_axis_y'
+    var_type = 'incr_sales_cum_axis_y' if cumulative else 'incr_sales_axis_y'
 
-    chart.has_legend = False
+    # When value output is unavailable, no profit/ROI charts follow, so the
+    # incremental chart carries the legend itself; otherwise the ROI chart does.
+    chart.has_legend = not f["if_value_applicable"]
+    if chart.has_legend:
+        chart.legend.position = XL_LEGEND_POSITION.RIGHT
+        chart.legend.include_in_layout = False
+        chart.legend.font.name = model_rep.pptx_cnf['font_family_body']
+        chart.legend.font.size = model_rep.pptx_cnf['font_size_small']
+
     chart = _set_chart_axis(chart, model_rep,
+                            model_conf=model_conf,
                             var=var_type,
                             year=axis_years,
                             plot_type=plot_type,
@@ -262,7 +411,7 @@ def _slide_vis_worker(slide,
         sr.format.line.width = Pt(2.5)
         sr.smooth = True
 
-    if curves_full_data["pred_exact_val"][1] > 1e6:
+    if f["if_value_applicable"] and curves_full_data["pred_exact_val"][1] > 1e6:
         xml_node = etree.Element("{http://schemas.openxmlformats.org/drawingml/2006/chart}dispUnits")
         etree.SubElement(xml_node, '{http://schemas.openxmlformats.org/drawingml/2006/chart}builtInUnit').attrib[
             'val'] = 'millions'
@@ -300,6 +449,9 @@ def _slide_vis_worker(slide,
 
         chart._chartSpace.xpath("//c:valAx")[0].insert(-1, xml_node)
 
+    if not f["if_value_applicable"]:
+        return slide
+
     # profit
     chart_data = _chart_data_worker(curves_full_data, f'profit_{plot_type}', if_exact, n_years)
 
@@ -316,10 +468,11 @@ def _slide_vis_worker(slide,
 
     chart.has_legend = False
 
-    var_type = 'profit_cum_axis_y' if if_exact and plot_type == 'long' else 'profit_axis_y'
+    var_type = 'profit_cum_axis_y' if cumulative else 'profit_axis_y'
 
     chart = _set_chart_axis(chart
                             , model_rep,
+                            model_conf=model_conf,
                             var=var_type,
                             year=axis_years,
                             if_exact=if_exact,
@@ -393,6 +546,7 @@ def _slide_vis_worker(slide,
     chart.legend.font.size = model_rep.pptx_cnf['font_size_small']
 
     chart = _set_chart_axis(chart, model_rep,
+                            model_conf=model_conf,
                             if_exact=if_exact,
                             var='roi_axis_y',
                             year=axis_years,
@@ -477,6 +631,7 @@ def _chart_data_worker(curves_full_df: pd.DataFrame,
 
         if "ROI" in curve_type:
             cols = [x for x in tmp.columns.tolist() if x not in ['option', 'max_obs_budg', 'bdg']]
+            tmp[cols] = tmp[cols].astype(object)
             tmp.loc[-1, cols] = "#N/A"
 
         tmp.index = tmp.index + 1
@@ -509,7 +664,8 @@ def _set_chart_axis(chart,
                     budget_step: int | float = 5,
                     bdg_max: int | float = 301,
                     plot_type: str = 'short',
-                    if_exact: bool = False):
+                    if_exact: bool = False,
+                    model_conf: "ModelConf | None" = None):
     """
     Set axis attributes for efficiency curves chart: axis titles, formatting etc.
 
@@ -521,11 +677,13 @@ def _set_chart_axis(chart,
     :param bdg_max: maximum budget size (all options with larger budgets to be dropped)
     :param plot_type: 'short' or 'long'
     :param if_exact: apply only to the specific time period, without next years
+    :param model_conf: model conf (KPI/currency facts) for wording resolution
     :return:
     """
 
     value_axis = chart.value_axis
-    value_axis_title = model_rep.vis_dict.loc[(model_rep.vis_dict['section'] == f'efficiency_{plot_type}') & (model_rep.vis_dict['variable'] == var), model_rep.language].iloc[0]
+    value_axis_title = wording.text(model_rep, model_conf,
+                                    section=f'efficiency_{plot_type}', variable=var)
     value_axis_title = value_axis_title.replace('***', year)
     value_axis.axis_title.text_frame.text = value_axis_title
     value_axis.axis_title.text_frame.paragraphs[0].font.size = model_rep.pptx_cnf['font_size_small']
@@ -533,15 +691,19 @@ def _set_chart_axis(chart,
     category_axis = chart.category_axis
     category_axis.has_title = True
     if if_exact & (plot_type == 'long'):
-        category_axis_title = model_rep.vis_dict.loc[(model_rep.vis_dict['section'] == f'efficiency_{plot_type}') & (
-                    model_rep.vis_dict['variable'] == 'axis_x_if_exact_true'), model_rep.language].iloc[0]
+        category_axis_title = wording.text(model_rep, model_conf,
+                                           section=f'efficiency_{plot_type}',
+                                           variable='axis_x_if_exact_true')
 
         year = year[-4:]
     elif (not if_exact) & (plot_type == 'long'):
-        category_axis_title = model_rep.vis_dict.loc[(model_rep.vis_dict['section'] == f'efficiency_{plot_type}') & (
-                model_rep.vis_dict['variable'] == 'axis_x_if_exact_false'), model_rep.language].iloc[0]
+        category_axis_title = wording.text(model_rep, model_conf,
+                                           section=f'efficiency_{plot_type}',
+                                           variable='axis_x_if_exact_false')
     else:
-        category_axis_title = model_rep.vis_dict.loc[(model_rep.vis_dict['section'] == f'efficiency_{plot_type}') & (model_rep.vis_dict['variable'] == 'axis_x'), model_rep.language].iloc[0]
+        category_axis_title = wording.text(model_rep, model_conf,
+                                           section=f'efficiency_{plot_type}',
+                                           variable='axis_x')
 
     category_axis_title = category_axis_title.replace('***', year)
     category_axis.axis_title.text_frame.text = category_axis_title

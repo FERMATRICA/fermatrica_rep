@@ -6,10 +6,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fermatrica-rep"
-version = "0.3.3"
+version = "0.4.0"
 description = "FERMATRICA Flexible Econometrics Regression Models and Tools: Reporting"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.14"
 license = { text = "Apache 2.0" }
 authors = [
     { name = "OKKAM CS: AMeshkov, Ivan Kocherov, Grigoriy Selyavin, Anton Sevastianov, Anna Gladysheva, Nargiz Bagirova, Kirill Prilipko" }
@@ -23,8 +23,13 @@ dependencies = [
 ]
 
 [tool.pytest.ini_options]
+addopts = "-n 4"
 markers = [
     "integration: integration tests that require --samples-path and a trained model",
+]
+filterwarnings = [
+    "ignore::pandas.errors.Pandas4Warning",
+    "ignore::pandas.errors.PerformanceWarning",
 ]
 
 urls = {"Homepage" = "https://github.com/FERMATRICA/fermatrica_rep"}

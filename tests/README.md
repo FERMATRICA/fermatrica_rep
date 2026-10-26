@@ -1,6 +1,6 @@
 ﻿# FERMATRICA_REP Tests
 
-267 tests (175 unit + 92 integration) covering reporting, analysis, options, and the export pipeline.
+1052 tests (873 unit + 179 integration) covering reporting, analysis, options, and the export pipeline.
 
 ---
 
@@ -14,7 +14,7 @@ Tests are organized into three layers:
 |-------|----------|------|------------|------|
 | **Unit** | tests/test_*.py | Synthetic in-memory | Nothing external | Always runs |
 | **Static fixtures** | tests/fixtures/ | .xlsx shipped in repo | Self-contained | Always runs |
-| **Integration** | tests/test_integration/ | Real models from core repo | `--samples-path`, env var, or root config.toml | Auto-skipped |
+| **Integration** | tests/test_integration/ | Real models from a local samples directory | `--samples-path`, env var, or root config.toml | Auto-skipped |
 
 - **Layer 1**: Synthetic DataFrames/Series test logic in isolation. Fastest and most reliable.
 - **Layer 2**: Two shipped xlsx files (options.xlsx, seasonality.xlsx from p01_sample) verify Excel parsers.
@@ -29,7 +29,7 @@ Tests are organized into three layers:
 | fixtures_path | session | Path to tests/fixtures/ |
 | options_xlsx_path | session | Path to fixtures/options.xlsx |
 | seasonality_xlsx_path | session | Path to fixtures/seasonality.xlsx |
-| samples_path | session | Core samples path (from --samples-path, env var, or config.toml) |
+| samples_path | session | Samples directory path (from --samples-path, env var, or config.toml) |
 | if_debug | function | Boolean for breakpoint debugging (default False) |
 
 ### Fixtures (conftest.py, test_integration/)
@@ -43,7 +43,7 @@ Tests are organized into three layers:
 | p04_model_ds | session | Loads p04 regional panel model + dataset |
 | p05_models_ds | session | Loads p05 two-level (BHT + Sales) models + datasets |
 
-Model discovery for p02-p05 uses `_find_latest_model()` — picks the most recent `model_*` directory. Adhoc code is activated on `sys.path` and cached modules are evicted between runs.
+Model discovery for p00-p05 uses `_find_latest_model()` — picks the most recent `model_*` directory. Adhoc code is activated on `sys.path` and cached modules are evicted between runs.
 
 ### Markers
 
@@ -76,7 +76,7 @@ Model discovery for p02-p05 uses `_find_latest_model()` — picks the most recen
 | analysis/ols.py | get_model_ds, trans, rhs_comparison, impacts_comparison (unit + integration) | — |
 | export/* | — | Requires MS Office on Windows |
 | options/optim.py | — | Requires real model, slow |
-| meta_model/ | ModelRep (via basic_model_rep fixture in waterfall tests) | — |
+| meta_model/ | ModelRep, ModelNode, MetaModel, MetaModelDiagnostics | — |
 
 ### Integration test coverage by sample
 
@@ -143,6 +143,16 @@ Tests for `fermatrica_rep.analysis.ols`. Uses p00 real model, statsmodels fixtur
 - **TestRhsComparison** (5 tests): Returns DataFrame, expected columns, sign change detection.
 - **TestImpactsComparison** (4 tests): Returns DataFrame, expected columns, impacts sum to 100.
 
+### test_diagnostics.py — MetaModel diagnostics (45 tests)
+Tests for `fermatrica_rep.meta_model.diagnostics`:
+- **TestCheckResult** (3 tests): Construction, details dict, level enum values.
+- **TestDiagnosticsReport** (6 tests): `.passed` property (error-only, ignores warnings, empty), `.summary` formatting (errors/warnings/info counts, skipped).
+- **TestMetaModelDiagnosticsIntegration** (3 tests): `.run()` returns report, skips merge when no options, skips merge with <2 options.
+- **TestCheckNodeTypes** (4 tests): Valid ModelNode passes, non-ModelNode fails with details, `raise_on_first=True` raises, `raise_on_first` only on error-level.
+- **TestCheckNodeAttrs** (14 tests): model/None error, empty ds error, None model_rep error, empty vis_dict error, None trans_dict warning, invalid language error, dt_pred None/present/wrong-type, adhoc dir missing/comment-only/has-code-no-src warning/has-code-with-src passes.
+- **TestCheckEdgeResolution** (7 tests): No edges info, None merge_fn info, callable passes, string resolves via eval, unresolvable string error, non-callable/non-string error, uninspectable signature warning.
+- **TestCheckMergeEffects** (8 tests): Identical options skipped, propagation detected via ds+dt_pred comparison, state restoration on compute crash, None prediction skip, all columns identical warning, float/non-float column diff warnings, single-node effects.
+
 ### test_options/test_define.py — Options config parsers (32 tests)
 Tests for `fermatrica_rep.options.define`, loading from `tests/fixtures/`:
 - **TestTransDictCreate** (6 tests): 9 translation items, bdg_tv→variable mapping, error on missing sheet/file.
@@ -181,7 +191,7 @@ End-to-end on ABA target panel (monthly, LME, 3 brands). Verifies ABA target, 3 
 End-to-end on regional panel (LME, 4 geographic regions). Verifies regional model load, 4 regions, per-master option_report with media_prices, extract_effect with master column, edge cases.
 
 ### test_integration/test_p05_pipeline.py — p05 two-level pipeline (6 tests)
-End-to-end on chained two-level panel (BHT → Sales). Verifies BHT and Sales model loads, pred_merge_bht importable, full chained option_report, extract_effect on both levels.
+End-to-end on chained two-level panel (BHT → Sales). Verifies BHT and Sales model loads, pred_merge_1 importable, full chained option_report, extract_effect on both levels.
 
 ### test_integration/test_fit.py — Fit plots (18 tests)
 Tests for `fermatrica_rep.fit` across 5 samples (p00-p04):
@@ -209,7 +219,7 @@ Tests for `fermatrica_rep.curves` across 3 samples (p00-p03):
 
 ### test_integration/test_curves_full.py — Full efficiency curves (2 tests)
 Tests for `fermatrica_rep.curves_full` across 2 samples (p00-p01):
-- **TestP00CurvesFull** (1 test): Full pipeline option_report_multi_post → curves_full_plot_short → curves_full_plot_long.
+- **TestP00CurvesFull** (1 test): Full pipeline compute_grid → curves_full_plot_short → curves_full_plot_long.
 - **TestP01CurvesFull** (1 test): Full curves pipeline on panel LME model.
 
 ### test_integration/test_adstocks.py — Adstock visualization (1 test)
@@ -225,7 +235,8 @@ Tests for `fermatrica_rep.curves_full` across 2 samples (p00-p01):
 ### Prerequisites
 
 - Python 3.11+ with `fermatrica`, `fermatrica_rep`, `fermatrica_utils`, `pandas`, `numpy`, `plotly`, `openpyxl`, `pyyaml`, `statsmodels` installed
-- Integration tests additionally require a local checkout of the [fermatrica core repository](https://github.com/FERMATRICA/fermatrica) with samples (p00-p05)
+- `pytest-xdist` is **required** — it is the enforced default runner (`addopts = "-n 4"` in `pyproject.toml`). Install it via `pip install -r requirements-dev.txt`
+- Integration tests additionally require a directory with sample models (p00-p10). Sample models are not shipped with this repository.
 - The samples path is configured via `config.toml` (repo root, copy from `config_example.toml`) or the `--samples-path` CLI flag
 
 ### Unit tests (fast, no dependencies)
@@ -233,7 +244,7 @@ Tests for `fermatrica_rep.curves_full` across 2 samples (p00-p01):
 pytest tests/ -v
 pytest tests/ -m "not integration" -v
 ```
-Result: 175 passed, 92 skipped.
+Result: 873 passed, 179 deselected.
 
 ### Single test file / class / method
 ```bash
@@ -245,7 +256,7 @@ pytest tests/test_waterfall.py::TestWaterfallData::test_brand_filtering -v
 ### Integration tests
 ```bash
 # CLI flag
-pytest tests/ --samples-path /path/to/fermatrica/samples -m integration -v
+pytest tests/ --samples-path /path/to/samples -m integration -v
 
 pytest tests/ -m integration -v
 
@@ -253,19 +264,43 @@ pytest tests/ -m integration -v
 # Edit config.toml (repo root) with your local path, then run:
 pytest tests/ -m integration -v
 ```
-Result: 92 passed (integration tests only, with --samples-path).
+Result: 179 passed (integration tests only, with --samples-path).
 
 ### Full suite
 ```bash
-pytest tests/ --samples-path /path/to/fermatrica/samples -v
+pytest tests/ --samples-path /path/to/samples -v
 ```
-Result: 267 passed.
+Result: 1052 tests (1049 passed, 3 skipped).
+
+### Parallel runs (pytest-xdist, enforced by default)
+
+**Every `pytest` invocation in this repo runs with xdist automatically**
+(`addopts = "-n 4"` in `pyproject.toml`). `pytest tests/` already uses 4
+workers — no flag needed. Override with an explicit `-n` on the command line
+(e.g. `-n 0` for a single-process run, `-n auto` for one worker per CPU).
+
+The suite is safe to run in parallel — tests write only to their own `tmp_path`
+directories, and the adhoc `sys.path`/`sys.modules` state is per-process. Session
+fixtures load each sample model once per worker (the samples are small).
+
+```bash
+pip install -r requirements-dev.txt   # pytest-xdist (required)
+pytest tests/                         # already -n 4 via addopts
+pytest tests/ -n 0                    # single-process override (e.g. --if-debug)
+pytest tests/ -n auto                 # one worker per CPU
+```
+
+On this machine (16 cores) the full suite runs in ~10 minutes with `-n 4`
+(measured: 9:51). The heaviest single test (brand summary XLSX export) runs a
+sequential in-process grid, so it does not parallelize internally — xdist
+overlaps it with the rest of the suite instead.
 
 ### Debug mode
 ```bash
-pytest tests/ --if-debug
+pytest tests/ --if-debug -n 0
 ```
 Drops into breakpoint() on assertion failures for interactive debugging.
+Pass `-n 0` — breakpoints cannot be interacted with inside xdist workers.
 
 ### VS Code GUI
 
@@ -274,7 +309,7 @@ samples path set. Integration tests then appear and run in the Test Explorer
 without any workspace settings:
 ```toml
 [paths]
-samples = "C:\\path\\to\\fermatrica\\samples"
+samples = "C:\\path\\to\\samples"
 ```
 
 ---

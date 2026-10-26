@@ -2,7 +2,7 @@ import pytest
 import pandas as pd
 import plotly.graph_objects as go
 
-from fermatrica_rep.waterfall import waterfall_data, waterfall_plot, _waterfall_data_worker
+from fermatrica_rep.analysis.waterfall import waterfall_data, waterfall_plot, _waterfall_data_worker
 
 
 class TestWaterfallData:

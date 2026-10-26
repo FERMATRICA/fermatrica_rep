@@ -31,3 +31,14 @@ available to export now are:
 
 import fermatrica_rep.export.basics
 import fermatrica_rep.export.slides
+
+from fermatrica_rep.export import wording
+
+from fermatrica_rep.export.export_pptx import (
+    options_table, options_detail, curves, adstocks, set_config,
+    export_option_table, export_option_detail, export_curves, export_adstocks,
+)
+
+from fermatrica_rep.export.export_summary import (
+    summary_data, export_summaries,
+)

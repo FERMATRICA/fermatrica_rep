@@ -1,7 +1,7 @@
 """Integration tests against p05_sample (two-level panel: BHT → Sales).
 
 Tests the chained reporting pipeline: load BHT model → option_report →
-pred_merge_bht → load Sales model → option_report on merged data.
+pred_merge_1 → load Sales model → option_report on merged data.
 """
 import numpy as np
 import pytest
@@ -53,15 +53,67 @@ class TestP05Pipeline:
         assert sales_model.obj is not None
         assert sales_model.conf.Y_var is not None
 
-    def test_pred_merge_bht_importable(self, p05_setup):
-        """pred_merge_bht function is importable from adhoc.reporting."""
-        from code_py.adhoc.reporting import pred_merge_bht
-        assert callable(pred_merge_bht)
+    def test_pred_merge_1_importable(self, p05_setup):
+        """pred_merge_1 function is importable from adhoc.reporting."""
+        from code_py.adhoc.reporting import pred_merge_1
+        assert callable(pred_merge_1)
+
+    def test_new_api_chain_loads_options_configuration(self, p05_models_ds, samples_path):
+        """New API chains both nodes and loads media prices from context.xlsx."""
+        import code_py.adhoc.reporting
+        import code_py.adhoc.translators
+        from code_py.adhoc.reporting import pred_merge_1
+        import fermatrica_rep as fmr
+
+        bht_model, bht_ds, sales_model, sales_ds = p05_models_ds
+        options_path = str(
+            samples_path
+            / "p05_sample"
+            / "code_py"
+            / "model_data"
+            / "options"
+            / "context.xlsx"
+        )
+        scopes = fmr.scopes_read(options_path)
+        options = fmr.Option.from_excel_all(options_path)
+        ssn_dict = fmr.seasonality_read(options_path)
+        trans_dict = fmr.trans_dict_create(path=options_path, sheet="translation")
+
+        node_bht = fmr.ModelNode(
+            model=bht_model,
+            ds=bht_ds,
+            options_path=options_path,
+            trans_dict=trans_dict,
+            adhoc_code=[code_py.adhoc.translators, code_py.adhoc.reporting],
+            language="english",
+            ssn_dict=ssn_dict,
+        )
+        node_sales = fmr.ModelNode(
+            model=sales_model,
+            ds=sales_ds,
+            options_path=options_path,
+            trans_dict=trans_dict,
+            adhoc_code=[code_py.adhoc.translators, code_py.adhoc.reporting],
+            language="english",
+            ssn_dict=ssn_dict,
+        )
+        node_bht.scope_names = {s.scope_name for s in scopes}
+        node_sales.scope_names = {s.scope_name for s in scopes}
+
+        mm = fmr.MetaModel(
+            nodes={"bht": node_bht, "sales": node_sales},
+            edges=[("bht", "sales", pred_merge_1)],
+        )
+        result = mm.compute(options["predefined"], scopes=scopes, allow_past=True)
+
+        assert node_bht.model_rep.media_prices is not None
+        assert node_sales.model_rep.media_prices is not None
+        assert result["sales"]
 
     def test_full_chain_option_report(self, p05_setup, samples_path):
-        """Full chain: BHT option_report → pred_merge_bht → Sales option_report."""
+        """Full chain: BHT option_report → pred_merge_1 → Sales option_report."""
         import fermatrica_rep as fmr
-        from code_py.adhoc.reporting import pred_merge_bht
+        from code_py.adhoc.reporting import pred_merge_1
 
         bht_model = p05_setup["bht_model"]
         bht_ds = p05_setup["bht_ds"]
@@ -96,7 +148,7 @@ class TestP05Pipeline:
         assert "pred_long_vol" in opt_sum_1
         assert "pred_long_val" in opt_sum_1
 
-        sales_ds_merged = pred_merge_bht(sales_ds, dt_pred_1)
+        sales_ds_merged = pred_merge_1(sales_ds, dt_pred_1)
 
         assert "aba_predicted" in sales_ds_merged.columns
 

@@ -1,8 +1,15 @@
 """
 Standard translators media budget -> media variable per media.
 
-Translation interface is fixed among all translation functions, so some parameters could look "excessive"
-in some functions. Do not remove them!
+All highest-level translator functions must have the exact same signature as `basic`:
+    def translator(md, ds, model_rep, var_key, var_name, val, ds_mask, media_price=None) -> pd.DataFrame
+The translation dispatcher calls all translators with a fixed set of arguments, so do not
+add, remove, or rename parameters in top-level translator functions.
+
+`tv_complex` is a worker function with extra parameters (`clip_dur`, `tv_type`, `media_prefix`)
+— it is NOT a highest-level translator. The top-level TV translators (`nat_tv_complex`,
+`reg_tv_complex`, `nat_tv_sponsor_complex`, `brnd_nat_tv_complex`) wrap it and conform
+to the standard signature.
 """
 
 
@@ -11,10 +18,57 @@ import pandas as pd
 import re
 import typing
 
-from fermatrica_utils import select_eff, groupby_eff
+from fermatrica_utils import select_eff, groupby_eff, fermatrica_warner
 from fermatrica.model.model_conf import ModelConf
 
 from fermatrica_rep.options.define import OptionSettings
+
+
+def _ensure_float_for_rhs(ds: pd.DataFrame
+                          , col: str
+                          , rhs: pd.Series | float | int
+                          ):
+    """
+    If `col` in `ds` is an integer dtype and the RHS values are float or contain
+    None/NaN, cast the column to float to avoid silent truncation.
+    """
+
+    if col not in ds.columns:
+        return
+    if pd.api.types.is_integer_dtype(ds[col]):
+        if isinstance(rhs, pd.Series):
+            if pd.api.types.is_float_dtype(rhs) or rhs.isna().any():
+                ds[col] = ds[col].astype(float)
+        elif isinstance(rhs, float):
+            ds[col] = ds[col].astype(float)
+
+
+def _get_media_price(media_price: float | None = None) -> float:
+    if media_price is not None:
+        return media_price
+    return 1.0
+
+
+WARN_NAN_SEASONALITY: bool = True
+
+
+def warn_nan_seasonality(ds: pd.DataFrame
+                          , ds_mask: pd.Series
+                          , ssn_name: str
+                          , var_key: str
+                          ):
+    if not WARN_NAN_SEASONALITY:
+        return
+    masked_ssn = ds.loc[ds_mask, ssn_name]
+    nan_mask = masked_ssn.isna()
+    if nan_mask.any():
+        nan_dates = ds.loc[ds_mask, 'date'].loc[nan_mask.values]
+        fermatrica_warner.warning(
+            'Seasonality column `' + ssn_name + '` has NaN/None values within ds_mask for `'
+            + var_key + '`. Date range: '
+            + str(nan_dates.min()) + ' — ' + str(nan_dates.max())
+            + '. It could lead to missed values in translation'
+        )
 
 
 def basic(md: "ModelConf"
@@ -24,6 +78,7 @@ def basic(md: "ModelConf"
           , var_name: str
           , val: float | int
           , ds_mask: pd.Series
+          , media_price: float | None = None
           ):
     """
     Most standard / basic translation.
@@ -42,35 +97,19 @@ def basic(md: "ModelConf"
     :return: main dataset with applied `val`
     """
 
-    # get primitives
-
-    media_price = md.trans_path_df.loc[md.trans_path_df['variable'] == var_name, 'price']
-
-    if len(media_price) > 0:
-        media_price = media_price.iloc[0]
-    else:
-        media_price = 1.0
+    media_price = _get_media_price(media_price)
 
     ssn_name = re.sub(r'^(no)*bdg_', 'opt_media_ssn_', var_key)
 
-    # find seasonality correction
+    if ssn_name in ds.columns:
+        warn_nan_seasonality(ds, ds_mask, ssn_name, var_key)
+        _rhs = ds.loc[ds_mask, ssn_name] * val * 1e+6 / media_price
+    else:
+        _rhs = val * 1e+6 / media_price
 
-    ssn_cor = 1
+    _ensure_float_for_rhs(ds, var_name, _rhs)
+    ds.loc[ds_mask, var_name] = _rhs
 
-    tmp = select_eff(ds, ['date', ssn_name]).loc[ds_mask, :].drop_duplicates()
-
-    if (tmp.loc[:, 'date'].max() - tmp.loc[:, 'date'].min()).days <= 366:
-        ssn_cor = tmp.loc[:, ssn_name].sum()
-        if ssn_cor != 0:
-            ssn_cor = 1 / ssn_cor
-        else:
-            ssn_cor = 1 / tmp.loc[:, ssn_name].shape[0]
-
-    # run
-
-    ds.loc[ds_mask, var_name] = ds.loc[ds_mask, ssn_name] * ssn_cor * val * 1e+6 / media_price
-
-    # maybe switch to void function later
     return ds
 
 
@@ -81,6 +120,7 @@ def basic_fix(md: "ModelConf"
               , var_name: str  # as in dataset
               , val: float | int
               , ds_mask: pd.Series
+              , media_price: float | None = None
               ):
     """
     Translate / apply budget to some 'fixed' variable 1 to 1, w/o seasonality, media price and Mln conversion.
@@ -99,6 +139,7 @@ def basic_fix(md: "ModelConf"
     :return: main dataset with applied `val`
     """
 
+    _ensure_float_for_rhs(ds, var_name, val)
     ds.loc[ds_mask, var_name] = val
 
     # maybe switch to void function later
@@ -112,6 +153,7 @@ def price(md: "ModelConf"
           , var_name: str  # as in dataset
           , val: float | int
           , ds_mask: pd.Series
+          , media_price: float | None = None
           ):
     """
     Standard price as fractions / ratios to basic price (price_..._back).
@@ -132,7 +174,9 @@ def price(md: "ModelConf"
     # run
 
     price_back_name = md.price_var + '_back'
-    ds.loc[ds_mask, md.price_var] = ds.loc[ds_mask, price_back_name] * val
+    _rhs = ds.loc[ds_mask, price_back_name] * val
+    _ensure_float_for_rhs(ds, md.price_var, _rhs)
+    ds.loc[ds_mask, md.price_var] = _rhs
 
     # maybe switch to void function later
     return ds
@@ -145,6 +189,7 @@ def tv_complex(md: "ModelConf"
                , var_name: str  # as in dataset
                , val: float | int
                , ds_mask: pd.Series
+               , media_price: float | None = None
                , clip_dur: float | int = 10
                , tv_type: str = 'rolik_nat'
                , media_prefix: str | list = 'ots'
@@ -171,10 +216,12 @@ def tv_complex(md: "ModelConf"
 
     # get primitives
 
-    media_price = md.trans_path_df.loc[md.trans_path_df['variable'] == var_key, 'price']
-    aud_year = model_rep.aud_coefs['year'].max()
+    media_price = _get_media_price(media_price)
+    aud_year = 2025
+    if model_rep is not None and hasattr(model_rep, "aud_coefs") and model_rep.aud_coefs is not None:
+        aud_year = model_rep.aud_coefs["year"].max()
 
-    var_name = re.split(r', *', var_name)
+    var_name = re.split(r", *", var_name)
     sku_prefix = ''
 
     if len(var_name) == 3:
@@ -196,21 +243,7 @@ def tv_complex(md: "ModelConf"
     else:
         media_prefix_base = media_prefix
 
-    if len(media_price) > 0:
-        media_price = media_price.iloc[0]
-    else:
-        media_price = 1.0
-
     ssn_name = re.sub(r'^bdg_', 'opt_media_ssn_', var_key)
-
-    # find seasonality correction
-
-    ssn_cor = 1
-
-    tmp = select_eff(ds, ['date', ssn_name]).loc[ds_mask, :].drop_duplicates()
-
-    if (tmp.loc[:, 'date'].max() - tmp.loc[:, 'date'].min()).days <= 366:
-        ssn_cor = 1 / tmp.loc[:, ssn_name].sum()
 
     # run
 
@@ -245,16 +278,28 @@ def tv_complex(md: "ModelConf"
 
         cl_base = re.sub(r'^(' + sku_prefix + media_prefix + r')_', media_prefix_base + '_', col)
 
+        _ensure_float_for_rhs(ds, cl_clipl, clip_dur)
         ds.loc[ds_mask, cl_clipl] = clip_dur
+        _ensure_float_for_rhs(ds, cl_clipl_umb, clip_dur)
         ds.loc[ds_mask, cl_clipl_umb] = clip_dur
 
         # per SKU / product
 
-        ds.loc[ds_mask, col] = ds.loc[ds_mask, ssn_name] * ssn_cor * val * 1/clip_dur * 1e+6 / media_price * ds.loc[ds_mask, sku_coef] *\
-                              model_rep.aud_coefs.loc[(model_rep.aud_coefs['variable'] == cl_base) & (model_rep.aud_coefs['year'] == aud_year), 'coef'].iloc[0]
+        if ssn_name in ds.columns:
+            warn_nan_seasonality(ds, ds_mask, ssn_name, var_key)
+            ssn_factor = ds.loc[ds_mask, ssn_name]
+        else:
+            ssn_factor = 1.0
+
+        _rhs = ssn_factor * val * 1/clip_dur * 1e+6 / media_price * ds.loc[ds_mask, sku_coef] *\
+              model_rep.aud_coefs.loc[(model_rep.aud_coefs['variable'] == cl_base) & (model_rep.aud_coefs['year'] == aud_year), 'coef'].iloc[0]
+        _ensure_float_for_rhs(ds, col, _rhs)
+        ds.loc[ds_mask, col] = _rhs
 
         if 'tv_ssn' in ds.columns.tolist():
-            ds.loc[ds_mask, col] = ds.loc[ds_mask, col] / ds.loc[ds_mask, 'tv_ssn']
+            _rhs = ds.loc[ds_mask, col] / ds.loc[ds_mask, 'tv_ssn']
+            _ensure_float_for_rhs(ds, col, _rhs)
+            ds.loc[ds_mask, col] = _rhs
 
         # per superbrand
 
@@ -268,7 +313,9 @@ def tv_complex(md: "ModelConf"
         ds_tmp = ds_tmp.merge(rtrn.reset_index(name=cl_umb), how='left', on=['date', 'superbrand'],
                               sort=False, copy=False)
 
-        ds.loc[ds_mask, cl_umb] = ds_tmp.loc[ds_mask, cl_umb]
+        _rhs = ds_tmp.loc[ds_mask, cl_umb]
+        _ensure_float_for_rhs(ds, cl_umb, _rhs)
+        ds.loc[ds_mask, cl_umb] = _rhs
 
     # maybe switch to void function later
     return ds
@@ -281,6 +328,7 @@ def nat_tv_complex(md: "ModelConf"
                    , var_name: str  # as in dataset
                    , val: float | int
                    , ds_mask: pd.Series
+                   , media_price: float | None = None
                    ):
     """
     National TV: complex TV translation with respect to affinities and TV audience sizes.
@@ -298,7 +346,7 @@ def nat_tv_complex(md: "ModelConf"
     :return: main dataset with applied `val`
     """
 
-    ds = tv_complex(md, ds, model_rep, var_key, var_name, val, ds_mask, clip_dur=10, tv_type='rolik_nat', media_prefix='ots')
+    ds = tv_complex(md, ds, model_rep, var_key, var_name, val, ds_mask, media_price=media_price, clip_dur=10, tv_type='rolik_nat', media_prefix='ots')
 
     return ds
 
@@ -310,6 +358,7 @@ def reg_tv_complex(md: "ModelConf"
                    , var_name: str  # as in dataset
                    , val: float | int
                    , ds_mask: pd.Series
+                   , media_price: float | None = None
                    ):
     """
     Regional TV: complex TV translation with respect to affinities and TV audience sizes.
@@ -327,7 +376,7 @@ def reg_tv_complex(md: "ModelConf"
     :return: main dataset with applied `val`
     """
 
-    ds = tv_complex(md, ds, model_rep, var_key, var_name, val, ds_mask, clip_dur=10, tv_type='rolik_local', media_prefix='ots')
+    ds = tv_complex(md, ds, model_rep, var_key, var_name, val, ds_mask, media_price=media_price, clip_dur=10, tv_type='rolik_local', media_prefix='ots')
 
     return ds
 
@@ -339,6 +388,7 @@ def nat_tv_sponsor_complex(md: "ModelConf"
                            , var_name: str  # as in dataset
                            , val: float | int
                            , ds_mask: pd.Series
+                           , media_price: float | None = None
                            ):
     """
     National TV sponsor: complex TV translation with respect to affinities and TV audience sizes.
@@ -356,7 +406,7 @@ def nat_tv_sponsor_complex(md: "ModelConf"
     :return: main dataset with applied `val`
     """
 
-    ds = tv_complex(md, ds, model_rep, var_key, var_name, val, ds_mask, clip_dur=5, tv_type='sponsor_nat', media_prefix='ots')
+    ds = tv_complex(md, ds, model_rep, var_key, var_name, val, ds_mask, media_price=media_price, clip_dur=5, tv_type='sponsor_nat', media_prefix='ots')
 
     return ds
 
@@ -368,6 +418,7 @@ def brnd_nat_tv_complex(md: "ModelConf"
                         , var_name: str  # as in dataset
                         , val: float | int
                         , ds_mask: pd.Series
+                        , media_price: float | None = None
                         ):
     """
     National TV extended: complex TV translation with respect to affinities and TV audience sizes.
@@ -385,7 +436,7 @@ def brnd_nat_tv_complex(md: "ModelConf"
     :return: main dataset with applied `val`
     """
 
-    ds = tv_complex(md, ds, model_rep, var_key, var_name, val, ds_mask, clip_dur=10, tv_type='rolik_nat', media_prefix=['ots', 'tmp_ots'])
+    ds = tv_complex(md, ds, model_rep, var_key, var_name, val, ds_mask, media_price=media_price, clip_dur=10, tv_type='rolik_nat', media_prefix=['ots', 'tmp_ots'])
 
     return ds
 

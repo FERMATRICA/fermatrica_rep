@@ -14,12 +14,14 @@ def _find_latest_model(model_dir: Path) -> str:
 
 
 def _activate_adhoc_path(root: Path):
-    """Evict cached adhoc modules and insert sample root onto sys.path."""
+    """Evict cached adhoc modules and insert sample root at the front of sys.path."""
     keys = [k for k in list(sys.modules) if k.startswith("code_py")]
     for k in keys:
         del sys.modules[k]
-    if str(root) not in sys.path:
-        sys.path.insert(0, str(root))
+    root_str = str(root)
+    while root_str in sys.path:
+        sys.path.remove(root_str)
+    sys.path.insert(0, root_str)
     import code_py.adhoc.model  # noqa: F401
 
 
@@ -29,13 +31,13 @@ def _deactivate_adhoc_path(root: Path):
         sys.path.remove(str(root))
 
 
-P00_MODEL_TAG = "2024-11-19_174649"
-P01_MODEL_TAG = "2026-06-18_124832"
-P02_MODEL_TAG = "2026-06-24_161124"
-P03_MODEL_TAG = "2026-06-18_180047"
-P04_MODEL_TAG = "2026-06-24_161827"
-P05_BHT_MODEL_TAG = "2026-06-24_170328"
-P05_SALES_MODEL_TAG = "2026-06-24_170351"
+P00_MODEL_TAG = "2026-08-04_222911"
+P01_MODEL_TAG = "2026-08-04_204155"
+P02_MODEL_TAG = "2026-08-04_202726"
+P03_MODEL_TAG = "2026-08-04_154614"
+P04_MODEL_TAG = "2026-08-04_112441"
+P05_BHT_MODEL_TAG = "2026-07-31_164017"
+P05_SALES_MODEL_TAG = "2026-07-31_164247"
 
 EXPECTED_MODEL_TYPES = {
     "p00": "OLS",
@@ -63,9 +65,11 @@ def p00_model_ds(samples_path):
     import fermatrica as fm
 
     root = samples_path / "p00_sample"
-    model_path = str(root / "code_py" / "model_data" / f"model_{P00_MODEL_TAG}")
-
-    model, ds, _ = fm.model_load_ext(model_path, missed_stop=True)
+    model_dir = root / "code_py" / "model_data"
+    model_path = model_dir / f"model_{P00_MODEL_TAG}"
+    if not model_path.is_dir():
+        model_path = Path(_find_latest_model(model_dir))
+    model, ds, _ = fm.model_load_ext(str(model_path), missed_stop=True)
     assert model is not None, "model_load_ext returned None"
     assert ds is not None, "model_load_ext returned None dataset"
     _validate_model_type("p00", model)
@@ -86,9 +90,11 @@ def p01_model_ds(samples_path):
 
     import fermatrica as fm
 
-    model_path = str(root / "code_py" / "model_data" / f"model_{P01_MODEL_TAG}")
-
-    model, ds, _ = fm.model_load_ext(model_path, missed_stop=True)
+    model_dir = root / "code_py" / "model_data"
+    model_path = model_dir / f"model_{P01_MODEL_TAG}"
+    if not model_path.is_dir():
+        model_path = Path(_find_latest_model(model_dir))
+    model, ds, _ = fm.model_load_ext(str(model_path), missed_stop=True)
     assert model is not None, "model_load_ext returned None"
     assert ds is not None, "model_load_ext returned None dataset"
     _validate_model_type("p01", model)
@@ -105,8 +111,11 @@ def p02_model_ds(samples_path):
     _activate_adhoc_path(root)
     import fermatrica as fm
 
-    model_path = str(root / "code_py" / "model_data" / f"model_{P02_MODEL_TAG}")
-    model, ds, _ = fm.model_load_ext(model_path, missed_stop=True)
+    model_dir = root / "code_py" / "model_data"
+    model_path = model_dir / f"model_{P02_MODEL_TAG}"
+    if not model_path.is_dir():
+        model_path = Path(_find_latest_model(model_dir))
+    model, ds, _ = fm.model_load_ext(str(model_path), missed_stop=True)
     assert model is not None and ds is not None
     _validate_model_type("p02", model)
     yield model, ds
@@ -120,8 +129,11 @@ def p03_model_ds(samples_path):
     _activate_adhoc_path(root)
     import fermatrica as fm
 
-    model_path = str(root / "code_py" / "model_data" / f"model_{P03_MODEL_TAG}")
-    model, ds, _ = fm.model_load_ext(model_path, missed_stop=True)
+    model_dir = root / "code_py" / "model_data"
+    model_path = model_dir / f"model_{P03_MODEL_TAG}"
+    if not model_path.is_dir():
+        model_path = Path(_find_latest_model(model_dir))
+    model, ds, _ = fm.model_load_ext(str(model_path), missed_stop=True)
     assert model is not None and ds is not None
     _validate_model_type("p03", model)
     yield model, ds
@@ -135,8 +147,13 @@ def p04_model_ds(samples_path):
     _activate_adhoc_path(root)
     import fermatrica as fm
 
-    model_path = str(root / "code_py" / "model_data" / f"model_{P04_MODEL_TAG}")
-    model, ds, _ = fm.model_load_ext(model_path, missed_stop=True)
+    model_dir = root / "code_py" / "model_data"
+    model_path = model_dir / f"model_{P04_MODEL_TAG}"
+    if not model_path.is_dir():
+        # refreshed model dir not yet committed under the pinned tag:
+        # fall back to the newest model_* directory
+        model_path = Path(_find_latest_model(model_dir))
+    model, ds, _ = fm.model_load_ext(str(model_path), missed_stop=True)
     assert model is not None and ds is not None
     _validate_model_type("p04", model)
     yield model, ds
@@ -150,11 +167,72 @@ def p05_models_ds(samples_path):
     _activate_adhoc_path(root)
     import fermatrica as fm
 
-    bht_path = str(root / "code_py" / "model_data_bht" / f"model_{P05_BHT_MODEL_TAG}")
-    sales_path = str(root / "code_py" / "model_data_sales" / f"model_{P05_SALES_MODEL_TAG}")
+    bht_dir = root / "code_py" / "model_data_bht"
+    bht_path = bht_dir / f"model_{P05_BHT_MODEL_TAG}"
+    if not bht_path.is_dir():
+        bht_path = Path(_find_latest_model(bht_dir))
+    sales_dir = root / "code_py" / "model_data_sales"
+    sales_path = sales_dir / f"model_{P05_SALES_MODEL_TAG}"
+    if not sales_path.is_dir():
+        sales_path = Path(_find_latest_model(sales_dir))
 
-    bht_model, bht_ds, _ = fm.model_load_ext(bht_path, missed_stop=True)
-    sales_model, sales_ds, _ = fm.model_load_ext(sales_path, missed_stop=True)
+    bht_model, bht_ds, _ = fm.model_load_ext(str(bht_path), missed_stop=True)
+    sales_model, sales_ds, _ = fm.model_load_ext(str(sales_path), missed_stop=True)
     assert all(x is not None for x in [bht_model, bht_ds, sales_model, sales_ds])
     yield bht_model, bht_ds, sales_model, sales_ds
+    _deactivate_adhoc_path(root)
+
+
+P07_CATEGORY_MODEL_TAG = "2026-07-17_191154"
+P07_SALES_MODEL_TAG = "2026-07-17_191630"
+
+
+@pytest.fixture(scope="session")
+def p07_models_ds(samples_path):
+    """Load p07 Category + Sales models (chained OLS -> LME DAG).
+
+    p07 is a two-level model: Category (weekly OLS) -> Sales (weekly LME, 13 SKUs).
+    Merge function pred_merge_1 broadcasts category predictions to SKU-level data.
+    """
+    import fermatrica as fm
+
+    root = samples_path / "p07_sample"
+    _activate_adhoc_path(root)
+
+    cat_path = str(root / "code_py" / "model_data_category" / f"model_{P07_CATEGORY_MODEL_TAG}")
+    sales_path = str(root / "code_py" / "model_data_sales" / f"model_{P07_SALES_MODEL_TAG}")
+
+    cat_model, cat_ds, _ = fm.model_load_ext(cat_path, missed_stop=True)
+    sales_model, sales_ds, _ = fm.model_load_ext(sales_path, missed_stop=True)
+    assert all(x is not None for x in [cat_model, cat_ds, sales_model, sales_ds])
+
+    yield cat_model, cat_ds, sales_model, sales_ds
+    _deactivate_adhoc_path(root)
+
+
+P10_CATEGORY_MODEL_TAG = "2026-07-17_191154"
+P10_SALES_MODEL_TAG = "2026-07-17_191630"
+
+
+@pytest.fixture(scope="session")
+def p10_models_ds(samples_path):
+    """Load p10 Category (static) + Sales models (chained OLS -> LME DAG).
+
+    p10 is a copy of p07 with the Category node marked static: its
+    translate() is a no-op, no trans_dict is required, and its output is
+    option-invariant while Sales still translates budgets.
+    """
+    import fermatrica as fm
+
+    root = samples_path / "p10_sample"
+    _activate_adhoc_path(root)
+
+    cat_path = str(root / "code_py" / "model_data_category" / f"model_{P10_CATEGORY_MODEL_TAG}")
+    sales_path = str(root / "code_py" / "model_data_sales" / f"model_{P10_SALES_MODEL_TAG}")
+
+    cat_model, cat_ds, _ = fm.model_load_ext(cat_path, missed_stop=True)
+    sales_model, sales_ds, _ = fm.model_load_ext(sales_path, missed_stop=True)
+    assert all(x is not None for x in [cat_model, cat_ds, sales_model, sales_ds])
+
+    yield cat_model, cat_ds, sales_model, sales_ds
     _deactivate_adhoc_path(root)

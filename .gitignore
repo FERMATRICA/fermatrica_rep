@@ -16,8 +16,12 @@ tmp/
 *log.txt
 *~$*xlsx
 *.pclprof
+*.lprof
 *__pycache__
 *.egg-info/
 
 # Local configuration (copied from config_example.toml)
 config.toml
+
+# MCP server scripts (local, machine-specific paths)
+.kilo/mcp/

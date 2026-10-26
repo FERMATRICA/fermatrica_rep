@@ -28,7 +28,7 @@ def _read_config_samples_path() -> str | None:
 def pytest_addoption(parser):
     parser.addoption(
         "--samples-path", action="store", default=None,
-        help="Path to fermatrica core samples directory (e.g. C:/path/to/fermatrica/samples)"
+        help="Path to a directory containing sample model projects (e.g. C:/path/to/samples)"
     )
     parser.addoption(
         "--if-debug", action="store_true", default=False,
@@ -38,7 +38,7 @@ def pytest_addoption(parser):
 
 @pytest.fixture(scope="session")
 def samples_path(request):
-    """Path to fermatrica core samples.
+    """Path to a directory containing sample model projects.
 
     Resolved from (in order of priority):
     1. ``--samples-path`` CLI flag (e.g. ``pytest --samples-path=...``)

@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from fermatrica_rep.curves_full import curves_full_plot_short, curves_full_plot_long
+from fermatrica_rep.analysis.curves_full import curves_full_plot_short, curves_full_plot_long
 from fermatrica_rep.options.define import OptionSettings
 from fermatrica_rep.meta_model.model_rep import ModelRep
 

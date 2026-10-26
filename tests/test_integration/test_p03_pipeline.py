@@ -255,3 +255,98 @@ class TestP03Pipeline:
             model, ds, model_rep, options_m["predefined"], opt_set, if_exact=False,
         )
         assert dt_pred is not None
+
+
+@pytest.mark.integration
+class TestP03NewApi:
+    """New-API (Option/OptionScope/ModelNode/MetaModel) tests against p03_sample.
+
+    Regression coverage for the refactored reporting flow on the monthly ABA
+    model: per-scope option computation via MetaModel.compute and full-horizon
+    media seasonality on future (listed==4) rows.
+    """
+
+    SCOPE_NAMES = ["brand_1_2025", "brand_1_2026", "brand_1_2025_retro"]
+
+    @pytest.fixture
+    def p03_new_setup(self, p03_model_ds, samples_path):
+        """Build a single-node MetaModel from context.xlsx (function-scoped)."""
+        import fermatrica_rep as fmr
+        import code_py.adhoc.translators
+
+        model, ds = p03_model_ds
+
+        root = samples_path / "p03_sample"
+        opt_path = str(root / "code_py" / "model_data" / "options" / "context.xlsx")
+
+        scopes = fmr.scopes_read(opt_path)
+        options = fmr.Option.from_excel_all(opt_path)
+        ssn_dict = fmr.seasonality_read(path=opt_path)
+        trans_dict = fmr.trans_dict_create(path=opt_path, sheet="translation")
+
+        node = fmr.ModelNode(model=model, ds=ds, trans_dict=trans_dict,
+                             adhoc_code=[code_py.adhoc.translators],
+                             language='english', ssn_dict=ssn_dict)
+        mm = fmr.MetaModel(nodes=node)
+
+        return {"mm": mm, "scopes": scopes, "options": options, "node": node}
+
+    def test_context_parse(self, p03_new_setup):
+        """context.xlsx parses into 3 scopes and zero/predefined options."""
+        scopes = p03_new_setup["scopes"]
+        options = p03_new_setup["options"]
+
+        assert len(scopes) == 3
+        assert {s.scope_name for s in scopes} == set(self.SCOPE_NAMES)
+        assert set(options.keys()) == {"zero", "predefined"}
+
+    def test_meta_model_compute_per_scope(self, p03_new_setup):
+        """MetaModel.compute yields per-scope pred_exact_vol > 0 and finite."""
+        mm = p03_new_setup["mm"]
+        scopes = p03_new_setup["scopes"]
+        options = p03_new_setup["options"]
+
+        result = mm.compute(options["predefined"], scopes=scopes, allow_past=True)["model"]
+
+        for scope_name in self.SCOPE_NAMES:
+            summary = result[scope_name]
+            assert summary["pred_exact_vol"] > 0, (
+                f"{scope_name} pred_exact_vol must be > 0, got {summary['pred_exact_vol']}"
+            )
+            assert np.isfinite(summary["pred_exact_vol"])
+            assert np.isfinite(summary["pred_long_vol"])
+
+    def test_no_nan_seasonality_future(self, p03_new_setup):
+        """No NaN opt_media_ssn for listed==4 rows across the forecast horizon."""
+        mm = p03_new_setup["mm"]
+        scopes = p03_new_setup["scopes"]
+        options = p03_new_setup["options"]
+
+        mm.compute(options["predefined"], scopes=scopes, allow_past=True)
+        node = mm.nodes["model"]
+
+        ssn_cols = [c for c in node.ds.columns if c.startswith("opt_media_ssn")]
+        assert ssn_cols, "no opt_media_ssn columns after compute"
+
+        future = node.ds[node.ds["listed"] == 4]
+        assert len(future) > 0
+        assert future[ssn_cols].isna().sum().sum() == 0, (
+            "NaN media seasonality inside the forecast horizon"
+        )
+
+    def test_compute_grid_runs(self, p03_new_setup):
+        """compute_grid produces a finite, positive curve for brand_1_2026."""
+        import fermatrica_rep as fmr
+
+        mm = p03_new_setup["mm"]
+        scopes = p03_new_setup["scopes"]
+
+        scopes_crv = [s for s in scopes if s.scope_name == "brand_1_2026"]
+        curves_full_data = fmr.compute_grid(
+            mm, scopes_crv, budget_step=25, bdg_max=100,
+            cores=1, if_exact=True, allow_past=True, background_option=None,
+        )
+        df = curves_full_data["model"]
+        assert len(df) > 0
+        assert df["pred_exact_vol"].notna().all()
+        assert (df["pred_exact_vol"] > 0).all()

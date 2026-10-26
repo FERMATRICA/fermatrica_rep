@@ -1,5 +1,5 @@
 ipyparallel>=8.4.1
-line_profiler_pycharm>=1.1.0
+line_profiler>=1.1.0
 openpyxl>=3.0.10
 pathlib>=1.0.1
 zstandard>=0.18.0

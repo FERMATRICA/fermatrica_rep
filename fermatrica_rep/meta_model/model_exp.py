@@ -20,7 +20,7 @@ from fermatrica_rep import waterfall_data
 
 class ModelConfExp(ModelConf):
     """
-    Export model from dashboard: basic ModelConf + calculated metrics, curves, decomposition etc.
+    Export model: basic ModelConf + calculated metrics, curves, decomposition etc.
     """
 
     state: pd.DataFrame | None
@@ -169,7 +169,7 @@ class ModelConfExp(ModelConf):
         :param split_m_m: decomposed prediction data
         :param period_decomp: time period to plot decomposition ('day', 'week', 'month', 'quarter', 'year')
         :param board_name_list: which boards to export (list of string board names)
-        :return:
+        :return: void
         """
 
         if "decomposition" in board_name_list:
@@ -209,7 +209,7 @@ class ModelConfExp(ModelConf):
         :param waterfall_date_start: start date for waterfall
         :param waterfall_date_end: end date for waterfall
         :param board_name_list: which boards to export (list of string board names)
-        :return:
+        :return: void
         """
 
         if "waterfall" in board_name_list:
@@ -217,7 +217,8 @@ class ModelConfExp(ModelConf):
             split_m_m_loc = split_m_m.copy()
 
             brands = [self.target_superbrand]
-            split = waterfall_data(split_m_m_loc, brands, waterfall_date_start, waterfall_date_end, absolute_sort=False)
+            split = waterfall_data(split_m_m_loc, brands, date_start=waterfall_date_start,
+                                   date_end=waterfall_date_end, absolute_sort=False)
 
             split = split.loc[split['variable'] != "Base", ['variable', 'value', 'ratio_lbl']]
             split.columns = ['variable', 'value', 'ratio']
@@ -236,7 +237,7 @@ class ModelConfExp(ModelConf):
         :param ds: main dataset
         :param period_fit: time period to plot fit ('day', 'week', 'month', 'quarter', 'year')
         :param board_name_list: which boards to export (list of string board names)
-        :return:
+        :return: void
         """
 
         if "fitness" in board_name_list:
@@ -293,7 +294,7 @@ class ModelConfExp(ModelConf):
         :param price: product price (numeric)
         :param conv: single conversion rate (numeric)
         :param board_name_list: which boards to export (list of string board names)
-        :return:
+        :return: void
         """
 
         if "curves_simple" in board_name_list:
@@ -343,7 +344,7 @@ class ModelConfExp(ModelConf):
 
         :param curves_full_data: full curves (complex, flexible, slow) data
         :param board_name_list: which boards to export (list of string board names)
-        :return:
+        :return: void
         """
 
         if ("curves_full" in board_name_list) and (curves_full_data is not None):
@@ -397,7 +398,7 @@ class ModelConfExp(ModelConf):
         Prepare current options as pandas DataFrame.
 
         :param current_options: options dictionary of dictionaries (for every year)
-        :return:
+        :return: void
         """
 
         if current_options:
@@ -411,7 +412,7 @@ class ModelConfExp(ModelConf):
         Prepare current options as pandas DataFrame.
 
         :param current_options_detailed: options list or dictionary of dictionaries (for every month)
-        :return:
+        :return: void
         """
 
         if isinstance(current_options_detailed, list):
@@ -427,7 +428,7 @@ class ModelConfExp(ModelConf):
         Prepare fit-predict data by year.
 
         :param dt_pred: prediction data
-        :return:
+        :return: void
         """
 
         cln_id = ["date", "superbrand"]
@@ -514,7 +515,7 @@ class ModelConfExp(ModelConf):
         :param split_m_m: decomposed prediction data
         :param curves_simple_data: simple curves (simple, fast, limited) data
         :param curves_full_data: full curves (complex, flexible, slow) data
-        :return:
+        :return: void
         """
 
         dict_info = {}
@@ -560,7 +561,7 @@ class ModelConfExp(ModelConf):
         """
         Prepare description to be exported as 'info'
 
-        :return:
+        :return: void
         """
         descr = {}
 
@@ -648,7 +649,7 @@ def export_model(model_exp: "ModelConfExp"
 
     :param model_exp: ModelConfExp object (extended ModelConf)
     :param mode: export mode: "full", "client", "analysis"
-    :return:
+    :return: bytes — XLSX workbook as a byte stream
     """
 
     model_conf_list = {}

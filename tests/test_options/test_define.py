@@ -3,7 +3,8 @@ import pandas as pd
 import numpy as np
 
 from fermatrica_rep.options.define import (trans_dict_create, budget_dict_create,
-    media_ssn_create, media_ssn_apply, option_settings_list_create, OptionSettings)
+    media_ssn_create, media_ssn_apply, option_settings_list_create, OptionSettings,
+    scopes_read)
 from fermatrica.basics.basics import FermatricaError
 
 
@@ -308,3 +309,69 @@ class TestMediaSsnApply:
         })
         result = media_ssn_apply(ds=ds, dt_ssn=dt_ssn)
         assert 'opt_media_ssn_tv' in result.columns
+
+
+class TestScopesRead:
+
+    @staticmethod
+    def _scopes_xlsx(tmp_path, rows):
+        path = tmp_path / 'scopes.xlsx'
+        pd.DataFrame(rows).to_excel(path, sheet_name='scopes', index=False)
+        return str(path)
+
+    def test_required_columns_missing_raises(self, tmp_path):
+        path = self._scopes_xlsx(tmp_path, [{
+            'scope_name': 's1', 'date_start': '2025-01-01', 'date_end': '2025-12-31',
+        }])
+        with pytest.raises(FermatricaError, match='missing required columns'):
+            scopes_read(path)
+
+    def test_empty_cells_default_to_year_and_1(self, tmp_path):
+        path = self._scopes_xlsx(tmp_path, [{
+            'scope_name': 's1',
+            'date_start': '2025-01-01', 'date_end': '2025-12-31',
+            'ref_date_start': '2024-01-01', 'ref_date_end': None,
+            'plan_period': None, 'inflation_multiplier': None, 'seasonality': None,
+        }])
+        scope = scopes_read(path)[0]
+        assert scope.plan_period == 'year'
+        assert scope.inflation_multiplier == 1.0
+        assert scope.seasonality is None
+
+    def test_empty_string_cells_default_to_year_and_1(self, tmp_path):
+        path = self._scopes_xlsx(tmp_path, [{
+            'scope_name': 's1',
+            'date_start': '2025-01-01', 'date_end': '2025-12-31',
+            'ref_date_start': '2024-01-01', 'ref_date_end': '',
+            'plan_period': '', 'inflation_multiplier': '', 'seasonality': '',
+        }])
+        scope = scopes_read(path)[0]
+        assert scope.plan_period == 'year'
+        assert scope.inflation_multiplier == 1.0
+        assert scope.seasonality is None
+
+    def test_explicit_values_preserved(self, tmp_path):
+        path = self._scopes_xlsx(tmp_path, [{
+            'scope_name': 's1',
+            'date_start': '2025-01-01', 'date_end': '2025-12-31',
+            'ref_date_start': '2024-01-01', 'ref_date_end': '2024-12-31',
+            'apply_vars': 'superbrand', 'target': 'BrandX',
+            'plan_period': 'exact', 'inflation_multiplier': 1.04, 'seasonality': 'brandx_ssn',
+        }])
+        scope = scopes_read(path)[0]
+        assert scope.plan_period == 'exact'
+        assert scope.inflation_multiplier == 1.04
+        assert scope.seasonality == 'brandx_ssn'
+        assert scope.filters == {'superbrand': ['BrandX']}
+        assert scope.ref_date_end == pd.Timestamp('2024-12-31')
+
+    def test_absent_optional_columns_default(self, tmp_path):
+        path = self._scopes_xlsx(tmp_path, [{
+            'scope_name': 's1',
+            'date_start': '2025-01-01', 'date_end': '2025-12-31',
+            'ref_date_start': '2024-01-01', 'ref_date_end': None,
+        }])
+        scope = scopes_read(path)[0]
+        assert scope.plan_period == 'year'
+        assert scope.inflation_multiplier == 1.0
+        assert scope.seasonality is None

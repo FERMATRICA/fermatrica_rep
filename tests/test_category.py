@@ -4,7 +4,9 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import pytest
 
-from fermatrica_rep.category import category_data, category_main_plot, category_err_plot, category_plot
+from fermatrica_rep.analysis.category import category_data, category_main_plot, category_err_plot, category_plot
+from fermatrica_rep.meta_model.node import ModelNode
+from fermatrica_rep.meta_model.meta_model import MetaModel
 
 
 class MockConf:
@@ -215,4 +217,12 @@ class TestCategoryPlot:
     def test_err_int_passed_through(self, model, ds):
         result = category_plot(model=model, ds=ds, period="month", err_int=0.05)
         assert isinstance(result, go.Figure)
+
+    def test_metamodel_returns_dict(self, model, ds):
+        node = ModelNode(model=model, ds=ds)
+        mm = MetaModel(nodes={"cat": node})
+        result = category_plot(mm)
+        assert isinstance(result, dict)
+        assert "cat" in result
+        assert isinstance(result["cat"], go.Figure)
 

@@ -257,3 +257,89 @@ class TestP02Pipeline:
         ]
         assert len(forecast) > 0, "No rows in the forecast period"
         assert set(forecast["listed"].unique()).issubset({4})
+
+
+@pytest.mark.integration
+class TestP02NewApi:
+    """New-API (Option/OptionScope/ModelNode/MetaModel) tests against p02_sample.
+
+    Regression coverage for the refactored reporting flow on a SKU-level weekly
+    panel with fixed params: context.xlsx parsing, per-scope option
+    computation, and full-horizon seasonality (no NaN media seasonality on
+    future rows after the `period` column fix).
+    """
+
+    BRAND = "brand_1"
+
+    @pytest.fixture
+    def p02_new_setup(self, p02_model_ds, samples_path):
+        """Build a single-node MetaModel from context.xlsx (function-scoped)."""
+        import fermatrica_rep as fmr
+        import code_py.adhoc.translators
+
+        model, ds = p02_model_ds
+
+        root = samples_path / "p02_sample"
+        opt_path = str(root / "code_py" / "model_data" / "options" / "context.xlsx")
+
+        scopes = fmr.scopes_read(opt_path)
+        options = fmr.Option.from_excel_all(opt_path)
+        ssn_dict = fmr.seasonality_read(path=opt_path)
+        trans_dict = fmr.trans_dict_create(path=opt_path, sheet="translation")
+
+        node = fmr.ModelNode(model=model, ds=ds, trans_dict=trans_dict,
+                             adhoc_code=[code_py.adhoc.translators],
+                             language='english', ssn_dict=ssn_dict,
+                             scope_names={s.scope_name for s in scopes})
+        mm = fmr.MetaModel(nodes=node)
+
+        return {"mm": mm, "scopes": scopes, "options": options, "node": node}
+
+    def test_context_parse(self, p02_new_setup):
+        """scopes and options parse from context.xlsx with expected keys."""
+        scopes = p02_new_setup["scopes"]
+        options = p02_new_setup["options"]
+
+        assert len(scopes) == 3
+        scope_names = {s.scope_name for s in scopes}
+        assert scope_names == {"brand_1_2025", "brand_1_2026", "brand_1_2025_retro"}
+        assert set(options.keys()) == {"zero", "predefined"}
+
+        items = options["predefined"].budget_for_scope("brand_1_2026")
+        assert items, "no budget items for brand_1_2026"
+        assert "bdg_tv" in items
+        assert items["bdg_tv"] > 0
+
+    def test_meta_model_compute_per_scope(self, p02_new_setup):
+        """MetaModel.compute yields per-scope pred_exact_vol > 0 and finite."""
+        mm = p02_new_setup["mm"]
+        scopes = p02_new_setup["scopes"]
+        options = p02_new_setup["options"]
+
+        result = mm.compute(options["predefined"], scopes=scopes)["model"]
+
+        for s in scopes:
+            summary = result[s.scope_name]
+            assert summary["pred_exact_vol"] > 0, (
+                f"{s.scope_name} pred_exact_vol must be > 0, got {summary['pred_exact_vol']}"
+            )
+            assert np.isfinite(summary["pred_exact_vol"])
+            assert np.isfinite(summary["pred_long_vol"])
+
+    def test_seasonality_no_nan_on_future(self, p02_new_setup):
+        """No NaN opt_media_ssn on listed==4 rows after the `period` fix."""
+        mm = p02_new_setup["mm"]
+        scopes = p02_new_setup["scopes"]
+        options = p02_new_setup["options"]
+
+        mm.compute(options["predefined"], scopes=scopes)
+        node = mm.nodes["model"]
+
+        ssn_cols = [c for c in node.ds.columns if c.startswith("opt_media_ssn")]
+        assert ssn_cols, "no opt_media_ssn columns after compute"
+
+        future = node.ds[node.ds["listed"] == 4]
+        assert len(future) > 0
+        assert future[ssn_cols].isna().sum().sum() == 0, (
+            "NaN media seasonality on future rows"
+        )

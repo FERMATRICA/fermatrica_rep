@@ -1,13 +1,15 @@
 ﻿"""Integration tests against p00_sample (time series, OLS, 1 brand).
 
 Tests the full reporting pipeline on the simplest available sample.
-No adhoc code is required for this sample.
+The sample carries an adhoc translator module (code_py.adhoc.translators)
+referenced by two dotted rows in the context.xlsx translation sheet.
 """
-import copy
 import numpy as np
 import pandas as pd
 import pytest
 from datetime import date
+
+from tests.test_integration.conftest import _activate_adhoc_path
 
 
 @pytest.mark.integration
@@ -355,3 +357,106 @@ class TestP00Pipeline:
 
         assert dt_pred is not None
         assert len(dt_pred) > 0
+
+
+@pytest.mark.integration
+class TestP00NewApi:
+    """New-API (Option/OptionScope/ModelNode/MetaModel) tests against p00_sample.
+
+    Regression coverage for the refactored reporting flow: per-scope option
+    computation via MetaModel.compute and full-horizon seasonality on weekly data
+    (monthly seasonality merged through the `period` column — the p00-specific trap,
+    where stale saved models lack `period` and produce NaN on future rows).
+    """
+
+    BRAND = "brand_x"
+    SCOPES = ["brand_x_2018", "brand_x_2017"]
+
+    @pytest.fixture
+    def p00_new_setup(self, p00_model_ds, samples_path):
+        """Build a single-node MetaModel from context.xlsx (function-scoped)."""
+        import fermatrica_rep as fmr
+
+        model, ds = p00_model_ds
+
+        root = samples_path / "p00_sample"
+        opt_path = str(root / "code_py" / "model_data" / "options" / "context.xlsx")
+
+        # p00's translation sheet references code_py.adhoc.translators.adhoc_basic
+        # for bdg_tv_nat / bdg_dgt_da, so the adhoc module must be importable
+        # and registered on the node's ModelRep for the dotted dispatch to work.
+        _activate_adhoc_path(root)
+        import code_py.adhoc.translators
+
+        scopes = fmr.scopes_read(opt_path)
+        options = fmr.Option.from_excel_all(opt_path)
+        ssn_dict = fmr.seasonality_read(path=opt_path)
+        trans_dict = fmr.trans_dict_create(path=opt_path, sheet="translation")
+
+        node = fmr.ModelNode(model=model, ds=ds, trans_dict=trans_dict,
+                             language='english', ssn_dict=ssn_dict,
+                             adhoc_code=[code_py.adhoc.translators],
+                             scope_names={s.scope_name for s in scopes})
+        mm = fmr.MetaModel(nodes=node)
+
+        return {"mm": mm, "scopes": scopes, "options": options, "node": node}
+
+    def test_context_parse(self, p00_new_setup):
+        """context.xlsx parses into 2 scopes and zero/predefined options."""
+        scopes = p00_new_setup["scopes"]
+        options = p00_new_setup["options"]
+
+        assert len(scopes) == 2
+        assert {s.scope_name for s in scopes} == set(self.SCOPES)
+        assert set(options.keys()) == {"zero", "predefined"}
+
+        for s in scopes:
+            assert s.filters["superbrand"] == [self.BRAND]
+            items = options["predefined"].budget_for_scope(s.scope_name)
+            assert items, f"no budget items for {s.scope_name}"
+
+    def test_meta_model_compute_per_scope(self, p00_new_setup):
+        """MetaModel.compute yields per-scope pred_exact_vol > 0 and finite."""
+        mm = p00_new_setup["mm"]
+        scopes = p00_new_setup["scopes"]
+        options = p00_new_setup["options"]
+
+        result = mm.compute(options["predefined"], scopes=scopes, allow_past=True)["model"]
+
+        for s in scopes:
+            summary = result[s.scope_name]
+            assert summary["pred_exact_vol"] > 0, (
+                f"{s.scope_name} pred_exact_vol must be > 0, got {summary['pred_exact_vol']}"
+            )
+            assert np.isfinite(summary["pred_exact_vol"])
+            assert np.isfinite(summary["pred_long_vol"])
+
+    def test_seasonality_covers_horizon(self, p00_new_setup):
+        """No NaN opt_media_ssn on listed==4 rows (monthly seasonality on weekly data)."""
+        mm = p00_new_setup["mm"]
+        scopes = p00_new_setup["scopes"]
+        options = p00_new_setup["options"]
+
+        mm.compute(options["predefined"], scopes=scopes, allow_past=True)
+        node = mm.nodes["model"]
+
+        ssn_cols = [c for c in node.ds.columns if c.startswith("opt_media_ssn")]
+        assert ssn_cols, "no opt_media_ssn columns after compute"
+
+        future = node.ds[node.ds["listed"] == 4]
+        assert future[ssn_cols].isna().sum().sum() == 0, (
+            "NaN media seasonality inside the forecast horizon"
+        )
+
+        beyond_plan_year = future[future["date"].dt.year > 2018]
+        assert len(beyond_plan_year) > 0
+        assert beyond_plan_year[ssn_cols].isna().sum().sum() == 0, (
+            "NaN media seasonality beyond the plan year"
+        )
+
+        # historical years before the earliest scope (2017) must stay NaN,
+        # except for the 2016 week boundary row the 2017 scope window includes
+        historical = node.ds[(node.ds["date"].dt.year < 2016) & (node.ds["listed"].isin([1, 2]))]
+        assert historical[ssn_cols].isna().all().all(), (
+            "historical years must keep NaN seasonality"
+        )

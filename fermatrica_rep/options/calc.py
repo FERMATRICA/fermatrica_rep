@@ -18,13 +18,14 @@ import copy
 import inspect
 import itertools
 import logging
+import warnings
 import numpy as np
 import multiprocessing
 
 from fermatrica_utils import import_module_from_string, fermatrica_warner
 from fermatrica import fermatrica_error, Model, ModelConf, predict_ext, transform
 
-from fermatrica_rep.options.define import OptionSettings, media_ssn_apply
+from fermatrica_rep.options.define import OptionSettings, media_ssn_apply, _enrich_trans_dict_from_model
 from fermatrica_rep.options.translators import *
 
 
@@ -96,6 +97,8 @@ def _option_translate_exact(model_conf: "ModelConf"
 
     # run
 
+    _enrich_trans_dict_from_model(model_conf, model_rep.trans_dict)
+
     for k, val in option_dict.items():
 
         if k not in model_rep.trans_dict['function'].keys():
@@ -109,7 +112,8 @@ def _option_translate_exact(model_conf: "ModelConf"
                                                               fun_name.split('.')[-1], False)):
             continue
 
-        ds = eval(fun_name)(model_conf, ds, model_rep, k, var_name, val, ds_mask)
+        base_price = model_rep.trans_dict.get('base_price', {}).get(k, 1.0)
+        ds = eval(fun_name)(model_conf, ds, model_rep, k, var_name, val, ds_mask, media_price=base_price)
 
     return ds
 
@@ -311,6 +315,13 @@ def option_report(model: "Model | list"
     """
 
     # strategies / policies
+
+    warnings.warn(
+        "option_report() is deprecated. Use ModelNode.compute() or "
+        "MetaModel.compute() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
 
     if (isinstance(option_dict, list) and not isinstance(option_settings, list)) or\
         (not isinstance(option_dict, list) and isinstance(option_settings, list) and not isinstance(model_rep, list)):
@@ -741,6 +752,13 @@ def option_report_multi_var(model: "Model | list"
     :param cores: number of processor cores to use in calculations
     :return: dictionary of summaries
     """
+
+    warnings.warn(
+        "option_report_multi_var() is deprecated. Use ModelNode.compute() or "
+        "MetaModel.compute() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
 
     if cores is None:
         logging.warning('Cores number for parallel computing is not set. ' +

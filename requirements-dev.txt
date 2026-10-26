@@ -1,0 +1,3 @@
+-r requirements.txt
+pytest>=8.0
+pytest-xdist>=3.6

@@ -1,5 +1,5 @@
 - description: "test_fit_main_plot_vol_month p01"
-  model_tag: "2026-06-18_124832"
+  model_tag: "2026-08-04_204155"
   sample: "p01"
   function: "fit_main_plot_vol"
   params:
@@ -11,6 +11,6 @@
     n_periods_min: 6
     traces:
     - name: "Predicted"
-      y_sum: 519980291.682333
+      y_sum: 522244697.424317
     - name: "Error"
-      y_sum: -31.145023
+      y_sum: -.inf

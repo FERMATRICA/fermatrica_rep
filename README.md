@@ -12,7 +12,7 @@ FERMATRICA_REP encompasses all reporting and business analysis functionality for
 2. Forecasting the future - KPI forecasts for future periods under specified conditions. Translating annual budgets into marketing variables, calculating summaries for investment scenarios, optimizing budgets against specified KPIs.
 3. Visualization and export of results - tables, `plotly` graphs, export to XLSX and PPTX. 
 
-The functionality of FERMATRICA_REP can be used independently or through the FERMATRICA_DASH dashboard (reporting logic is encapsulated within FERMATRICA_REP).
+The functionality of FERMATRICA_REP can be used independently.
 
 ### 2. Components
 
@@ -44,10 +44,8 @@ To facilitate work, it is recommended to install all components of the FERMATRIC
     git clone https://github.com/FERMATRICA/fermatrica.git
     git clone https://github.com/FERMATRICA/fermatrica_rep.git 
     ```
-   1. To work with the interactive dashboard: _coming soon_
-    2. For preliminary data work: _coming soon_
 3. In each of the repositories, select the FERMATRICA_v010 environment (FERMATRICA_v020, FERMATRICA_v030, etc.) through `Add interpreter` in the PyCharm interface.
-4. Install all cloned packages except FERMATRICA_DASH using pip install.
+4. Install all cloned packages using pip install.
     ```commandline
     cd [my_fermatrica_folder]/[fermatrica_part_folder]
     pip install .
@@ -73,7 +71,7 @@ FERMATRICA_REP - это весь функционал отчётности и б
 2. Прогнозирование будущего - прогноз KPI на будущие периоды при заданных условиях. Трансляция годовых бюджетов в маркетинговые переменные, расчёт резюме (summary) по сценарию инвестирования, оптимизация бюджетов под заданный KPI.
 3. Визуализация и экспорт результатов - таблицы, графики `plotly`, экспорт в XLSX и PPTX.
 
-> Функционал FERMATRICA_REP может использоваться самостоятельно или через дашборд FERMATRICA_DASH (логика репортинга вынесена в FERMATRICA_REP).
+> Функционал FERMATRICA_REP может использоваться самостоятельно.
 
 ### 2. Состав
 
@@ -105,10 +103,8 @@ FERMATRICA_REP - это весь функционал отчётности и б
     git clone https://github.com/FERMATRICA/fermatrica.git
     git clone https://github.com/FERMATRICA/fermatrica_rep.git 
     ```
-    - Для работы с интерактивным дашбордом FERMATRICA_DASH: _coming soon_
-    - Для предварительной работы с данными FERMATRICA_DATA: _coming soon_
 3. В каждом из репозиториев выберите среду FERMATRICA_v010 (FERMATRICA_v020, FERMATRICA_v030 и т.д.) через `Add interpreter` (в интерфейсе PyCharm)
-4. Установите все склонированные пакеты, кроме FERMATRICA_DASH, используя `pip install`
+4. Установите все склонированные пакеты, используя `pip install`
     ```commandline
     cd [my_fermatrica_folder]/[fermatrica_part_folder]
     pip install .

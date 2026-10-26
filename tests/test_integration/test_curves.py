@@ -32,7 +32,7 @@ class TestP00Curves:
 
     def test_curves_simple_data(self, setup):
         """curves_simple_data returns a DataFrame with expected columns."""
-        from fermatrica_rep.curves import curves_simple_data
+        from fermatrica_rep.analysis.curves import curves_simple_data
 
         result = curves_simple_data(
             model=setup["model"],
@@ -49,7 +49,7 @@ class TestP00Curves:
 
     def test_curves_simple_data_monotonic(self, setup):
         """curves_simple_data response is monotonically non-decreasing with budget."""
-        from fermatrica_rep.curves import curves_simple_data
+        from fermatrica_rep.analysis.curves import curves_simple_data
 
         result = curves_simple_data(
             model=setup["model"],
@@ -65,7 +65,7 @@ class TestP00Curves:
 
     def test_curves_simple_data_zero_budget(self, setup):
         """curves_simple_data row with zero budget has zero incremental KPI."""
-        from fermatrica_rep.curves import curves_simple_data
+        from fermatrica_rep.analysis.curves import curves_simple_data
 
         result = curves_simple_data(
             model=setup["model"],
@@ -83,7 +83,7 @@ class TestP00Curves:
     def test_curves_simple_plot(self, setup):
         """curves_simple_plot returns dict of go.Figure with data traces."""
         import plotly.graph_objects as go
-        from fermatrica_rep.curves import curves_simple_data, curves_simple_plot
+        from fermatrica_rep.analysis.curves import curves_simple_data, curves_simple_plot
 
         data = curves_simple_data(
             model=setup["model"],
@@ -103,7 +103,7 @@ class TestP00Curves:
     def test_curves_simple_plot_x_is_budget(self, setup):
         """curves_simple_plot x-axis values match budget index."""
         import plotly.graph_objects as go
-        from fermatrica_rep.curves import curves_simple_data, curves_simple_plot
+        from fermatrica_rep.analysis.curves import curves_simple_data, curves_simple_plot
 
         data = curves_simple_data(
             model=setup["model"],
@@ -145,7 +145,7 @@ class TestP01Curves:
 
     def test_curves_simple_data(self, setup):
         """curves_simple_data returns data with expected structure."""
-        from fermatrica_rep.curves import curves_simple_data
+        from fermatrica_rep.analysis.curves import curves_simple_data
 
         result = curves_simple_data(
             model=setup["model"],
@@ -160,7 +160,7 @@ class TestP01Curves:
     def test_curves_simple_plot(self, setup):
         """curves_simple_plot returns dict of go.Figure with data traces."""
         import plotly.graph_objects as go
-        from fermatrica_rep.curves import curves_simple_data, curves_simple_plot
+        from fermatrica_rep.analysis.curves import curves_simple_data, curves_simple_plot
 
         data = curves_simple_data(
             model=setup["model"],
@@ -179,7 +179,7 @@ class TestP01Curves:
 
     def test_curves_simple_data_monotonic(self, setup):
         """curves_simple_data response is monotonically non-decreasing with budget."""
-        from fermatrica_rep.curves import curves_simple_data
+        from fermatrica_rep.analysis.curves import curves_simple_data
 
         result = curves_simple_data(
             model=setup["model"],
@@ -195,7 +195,7 @@ class TestP01Curves:
 
     def test_curves_simple_data_zero_budget(self, setup):
         """curves_simple_data row with zero budget has zero incremental KPI."""
-        from fermatrica_rep.curves import curves_simple_data
+        from fermatrica_rep.analysis.curves import curves_simple_data
 
         result = curves_simple_data(
             model=setup["model"],
@@ -238,7 +238,7 @@ class TestP02Curves:
 
     def test_curves_simple_data(self, setup):
         """curves_simple_data returns a result with expected structure."""
-        from fermatrica_rep.curves import curves_simple_data
+        from fermatrica_rep.analysis.curves import curves_simple_data
 
         result = curves_simple_data(
             model=setup["model"],
@@ -253,7 +253,7 @@ class TestP02Curves:
     def test_curves_simple_plot(self, setup):
         """curves_simple_plot returns dict of go.Figure."""
         import plotly.graph_objects as go
-        from fermatrica_rep.curves import curves_simple_data, curves_simple_plot
+        from fermatrica_rep.analysis.curves import curves_simple_data, curves_simple_plot
 
         data = curves_simple_data(
             model=setup["model"],
@@ -272,7 +272,7 @@ class TestP02Curves:
 
     def test_curves_simple_data_monotonic(self, setup):
         """curves_simple_data response is monotonically non-decreasing with budget."""
-        from fermatrica_rep.curves import curves_simple_data
+        from fermatrica_rep.analysis.curves import curves_simple_data
 
         result = curves_simple_data(
             model=setup["model"],
@@ -288,7 +288,7 @@ class TestP02Curves:
 
     def test_curves_simple_data_zero_budget(self, setup):
         """curves_simple_data row with zero budget has zero incremental KPI."""
-        from fermatrica_rep.curves import curves_simple_data
+        from fermatrica_rep.analysis.curves import curves_simple_data
 
         result = curves_simple_data(
             model=setup["model"],
@@ -331,7 +331,7 @@ class TestP03Curves:
 
     def test_curves_simple_data(self, setup):
         """curves_simple_data returns a result with expected structure."""
-        from fermatrica_rep.curves import curves_simple_data
+        from fermatrica_rep.analysis.curves import curves_simple_data
 
         result = curves_simple_data(
             model=setup["model"],
@@ -346,7 +346,7 @@ class TestP03Curves:
     def test_curves_simple_plot(self, setup):
         """curves_simple_plot returns dict of go.Figure."""
         import plotly.graph_objects as go
-        from fermatrica_rep.curves import curves_simple_data, curves_simple_plot
+        from fermatrica_rep.analysis.curves import curves_simple_data, curves_simple_plot
 
         data = curves_simple_data(
             model=setup["model"],
@@ -365,7 +365,7 @@ class TestP03Curves:
 
     def test_curves_simple_data_monotonic(self, setup):
         """curves_simple_data response is monotonically non-decreasing with budget."""
-        from fermatrica_rep.curves import curves_simple_data
+        from fermatrica_rep.analysis.curves import curves_simple_data
 
         result = curves_simple_data(
             model=setup["model"],
@@ -381,7 +381,7 @@ class TestP03Curves:
 
     def test_curves_simple_data_zero_budget(self, setup):
         """curves_simple_data row with zero budget has zero incremental KPI."""
-        from fermatrica_rep.curves import curves_simple_data
+        from fermatrica_rep.analysis.curves import curves_simple_data
 
         result = curves_simple_data(
             model=setup["model"],

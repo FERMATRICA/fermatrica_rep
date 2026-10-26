@@ -42,13 +42,13 @@ class TestP01Adstocks:
 
     def test_adstocks_data(self, setup):
         """adstocks_data returns a non-empty DataFrame."""
-        from fermatrica_rep.adstocks import adstocks_data
+        from fermatrica_rep.analysis.adstocks import adstocks_data
 
         result = adstocks_data(
             model=setup["model"],
             ds=setup["ds"],
             model_rep=setup["model_rep"],
-            superbrand=self.BRAND,
+            filters={"superbrand": [self.BRAND]},
             cln_meas=setup["cln_meas"],
             cln_dim=("superbrand", "bs_key", "date", "listed"),
             n=10,
@@ -66,13 +66,13 @@ class TestP01Adstocks:
 
     def test_adstock_weights_sum_to_one(self, setup):
         """Each adstock column's weights sum to approximately 1.0."""
-        from fermatrica_rep.adstocks import adstocks_data
+        from fermatrica_rep.analysis.adstocks import adstocks_data
 
         result = adstocks_data(
             model=setup["model"],
             ds=setup["ds"],
             model_rep=setup["model_rep"],
-            superbrand=self.BRAND,
+            filters={"superbrand": [self.BRAND]},
             cln_meas=setup["cln_meas"],
             cln_dim=("superbrand", "bs_key", "date", "listed"),
             n=10,
@@ -86,13 +86,13 @@ class TestP01Adstocks:
 
     def test_adstock_weights_first_is_one(self, setup):
         """First weight (lag=0, first row) should be 1.0."""
-        from fermatrica_rep.adstocks import adstocks_data
+        from fermatrica_rep.analysis.adstocks import adstocks_data
 
         result = adstocks_data(
             model=setup["model"],
             ds=setup["ds"],
             model_rep=setup["model_rep"],
-            superbrand=self.BRAND,
+            filters={"superbrand": [self.BRAND]},
             cln_meas=setup["cln_meas"],
             cln_dim=("superbrand", "bs_key", "date", "listed"),
             n=10,

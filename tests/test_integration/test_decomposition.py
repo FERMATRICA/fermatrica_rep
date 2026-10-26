@@ -43,7 +43,7 @@ class TestP00Decomp:
 
     def test_decompose_main_plot(self, setup):
         """decompose_main_plot returns go.Figure with stacked bar traces."""
-        from fermatrica_rep.decomposition import decompose_main_plot
+        from fermatrica_rep.analysis.decomposition import decompose_main_plot
 
         fig = decompose_main_plot(
             split_m_m=setup["split_m_m"],
@@ -58,7 +58,7 @@ class TestP00Decomp:
 
     def test_decompose_main_plot_contour_line(self, setup):
         """decompose_main_plot with contour_line=True returns go.Figure."""
-        from fermatrica_rep.decomposition import decompose_main_plot
+        from fermatrica_rep.analysis.decomposition import decompose_main_plot
 
         fig = decompose_main_plot(
             split_m_m=setup["split_m_m"],
@@ -73,7 +73,7 @@ class TestP00Decomp:
 
     def test_edge_case_show_future_false(self, setup):
         """decompose_main_plot with show_future=False returns go.Figure."""
-        from fermatrica_rep.decomposition import decompose_main_plot
+        from fermatrica_rep.analysis.decomposition import decompose_main_plot
 
         fig = decompose_main_plot(
             split_m_m=setup["split_m_m"],
@@ -90,7 +90,7 @@ class TestP00Decomp:
         """decompose_main_plot matches golden expected trace values (p00 OLS)."""
         import os
         import yaml
-        from fermatrica_rep.decomposition import decompose_main_plot
+        from fermatrica_rep.analysis.decomposition import decompose_main_plot
         from tests.test_integration.helpers import compare_plot_golden
 
         pth = os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -186,7 +186,7 @@ class TestP01Decomp:
 
     def test_decompose_main_plot(self, setup):
         """decompose_main_plot returns go.Figure with stacked bar traces."""
-        from fermatrica_rep.decomposition import decompose_main_plot
+        from fermatrica_rep.analysis.decomposition import decompose_main_plot
 
         fig = decompose_main_plot(
             split_m_m=setup["split_m_m"],
@@ -201,7 +201,7 @@ class TestP01Decomp:
 
     def test_decompose_main_plot_multi_brand(self, setup):
         """decompose_main_plot can accept multiple brands."""
-        from fermatrica_rep.decomposition import decompose_main_plot
+        from fermatrica_rep.analysis.decomposition import decompose_main_plot
 
         fig = decompose_main_plot(
             split_m_m=setup["split_m_m"],
@@ -217,7 +217,7 @@ class TestP01Decomp:
 
     def test_edge_case_weekly_period(self, setup):
         """decompose_main_plot with period='w' returns go.Figure."""
-        from fermatrica_rep.decomposition import decompose_main_plot
+        from fermatrica_rep.analysis.decomposition import decompose_main_plot
 
         fig = decompose_main_plot(
             split_m_m=setup["split_m_m"],
@@ -232,7 +232,7 @@ class TestP01Decomp:
 
     def test_edge_case_brands_none(self, setup):
         """decompose_main_plot with brands=None returns go.Figure for all brands."""
-        from fermatrica_rep.decomposition import decompose_main_plot
+        from fermatrica_rep.analysis.decomposition import decompose_main_plot
 
         fig = decompose_main_plot(
             split_m_m=setup["split_m_m"],
@@ -249,7 +249,7 @@ class TestP01Decomp:
         """decompose_main_plot matches golden expected trace values (p01 LME)."""
         import os
         import yaml
-        from fermatrica_rep.decomposition import decompose_main_plot
+        from fermatrica_rep.analysis.decomposition import decompose_main_plot
         from tests.test_integration.helpers import compare_plot_golden
 
         pth = os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -345,7 +345,7 @@ class TestP02Decomp:
 
     def test_decompose_main_plot(self, setup):
         """decompose_main_plot returns go.Figure for single brand."""
-        from fermatrica_rep.decomposition import decompose_main_plot
+        from fermatrica_rep.analysis.decomposition import decompose_main_plot
 
         fig = decompose_main_plot(
             split_m_m=setup["split_m_m"],
@@ -360,7 +360,7 @@ class TestP02Decomp:
 
     def test_decompose_main_plot_multi_brand(self, setup):
         """decompose_main_plot can accept two brands."""
-        from fermatrica_rep.decomposition import decompose_main_plot
+        from fermatrica_rep.analysis.decomposition import decompose_main_plot
 
         fig = decompose_main_plot(
             split_m_m=setup["split_m_m"],
@@ -433,7 +433,7 @@ class TestP03Decomp:
 
     def test_decompose_main_plot(self, setup):
         """decompose_main_plot returns go.Figure for ABA model."""
-        from fermatrica_rep.decomposition import decompose_main_plot
+        from fermatrica_rep.analysis.decomposition import decompose_main_plot
 
         fig = decompose_main_plot(
             split_m_m=setup["split_m_m"],
@@ -505,7 +505,7 @@ class TestP04Decomp:
 
     def test_decompose_main_plot(self, setup):
         """decompose_main_plot returns go.Figure for single region."""
-        from fermatrica_rep.decomposition import decompose_main_plot
+        from fermatrica_rep.analysis.decomposition import decompose_main_plot
 
         fig = decompose_main_plot(
             split_m_m=setup["split_m_m"],
@@ -520,7 +520,7 @@ class TestP04Decomp:
 
     def test_decompose_main_plot_multi_region(self, setup):
         """decompose_main_plot can accept multiple regions via brands=None."""
-        from fermatrica_rep.decomposition import decompose_main_plot
+        from fermatrica_rep.analysis.decomposition import decompose_main_plot
 
         fig = decompose_main_plot(
             split_m_m=setup["split_m_m"],

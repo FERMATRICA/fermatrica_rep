@@ -2,11 +2,20 @@ import pytest
 import pandas as pd
 import numpy as np
 
-from fermatrica_rep.stats import (
+from statsmodels.formula.api import ols
+from fermatrica.model.model import Model
+
+from fermatrica_rep.analysis.stats import (
     basic_metrics_table,
     metrics_group_table,
-    metrics_table
+    metrics_table,
+    predictors_table,
+    tests_table_ols as _tests_table_ols,
+    vif_table,
 )
+from fermatrica_rep.meta_model.node import ModelNode
+from fermatrica_rep.meta_model.meta_model import MetaModel
+from fermatrica_rep.meta_model.model_rep import ModelRep
 
 
 class TestBasicMetricsTable:
@@ -187,3 +196,110 @@ class TestMetricsTable:
         })
         with pytest.raises(AttributeError):
             metrics_table(model=None, dt_pred=dt_pred)
+
+
+class TestStatsNodeDispatch:
+    """Stats functions accept ModelNode / MetaModel (node-level dispatch)."""
+
+    @pytest.fixture
+    def synthetic_model(self):
+        np.random.seed(42)
+        n = 40
+        x1 = np.random.uniform(1, 10, n)
+        x2 = np.random.uniform(10, 100, n)
+        y = 3.0 * x1 + 0.5 * x2 + 10.0 + np.random.normal(0, 1, n)
+        ds = pd.DataFrame({
+            'x1': x1, 'x2': x2, 'y': y,
+            'date': pd.date_range('2024-01-01', periods=n, freq='D'),
+            'superbrand': ['brand_x'] * n,
+            'bs_key': [1] * n,
+            'listed': [2] * n,
+            'const': [1.0] * n,
+            'price_dummy': [1.0] * n,
+        })
+        ols_result = ols('y ~ x1 + x2', data=ds).fit()
+
+        class _Conf:
+            pass
+
+        conf = _Conf()
+        conf.model_type = 'OLS'
+        conf.model_rhs = pd.DataFrame({
+            'token': ['x1', 'x2'],
+            'display_var': ['x1_disp', 'x2_disp'],
+            'if_active': [1, 1],
+        })
+        conf.model_lhs = None
+        conf.price_var = 'price_dummy'
+        conf.bs_key = ['superbrand']
+        conf.Y_var = 'y'
+        conf.params = pd.DataFrame({
+            'variable': ['x1', 'x2'],
+            'fun': ['coef', 'coef'],
+            'arg': ['', ''],
+            'value': [0.0, 0.0],
+            'if_active': [1, 1],
+        })
+        conf.display_var_base = 'base'
+        conf.summary_type = 'sum'
+
+        model = Model.__new__(Model)
+        model.conf = conf
+        model.obj = type('Obj', (), {'models': {'main': ols_result}})()
+        return model, ds, ols_result
+
+    @pytest.fixture
+    def dt_pred(self, synthetic_model):
+        _, ds, _ = synthetic_model
+        n = len(ds)
+        return pd.DataFrame({
+            'date': ds['date'],
+            'listed': [2] * 30 + [3] * (n - 30),
+            'observed': ds['y'],
+            'predicted': ds['y'] + 1.0,
+            'superbrand': ['brand_x'] * n,
+            'market': ['market_1'] * n,
+            'price_dummy': [1.0] * n,
+        })
+
+    @pytest.fixture
+    def node(self, synthetic_model, dt_pred):
+        model, ds, _ = synthetic_model
+        node = ModelNode(model=model, ds=ds, model_rep=ModelRep(ds, language='english'))
+        node.dt_pred = dt_pred
+        return node
+
+    def test_metrics_group_table_node(self, node):
+        assert metrics_group_table(node).equals(metrics_group_table(node.dt_pred))
+
+    def test_predictors_table_node(self, node):
+        assert predictors_table(node).equals(predictors_table(node.model))
+
+    def test_vif_table_node(self, node):
+        assert vif_table(node).equals(vif_table(node.model.obj.models['main']))
+
+    def test_basic_metrics_table_node(self, node):
+        assert basic_metrics_table(node).equals(basic_metrics_table(node.dt_pred))
+
+    def test_metrics_table_node(self, node):
+        assert metrics_table(node).equals(metrics_table(node.model, node.dt_pred))
+
+    def test_tests_table_ols_node(self, node):
+        assert _tests_table_ols(node).equals(_tests_table_ols(node.model, node.dt_pred))
+
+    def test_metamodel_dispatch_returns_dict(self, node):
+        mm = MetaModel(nodes={'sales': node})
+        for fn in (metrics_group_table, basic_metrics_table, predictors_table,
+                   vif_table, metrics_table, _tests_table_ols):
+            result = fn(mm)
+            assert isinstance(result, dict)
+            assert set(result.keys()) == {'sales'}
+
+    def test_metamodel_dispatch_matches_node(self, node):
+        mm = MetaModel(nodes={'sales': node})
+        assert metrics_group_table(mm)['sales'].equals(metrics_group_table(node))
+        assert predictors_table(mm)['sales'].equals(predictors_table(node))
+        assert vif_table(mm)['sales'].equals(vif_table(node))
+        assert basic_metrics_table(mm)['sales'].equals(basic_metrics_table(node))
+        assert metrics_table(mm)['sales'].equals(metrics_table(node))
+        assert _tests_table_ols(mm)['sales'].equals(_tests_table_ols(node))

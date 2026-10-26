@@ -7,6 +7,8 @@ import numpy as np
 import pytest
 from datetime import date
 
+import fermatrica_rep as fmr
+
 
 @pytest.mark.integration
 class TestP01Elasticity:
@@ -16,9 +18,7 @@ class TestP01Elasticity:
 
     @pytest.fixture
     def setup(self, p01_model_ds, samples_path):
-        """Build model_rep, opt_set, and option dict for elasticity calculation."""
-        import fermatrica_rep as fmr
-
+        """Build ModelNode, scope, and option for elasticity calculation."""
         model, ds = p01_model_ds
         ds = ds.copy()
 
@@ -30,63 +30,64 @@ class TestP01Elasticity:
         model_rep = fmr.ModelRep(ds, trans_dict=trans_dict, language="english")
         ds = fmr.media_ssn_apply(ds, path=ssn_path, sheet="data")
 
-        opt_set = fmr.OptionSettings(
-            target=[[self.BRAND]],
+        node = fmr.ModelNode(model=model, ds=ds, model_rep=model_rep)
+
+        scope = fmr.OptionScope(
+            scope_name=self.BRAND,
             date_start=date(2025, 6, 30),
             date_end=date(2025, 12, 31),
             ref_date_start=date(2024, 1, 1),
             ref_date_end=date(2024, 12, 31),
-            apply_vars=["superbrand"],
+            filters={"superbrand": [self.BRAND]},
             plan_period="exact",
         )
 
-        option = {"bdg_tv": 50, "bdg_digital": 30, "bdg_pr": 20, "price": 1.0}
+        budget_data = {
+            scope.scope_name: {"bdg_tv": 50, "bdg_digital": 30, "bdg_pr": 20, "nobdg_price": 1.0}
+        }
+        option = fmr.Option(name="base", budget_data=budget_data)
 
-        return {"model": model, "ds": ds, "model_rep": model_rep,
-                "opt_set": opt_set, "option": option}
+        return {
+            "node": node,
+            "scope": scope,
+            "option": option,
+        }
 
     def test_elasticity_data(self, setup):
         """elasticity_data returns a non-empty DataFrame."""
-        from fermatrica_rep.elasticity_price import elasticity_data
-
-        result = elasticity_data(
-            model=setup["model"],
-            model_rep=setup["model_rep"],
-            ds=setup["ds"],
-            opt_set=setup["opt_set"],
+        result = fmr.elasticity_data(
+            model=setup["node"],
+            scope=setup["scope"],
             option=setup["option"],
             step=0.1,
             price_range=(-0.5, 0.5),
-            cores=1,
             if_exact=True,
         )
 
         assert result is not None
         assert len(result) > 0
 
-        # Verify all numeric columns are finite
         num_cols = result.select_dtypes(include=[np.number]).columns
-        assert np.all(np.isfinite(result[num_cols].values)), \
+        assert np.all(np.isfinite(result[num_cols].values)), (
             "elasticity_data produced NaN or Inf values"
+        )
 
     def test_elasticity_has_expected_columns(self, setup):
         """Result has expected column names."""
-        from fermatrica_rep.elasticity_price import elasticity_data
-
-        result = elasticity_data(
-            model=setup["model"],
-            model_rep=setup["model_rep"],
-            ds=setup["ds"],
-            opt_set=setup["opt_set"],
+        result = fmr.elasticity_data(
+            model=setup["node"],
+            scope=setup["scope"],
             option=setup["option"],
             step=0.1,
             price_range=(-0.5, 0.5),
-            cores=1,
             if_exact=True,
         )
 
-        expected = {"price", "pred_exact_vol", "pred_exact_val",
-                    "pred_exact_vol_diff", "pred_exact_val_diff",
-                    "price_diff", "elasticity"}
-        assert expected.issubset(set(result.columns)), \
+        expected = {
+            "nobdg_price", "pred_exact_vol", "pred_exact_val",
+            "pred_exact_vol_diff", "pred_exact_val_diff",
+            "nobdg_price_diff", "elasticity",
+        }
+        assert expected.issubset(set(result.columns)), (
             f"Missing columns: {expected - set(result.columns)}"
+        )

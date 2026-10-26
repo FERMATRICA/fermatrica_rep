@@ -5,13 +5,17 @@ Define option and translation settings and prepare dataset for option calculatio
 
 import copy
 import datetime
+import warnings
 import pandas as pd
 import re
 from openpyxl import load_workbook
 from pandas.api.types import is_string_dtype, is_object_dtype
 
-from fermatrica_utils import StableClass, ds_merge, date_to_period
+from fermatrica_utils import StableClass, period_align
 from fermatrica.basics.basics import fermatrica_error
+
+from fermatrica_rep.options.scope import OptionScope
+from fermatrica_rep.options.option import Option
 
 
 def trans_dict_create(dt_trans: pd.DataFrame | None = None
@@ -53,15 +57,53 @@ def trans_dict_create(dt_trans: pd.DataFrame | None = None
 
     # convert to dictionary
 
-    if 'item_group' not in dt_trans.columns:
-        dt_trans['item_group'] = dt_trans['item'].str.replace('bdg_', '')
+    if "item_group" not in dt_trans.columns:
+        dt_trans["item_group"] = dt_trans["item"].str.replace("bdg_", "")
 
-    dt_trans = dt_trans.loc[(dt_trans['function'] != '') & (pd.notna(dt_trans['function'])), :]
+    if "base_price" not in dt_trans.columns and "price" in dt_trans.columns:
+        dt_trans["base_price"] = dt_trans["price"]
+    if "base_price" not in dt_trans.columns:
+        dt_trans["base_price"] = 1.0
 
-    dt_trans.set_index('item', inplace=True)
-    dct = dt_trans.to_dict(orient='dict')
+    dt_trans = dt_trans.loc[(dt_trans["function"] != "") & (pd.notna(dt_trans["function"])), :]
+
+    dt_trans.set_index("item", inplace=True)
+    dct = dt_trans.to_dict(orient="dict")
 
     return dct
+
+
+def _enrich_trans_dict_from_model(model_conf, trans_dict: dict) -> dict:
+    """
+    Enrich ``trans_dict["base_price"]`` with media prices from
+    ``model.conf.trans_path_df``.
+
+    Matches ``trans_path_df["variable"]`` to ``trans_dict["variable"][item]``
+    and copies the ``price`` column into ``trans_dict["base_price"][item]``.
+    Does nothing if ``trans_dict`` is ``None``, ``trans_path_df`` is missing
+    or empty, or if required columns are absent.
+
+    :param model_conf: ModelConf object (``model.conf``)
+    :param trans_dict: translation dictionary (mutated in place)
+    :return: the same ``trans_dict`` (mutated in place, also returned for chaining)
+    """
+    if trans_dict is None:
+        return trans_dict
+    if not hasattr(model_conf, 'trans_path_df') or model_conf.trans_path_df is None:
+        return trans_dict
+
+    tdf = model_conf.trans_path_df
+    if tdf.empty or 'variable' not in tdf.columns or 'price' not in tdf.columns:
+        return trans_dict
+
+    price_map = tdf.set_index('variable')['price'].to_dict()
+    trans_dict.setdefault('base_price', {})
+
+    for item, var_name in trans_dict.get('variable', {}).items():
+        if var_name in price_map:
+            trans_dict['base_price'][item] = float(price_map[var_name])
+
+    return trans_dict
 
 
 def budget_dict_create(dct: dict | pd.DataFrame | None = None
@@ -82,6 +124,12 @@ def budget_dict_create(dct: dict | pd.DataFrame | None = None
     :param vat_rate: VAT rate, defaults to 0. Set it different if costs used in the model include VAT
     :return: dictionary with named options as separate items
     """
+
+    warnings.warn(
+        "budget_dict_create() is deprecated. Use Option.from_excel() with an 'allocations' sheet instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
 
     # load
 
@@ -371,29 +419,181 @@ def media_ssn_create(path: str
     return ssn_dict
 
 
+def _seasonality_to_dates(
+    dt_ssn: pd.DataFrame,
+    period_var: str,
+    ds: pd.DataFrame,
+    date_start: datetime.date | str | None,
+    date_end: datetime.date | str | None,
+) -> pd.DataFrame:
+    """
+    Convert seasonality DataFrame to date-based format with a ``period`` column.
+
+    Handles period_var values: ``month``, ``week_number``, ``day``, ``date``,
+    and ``period`` (from ``seasonality_read``, inferred from value range).
+    Both with-year and without-year cases are supported.
+    """
+
+    dt_ssn = dt_ssn.copy()
+    has_year = "year" in dt_ssn.columns
+
+    if date_start is not None:
+        ds_start = pd.to_datetime(date_start)
+    else:
+        ds_start = ds["date"].min()
+    if date_end is not None:
+        ds_end = pd.to_datetime(date_end)
+    else:
+        ds_end = ds["date"].max()
+
+    years = sorted(set(range(ds_start.year, ds_end.year + 1)))
+    if not has_year:
+        # Yearless annual pattern: expand from the scope start year through the
+        # end of the dataset horizon so that seasonality covers the exact scope
+        # period and the long-term forecast, while historical years before the
+        # scope start are left untouched (NaN). Restores the legacy behavior of
+        # the old `seasonality.xlsx` flow and keeps `_translate_long` finite for
+        # years past the plan year.
+        years = sorted(set(range(ds_start.year, int(ds["date"].dt.year.max()) + 1)))
+
+    if period_var == "date":
+        dt_ssn["date"] = pd.to_datetime(dt_ssn["date"])
+        dt_ssn["period"] = "day"
+        dt_ssn.drop(columns=["year"], inplace=True, errors="ignore")
+        return dt_ssn
+
+    src_period: str
+    if "month" in period_var.lower() or (
+        period_var == "period" and dt_ssn[period_var].max() <= 12
+    ):
+        src_period = "month"
+    elif "week" in period_var.lower() or (
+        period_var == "period" and dt_ssn[period_var].max() > 12
+    ):
+        src_period = "week"
+    elif "day" in period_var.lower():
+        src_period = "day"
+    else:
+        fermatrica_error(
+            f"Cannot determine seasonality granularity from first column: '{period_var}'"
+        )
+
+    dt_ssn[period_var] = pd.to_numeric(dt_ssn[period_var])
+
+    if not has_year:
+        expanded = []
+        for _, row in dt_ssn.iterrows():
+            for y in years:
+                r = row.to_dict()
+                r["_year"] = y
+                expanded.append(r)
+        dt_ssn = pd.DataFrame(expanded)
+        has_year = True
+        year_col = "_year"
+    else:
+        year_col = "year"
+
+    year_int = dt_ssn[year_col].astype(int)
+
+    if src_period == "month":
+        dt_ssn["date"] = pd.to_datetime(
+            year_int.astype(str)
+            + "-"
+            + dt_ssn[period_var].astype(int).astype(str)
+            + "-01"
+        )
+    elif src_period == "week":
+        dt_ssn["date"] = pd.to_datetime(
+            year_int.astype(str)
+            + "-W"
+            + dt_ssn[period_var].astype(int).astype(str)
+            + "-1",
+            format="%Y-W%W-%w",
+        )
+        # Years with a 53rd Monday (e.g. 2029-12-31) fall outside the %Y-W%W
+        # calendar and are left uncovered, leaving NaN seasonality. Reuse the
+        # last pattern week for every ds Monday still missing so that the whole
+        # dataset receives a seasonality value.
+        covered = set(pd.DatetimeIndex(dt_ssn["date"]))
+        extras = []
+        for d in pd.DatetimeIndex(ds["date"].unique()):
+            if d in covered or d.year not in set(years):
+                continue
+            sel = dt_ssn.loc[dt_ssn["date"].dt.year == d.year]
+            if sel.empty:
+                continue
+            row = sel.iloc[-1].copy()
+            row["date"] = d
+            extras.append(row)
+        if extras:
+            dt_ssn = pd.concat([dt_ssn, pd.DataFrame(extras)], ignore_index=True)
+    elif src_period == "day":
+        dt_ssn["date"] = pd.to_datetime(
+            year_int.astype(str) + "-01-01"
+        ) + pd.to_timedelta(dt_ssn[period_var].astype(int) - 1, unit="D")
+
+    dt_ssn["period"] = src_period
+    dt_ssn.drop(columns=[period_var, "year", "_year"], inplace=True, errors="ignore")
+
+    return dt_ssn
+
+
+def _normalize_seasonality(
+    dt_ssn: pd.DataFrame, bdg_opt_cols: set[str]
+) -> pd.DataFrame:
+    """
+    Normalize budget seasonality columns to sum to 1.0 per year.
+
+    For already-normalized data this is a no-op (division by 1.0).
+    Non-budget columns are left untouched.
+    """
+
+    if not bdg_opt_cols:
+        return dt_ssn
+
+    dt_ssn = dt_ssn.copy()
+    dt_ssn["_year"] = dt_ssn["date"].dt.year
+
+    for col in bdg_opt_cols:
+        if col not in dt_ssn.columns:
+            continue
+        totals = dt_ssn.groupby("_year")[col].transform("sum")
+        mask = totals > 0
+        if mask.any():
+            dt_ssn.loc[mask, col] = dt_ssn.loc[mask, col] / totals.loc[mask]
+
+    dt_ssn.drop(columns=["_year"], inplace=True)
+    return dt_ssn
+
+
 def media_ssn_apply(ds: pd.DataFrame
                     , dt_ssn: pd.DataFrame | None = None
                     , path: str | None = None
                     , sheet: str | None = 'data'
                     , fix_53w: bool = False
                     , date_start: str | datetime.date | None = None
-                    , date_end: str | datetime.date | None = None) -> pd.DataFrame:
+                    , date_end: str | datetime.date | None = None
+                    , bdg_ssn_cols: set[str] | None = None) -> pd.DataFrame:
     """
     Applies media seasonality to the main dataset. Media seasonality is here for distribution of
     yearly budget by specific periods (months, weeks) within year.
 
-    Media seasonality data to be passed either via `path` and `sheet` args (to load from
-    disc) or as already existing dataframe as `dt_ssn` argument.
+    Media seasonality data to be passed either via ``path`` and ``sheet`` args (to load from
+    disc) or as already existing dataframe as ``dt_ssn`` argument.
 
     :param ds: main dataset
     :param dt_ssn: media seasonal distribution data (optional)
-    :param path: path to XLSX file like "seasonality.xlsx" with `sheet` sheet
-    :param sheet: name of the sheet with option data (only if `path` is set), defaults to
-        "data"
-    :param fix_53w: if False, last week in the year starting 29-31 Dec is counted as 1st week of the next year
-    :param date_start: start date for applying seasonality (optional). If provided, seasonality before this date remains unchanged
-    :param date_end: end date for applying seasonality (optional). If provided, seasonality after this date remains unchanged
-    :return: `ds` main dataset
+    :param path: path to XLSX file like "seasonality.xlsx" with ``sheet`` sheet
+    :param sheet: name of the sheet with option data (only if ``path`` is set), defaults to
+        ``"data"``
+    :param fix_53w: (deprecated) no longer used — kept for backward compatibility
+    :param date_start: start date for applying seasonality (optional)
+    :param date_end: end date for applying seasonality (optional)
+    :param bdg_ssn_cols: set of bare seasonality column names (without ``opt_media_ssn_`` prefix)
+        that represent budget items. Columns in this set are normalized to sum to 1 per year
+        and use ``"sum"`` aggregation during cross-granularity conversion. Non-budget columns
+        use ``"first"`` aggregation and are not normalized.
+    :return: ``ds`` main dataset
     """
 
     # load
@@ -433,11 +633,6 @@ def media_ssn_apply(ds: pd.DataFrame
         elif 'day' in period_var.lower():
             ds['period'] = 'day'
 
-    if period_var not in ds.columns:
-        period_var_trg = ds['period'].iloc[0]
-    else:
-        period_var_trg = period_var
-
     # remove check row
 
     if is_string_dtype(dt_ssn[period_var]) | is_object_dtype(dt_ssn[period_var]):
@@ -474,61 +669,62 @@ def media_ssn_apply(ds: pd.DataFrame
         if col in ds.columns:
             del ds[col]
 
-    # cast types and prepare merge
+    # convert seasonality to date-based format and normalize
 
-    if period_var == 'month':
-        dt_ssn[period_var] = pd.to_numeric(dt_ssn.loc[:, period_var])
-        ds[period_var] = ds.loc[:, 'date'].dt.month
+    dt_ssn = _seasonality_to_dates(dt_ssn, period_var, ds, date_start, date_end)
 
-    elif period_var == 'week_number':
-        dt_ssn[period_var] = pd.to_numeric(dt_ssn.loc[:, period_var])
+    bdg_opt_cols: set[str] = set()
+    if bdg_ssn_cols:
+        bdg_opt_cols = {"opt_media_ssn_" + c for c in bdg_ssn_cols}
 
-        date_start_full = ds['date'].min()
-        date_end_full = ds['date'].max()
+    dt_ssn = _normalize_seasonality(dt_ssn, bdg_opt_cols)
 
-        clnd = pd.date_range(date_start_full, date_end_full)
-        clnd = pd.DataFrame({'date': clnd})
-        clnd["date"] = date_to_period(clnd["date"], period="week")
-        clnd = clnd.drop_duplicates()
-        
-        clnd['week_number'] = clnd['date'].dt.isocalendar().week
-        if fix_53w:
-            clnd.loc[(clnd['week_number'] == 1) & (clnd['date'].dt.year != clnd['date'].dt.isocalendar().year), 'week_number'] = 53
+    # cross-granularity conversion via period_align
 
-        if 'year' in dt_ssn.columns:
-            clnd['year'] = clnd['date'].dt.year
-            dt_ssn = dt_ssn.merge(clnd, how='inner', on=['year', 'week_number'], sort=False, copy=True)
-        else:
-            dt_ssn = dt_ssn.merge(clnd, how='inner', on=['week_number'], sort=False, copy=True)
+    dt_ssn_period = dt_ssn["period"].iloc[0]
+    period_var_trg = ds["period"].iloc[0]
 
-        dt_ssn.drop(columns=['week_number', period_var, 'year'], inplace=True, errors='ignore')
-        dt_ssn['period'] = 'week'
-        period_var = 'date'
+    if dt_ssn_period != period_var_trg:
+        opt_cols = [c for c in dt_ssn.columns if c.startswith("opt_media_ssn_")]
+        vars_agg_dict = {}
+        for col in opt_cols:
+            vars_agg_dict[col] = "sum" if col in bdg_opt_cols else "first"
 
-    elif period_var == 'day' and period_var_trg in ['day']:
-        dt_ssn[period_var] = pd.to_numeric(dt_ssn.loc[:, period_var])
-        ds[period_var] = ds.loc[:, 'date'].dt.dayofyear
+        dt_ssn = period_align(dt_ssn, period_var_trg, vars_agg_dict, None)
 
-    # merge with data
+    # rescale budget cols to sum to 1 per year within the scope date range
 
-    if 'year' in dt_ssn.columns:
-        dt_ssn['year'] = pd.to_numeric(dt_ssn.loc[:, 'year'])
-        ds['year'] = ds.loc[:, 'date'].dt.year
-        ds = ds.merge(dt_ssn, how='left', on=[period_var, 'year'], sort=False, copy=False)
+    if (
+        date_start is not None
+        and date_end is not None
+        and bdg_opt_cols
+        and any(c in dt_ssn.columns for c in bdg_opt_cols)
+    ):
+        ssn_start = pd.to_datetime(date_start)
+        ssn_end = pd.to_datetime(date_end)
+        scope_mask = (dt_ssn["date"] >= ssn_start) & (dt_ssn["date"] <= ssn_end)
+        if scope_mask.any():
+            dt_ssn["_scope_year"] = dt_ssn["date"].dt.year
+            for col in bdg_opt_cols:
+                if col not in dt_ssn.columns:
+                    continue
+                totals = dt_ssn.loc[scope_mask].groupby("_scope_year")[col].sum()
+                dt_ssn["_scope_total"] = dt_ssn["_scope_year"].map(totals)
+                rescale_mask = scope_mask & (dt_ssn["_scope_total"] > 0)
+                if rescale_mask.any():
+                    dt_ssn.loc[rescale_mask, col] = (
+                        dt_ssn.loc[rescale_mask, col]
+                        / dt_ssn.loc[rescale_mask, "_scope_total"]
+                    )
+            dt_ssn.drop(columns=["_scope_year", "_scope_total"], inplace=True, errors="ignore")
 
-    elif (period_var == 'date') and ('period' in dt_ssn.columns):
-        dt_ssn['date'] = pd.to_datetime(dt_ssn.loc[:, 'date'])
-        
-        cln = dt_ssn.columns.to_list()
-        cln = [x for x in cln if re.match(r'^opt_media_ssn_', x)]
+    # merge with data on date
 
-        vars_agg_dict = dict.fromkeys(cln, 'sum')
-
-        dim_cols = None
-        ds = ds_merge(ds, dt_ssn, ds['period'].iloc[0], vars_agg_dict, dim_cols)
-
-    else:
-        ds = ds.merge(dt_ssn, how='left', on=period_var, sort=False, copy=False)
+    opt_cols = [c for c in dt_ssn.columns if c.startswith("opt_media_ssn_")]
+    dt_ssn["date"] = dt_ssn["date"].astype("datetime64[us]")
+    ds = ds.merge(
+        dt_ssn[["date"] + opt_cols], how="left", on="date", sort=False, copy=False
+    )
 
     # restore previous values outside the date range (vectorized)
     if saved_ssn_values is not None and outside_mask is not None:
@@ -580,6 +776,13 @@ class OptionSettings(StableClass):
             target = [target]
         if isinstance(apply_vars, str):
             apply_vars = [apply_vars]
+
+        warnings.warn(
+            "OptionSettings is deprecated. Use OptionScope + Option instead. "
+            "See MetaModel.compute() and ModelNode.compute() for the new API.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
         self.target = target
         self.date_start = pd.to_datetime(date_start)
@@ -670,4 +873,275 @@ def option_settings_list_create(target: list | tuple | str
     
     else:
         return option_settings_list
+
+
+def scopes_read(path: str, sheet: str = "scopes"):
+    """
+    Read scopes sheet from options.xlsx and return a list of OptionScope
+    objects.
+
+    Parses the scopes sheet which defines named application scopes — where
+    and when budgets should be applied. Handles CSV-formatted
+    ``apply_vars`` and ``target`` columns by splitting on commas into the
+    new ``filters`` dict format. The ``ref_date_end`` column is optional
+    and defaults to ``date_start - 1 day`` when omitted or blank.
+
+    Parameters
+    ----------
+    path : str
+        Path to the options XLSX file (e.g. ``"options.xlsx"``).
+    sheet : str, optional
+        Sheet name containing scopes data. Defaults to ``"scopes"``.
+
+    Returns
+    -------
+    list[OptionScope]
+        List of OptionScope objects, one per row in the scopes sheet.
+
+    Raises
+    ------
+    FermatricaError
+        If the sheet is missing or required columns (``scope_name``,
+        ``date_start``, ``date_end``, ``ref_date_start``) are absent.
+    """
+    from fermatrica_rep.options.scope import OptionScope
+
+    wb = load_workbook(path)
+    shts = wb.sheetnames
+    wb.close()
+
+    if sheet not in shts:
+        fermatrica_error(
+            f"Error reading XLSX file: {path}. Sheet {sheet} not found"
+        )
+
+    dt_scopes = pd.read_excel(path, sheet_name=sheet)
+
+    required_cols = {"scope_name", "date_start", "date_end", "ref_date_start", "ref_date_end"}
+    missing = required_cols - set(dt_scopes.columns)
+    if missing:
+        fermatrica_error(
+            f"Scopes sheet missing required columns: {missing}"
+        )
+
+    scopes = []
+    for _, row in dt_scopes.iterrows():
+        filters: dict[str, list[str]] = {}
+        apply_vars_raw = row.get("apply_vars", None)
+        target_raw = row.get("target", None)
+        if pd.notna(apply_vars_raw) and pd.notna(target_raw):
+            apply_vars_list = [x.strip() for x in str(apply_vars_raw).split(",")]
+            target_list = [x.strip() for x in str(target_raw).split(",")]
+            for col, val in zip(apply_vars_list, target_list):
+                filters.setdefault(col, []).append(val)
+
+        ref_date_end_raw = row.get("ref_date_end", None)
+        if pd.isna(ref_date_end_raw) or str(ref_date_end_raw).strip() == "":
+            ref_date_end = str(pd.to_datetime(row["date_start"]) - pd.DateOffset(1))
+        else:
+            ref_date_end = str(ref_date_end_raw)
+
+        seasonality_raw = row.get("seasonality", None)
+        seasonality = str(seasonality_raw) if pd.notna(seasonality_raw) and str(seasonality_raw).strip() else None
+
+        plan_period_raw = row.get("plan_period", None)
+        plan_period = str(plan_period_raw).strip() if pd.notna(plan_period_raw) and str(plan_period_raw).strip() else "year"
+
+        inflation_multiplier_raw = row.get("inflation_multiplier", None)
+        if pd.notna(inflation_multiplier_raw) and str(inflation_multiplier_raw).strip() != "":
+            inflation_multiplier = float(inflation_multiplier_raw)
+        else:
+            inflation_multiplier = 1.0
+
+        scopes.append(
+            OptionScope(
+                scope_name=str(row["scope_name"]),
+                date_start=str(row["date_start"]),
+                date_end=str(row["date_end"]),
+                ref_date_start=str(row["ref_date_start"]),
+                ref_date_end=ref_date_end,
+                filters=filters,
+                plan_period=plan_period,
+                inflation_multiplier=inflation_multiplier,
+                seasonality=seasonality,
+            )
+        )
+    return scopes
+
+
+def media_prices_read(
+    path: str, sheet: str = "media_prices"
+) -> dict[str, dict[str, float]]:
+    """
+    Read the media_prices sheet from options.xlsx.
+
+    Returns per-tool inflation multipliers organized as a nested dict
+    ``{scope_name: {item: multiplier}}``. These multipliers override the
+    scope-level ``inflation_multiplier`` for individual budget items
+    within a scope.
+
+    If the sheet is absent from the file, returns an empty dict silently
+    (the media_prices sheet is optional).
+
+    Parameters
+    ----------
+    path : str
+        Path to the options XLSX file.
+    sheet : str, optional
+        Sheet name. Defaults to ``"media_prices"``.
+
+    Returns
+    -------
+    dict[str, dict[str, float]]
+        Nested dict mapping ``{scope_name: {item: multiplier}}``.
+        Empty dict if the sheet is not present.
+    """
+    wb = load_workbook(path)
+    shts = wb.sheetnames
+    wb.close()
+
+    if sheet not in shts:
+        return {}
+
+    dt_prices = pd.read_excel(path, sheet_name=sheet)
+
+    result: dict[str, dict[str, float]] = {}
+    for _, row in dt_prices.iterrows():
+        scope_name = str(row["scope_name"])
+        item = str(row["item"])
+        multiplier = float(row["multiplier"])
+        result.setdefault(scope_name, {})[item] = multiplier
+
+    return result
+
+
+def seasonality_read(
+    path: str, sheet: str = "seasonality"
+) -> dict[str, pd.DataFrame]:
+    """
+    Read the seasonality sheet from options.xlsx, keyed by scope_name.
+
+    Seasonality data contains weekly or monthly coefficients that adjust
+    media variables to reflect seasonal patterns. The sheet is grouped by
+    ``scope_name`` — each group becomes a DataFrame with a ``period``
+    column and one column per media tool (e.g. ``bdg_tv``,
+    ``bdg_digital``).
+
+    If the sheet is absent from the file, returns an empty dict silently
+    (the seasonality sheet is optional).
+
+    Parameters
+    ----------
+    path : str
+        Path to the options XLSX file.
+    sheet : str, optional
+        Sheet name. Defaults to ``"seasonality"``.
+
+    Returns
+    -------
+    dict[str, pd.DataFrame]
+        Dict mapping ``{scope_name: DataFrame}`` where each DataFrame
+        has a ``period`` column and columns for each media tool's
+        seasonal coefficients. Empty dict if the sheet is not present.
+
+    Raises
+    ------
+    FermatricaError
+        If the sheet exists but has no ``scope_name`` column.
+    """
+    wb = load_workbook(path)
+    shts = wb.sheetnames
+    wb.close()
+
+    if sheet not in shts:
+        return {}
+
+    dt_ssn = pd.read_excel(path, sheet_name=sheet)
+
+    if "scope_name" not in dt_ssn.columns:
+        fermatrica_error(
+            "Seasonality sheet must have a 'scope_name' column"
+        )
+
+    result: dict[str, pd.DataFrame] = {}
+    for scope_name, group in dt_ssn.groupby("scope_name"):
+        result[str(scope_name)] = group.drop(columns=["scope_name"]).reset_index(
+            drop=True
+        )
+
+    return result
+
+
+def _option_settings_to_scope(opt_set, idx=0):
+    """Convert a single OptionSettings to an OptionScope."""
+    return OptionScope(
+        scope_name=getattr(opt_set, 'prefix', f"scope_{idx}"),
+        date_start=opt_set.date_start,
+        date_end=opt_set.date_end,
+        ref_date_start=getattr(opt_set, 'ref_date_start', opt_set.date_start),
+        ref_date_end=getattr(opt_set, 'ref_date_end', opt_set.date_end),
+        filters={k: [v] if not isinstance(v, list) else v
+                 for k, v in zip(opt_set.apply_vars, opt_set.target)},
+        plan_period=getattr(opt_set, 'plan_period', 'year'),
+    )
+
+
+def _convert_old_options(opt_set, options_m):
+    """Convert old-style OptionSettings + raw dict to new OptionScope + Option lists.
+
+    Parameters
+    ----------
+    opt_set : OptionSettings | list[OptionSettings]
+        Old OptionSettings object(s).
+    options_m : dict
+        Dict of option name to raw budget data dict.
+
+    Returns
+    -------
+    tuple[list[OptionScope], list[Option]]
+    """
+    if isinstance(opt_set, list):
+        scopes = [_option_settings_to_scope(os, i) for i, os in enumerate(opt_set)]
+    else:
+        scopes = [_option_settings_to_scope(opt_set)]
+
+    first_scope_name = scopes[0].scope_name
+
+    options = []
+    for option_name, option_data in options_m.items():
+        if isinstance(option_data, list):
+            budget_items = {}
+            text_flags = None
+            for sub_dict in option_data:
+                if isinstance(sub_dict, dict):
+                    for k, v in sub_dict.items():
+                        if k.startswith('bdg_') and k != 'bdg' and not isinstance(v, dict):
+                            budget_items[k] = float(v)
+                        elif k == 'text_flags':
+                            text_flags = str(v)
+            budget_data = {s.scope_name: dict(budget_items) for s in scopes}
+            options.append(Option(name=option_name, budget_data=budget_data,
+                                  text_flags=str(text_flags) if text_flags is not None else None))
+        elif isinstance(option_data, dict) and any(isinstance(v, dict) for v in option_data.values()):
+            budget_data = {}
+            text_flags = None
+            for key, items in option_data.items():
+                if isinstance(key, int):
+                    matching_scopes = [s for s in scopes if s.date_start.year == key]
+                    sn = matching_scopes[0].scope_name if matching_scopes else first_scope_name
+                    budget_items = {k: float(v) for k, v in items.items()
+                                    if k.startswith('bdg_') and k != 'bdg' and not isinstance(v, dict)}
+                    budget_data[sn] = budget_items
+                elif key == 'text_flags':
+                    text_flags = str(items)
+            options.append(Option(name=option_name, budget_data=budget_data, text_flags=text_flags))
+        else:
+            budget_items = {k: float(v) for k, v in option_data.items()
+                            if k.startswith('bdg_') and k != 'bdg' and not isinstance(v, dict)}
+            text_flags = option_data.get('text_flags')
+            budget_data = {s.scope_name: budget_items for s in scopes}
+            options.append(Option(name=option_name, budget_data=budget_data,
+                                  text_flags=str(text_flags) if text_flags is not None else None))
+
+    return scopes, options
 

@@ -4,8 +4,91 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from fermatrica_rep.export.basics import _extract_options_data
+from fermatrica_rep.export.basics import _extract_options_data, resolve_scopes_for_node, resolve_scope_for_node
 from fermatrica_rep.options.define import OptionSettings
+from fermatrica_rep.options.scope import OptionScope
+
+
+def _scope(name, date_start='2026-01-01', date_end='2026-12-31'):
+    return OptionScope(
+        scope_name=name,
+        date_start=date_start,
+        date_end=date_end,
+        ref_date_start='2025-01-01',
+        ref_date_end='2025-12-31',
+        filters={'superbrand': ['brand_1']},
+    )
+
+
+class TestResolveScopesForNode:
+
+    def _scopes(self):
+        return [
+            _scope('predefined_brand_1_2025', '2025-01-01', '2025-12-31'),
+            _scope('predefined_brand_1_2026', '2026-01-01', '2026-12-31'),
+            _scope('zero_brand_1_2026', '2026-01-01', '2026-12-31'),
+        ]
+
+    def test_returns_all_nonzero_scopes_in_order(self):
+        node_result = {
+            'predefined_brand_1_2025': {'pred_exact_vol': 100.0},
+            'predefined_brand_1_2026': {'pred_exact_vol': 200.0},
+            'zero_brand_1_2026': {'pred_exact_vol': 0.0},
+        }
+        resolved = resolve_scopes_for_node(node_result, self._scopes())
+        assert [name for _, name in resolved] == [
+            'predefined_brand_1_2025', 'predefined_brand_1_2026',
+        ]
+
+    def test_handles_return_full_tuples(self):
+        scopes = self._scopes()
+        node_result = {
+            'predefined_brand_1_2026': ('ds', 'dt_pred', {'pred_exact_vol': 50.0}),
+        }
+        resolved = resolve_scopes_for_node(node_result, scopes)
+        assert len(resolved) == 1
+        scope, name = resolved[0]
+        assert name == 'predefined_brand_1_2026'
+        assert scope is scopes[1]
+
+    def test_empty_when_all_zero(self):
+        node_result = {
+            'predefined_brand_1_2025': {'pred_exact_vol': 0.0},
+            'predefined_brand_1_2026': {'pred_exact_vol': 0.0},
+        }
+        assert resolve_scopes_for_node(node_result, self._scopes()) == []
+
+    def test_none_and_missing_skipped(self):
+        node_result = {
+            'predefined_brand_1_2026': {'pred_exact_vol': 7.0},
+            'zero_brand_1_2026': None,
+        }
+        resolved = resolve_scopes_for_node(node_result, self._scopes())
+        assert [name for _, name in resolved] == ['predefined_brand_1_2026']
+
+    def test_scope_filtered_by_option_returns_only_its_scopes(self):
+        # per-option scopes: the option's compute result covers only its own scopes
+        node_result = {
+            'predefined_brand_1_2025': {'pred_exact_vol': 100.0},
+            'predefined_brand_1_2026': {'pred_exact_vol': 200.0},
+        }
+        resolved = resolve_scopes_for_node(node_result, self._scopes())
+        assert [name for _, name in resolved] == [
+            'predefined_brand_1_2025', 'predefined_brand_1_2026',
+        ]
+
+    def test_singular_wrapper_returns_first(self):
+        node_result = {
+            'predefined_brand_1_2025': {'pred_exact_vol': 0.0},
+            'predefined_brand_1_2026': {'pred_exact_vol': 200.0},
+        }
+        scope, name = resolve_scope_for_node(node_result, self._scopes())
+        assert name == 'predefined_brand_1_2026'
+
+    def test_singular_wrapper_falls_back_to_first_scope(self):
+        node_result = {}
+        scope, name = resolve_scope_for_node(node_result, self._scopes())
+        assert name == 'predefined_brand_1_2025'
 
 
 class TestExtractOptionsData:

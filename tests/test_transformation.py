@@ -4,7 +4,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from fermatrica_rep.transformation import transformation_main_plot, transformation_plot
+from fermatrica_rep.analysis.transformation import transformation_main_plot, transformation_plot
 
 
 class TestTransformationMainPlot:

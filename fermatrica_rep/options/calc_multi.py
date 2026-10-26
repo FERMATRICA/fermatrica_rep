@@ -6,6 +6,7 @@ Calculate and report multiple options with grid of options. Use it to calculate 
 
 import re
 import itertools
+import warnings
 import numpy as np
 import pandas as pd
 import copy
@@ -241,6 +242,12 @@ def option_report_multi_post(model: "Model | list"
     :param bdg_max: maximum budget size (all options with larger budgets to be dropped)
     :return: options summaries per every option with option split and info, as dataframe
     """
+
+    warnings.warn(
+        "option_report_multi_post() is deprecated. Use parallel.compute_grid() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
 
     if translation is None:
         if isinstance(model_rep, list):

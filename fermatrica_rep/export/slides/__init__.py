@@ -10,9 +10,17 @@ Generate specific slides for PPTX export:
 """
 
 
-from fermatrica_rep.export.slides.fit_predict import create as fit_predict
-from fermatrica_rep.export.slides.decomposition import create as decomposition
-from fermatrica_rep.export.slides.incr_roi import create as incr_roi
-from fermatrica_rep.export.slides.waterfall import create as waterfall
-from fermatrica_rep.export.slides.options import create as options
-from fermatrica_rep.export.slides.adstocks import create as adstocks
+from fermatrica_rep.export.slides import fit_predict
+from fermatrica_rep.export.slides import decomposition
+from fermatrica_rep.export.slides import incr_roi
+from fermatrica_rep.export.slides import waterfall
+from fermatrica_rep.export.slides import options
+from fermatrica_rep.export.slides import adstocks
+
+# Backward-compatible callable aliases (deprecated — use .create_legacy() or .create() directly)
+fit_predict_legacy = fit_predict.create_legacy
+decomposition_legacy = decomposition.create_legacy
+incr_roi_legacy = incr_roi.create_legacy
+waterfall_legacy = waterfall.create_legacy
+options_legacy = options.create_legacy
+adstocks_legacy = adstocks.create_legacy

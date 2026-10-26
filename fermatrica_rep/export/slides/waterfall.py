@@ -1,7 +1,7 @@
 """
 Generate slide with waterfall (static decomposition) plot. Could be used both in retro analysis and in option
-reporting. As for now only superbrand export is available (no SKU's). `bs_key_filter` could also be used
-to filter only some of bs_key of the brands to be reported.
+reporting. As for now only superbrand export is available (no SKU's). A `filters` dict could also be used
+to restrict the reported rows (e.g. `{'bs_key': [...]}`).
 """
 
 
@@ -19,54 +19,60 @@ from pptx.oxml.xmlchemy import OxmlElement
 from fermatrica_utils import groupby_eff, hex_to_rgb
 
 from fermatrica.model.model import Model
+from fermatrica_rep.basics import _filter_df
+from fermatrica_rep.export import wording
+from fermatrica_rep.export.basics import _resolve_slide_layout
 from fermatrica_rep.meta_model.model_rep import ModelRep
+from fermatrica_rep.meta_model.node import ModelNode
 
 
 def create(prs: Presentation,
-           model: "Model",
-           model_rep: "ModelRep",
+           node: ModelNode,
+           *,
            split_m_m: pd.DataFrame,
            option_name: str,
-           brands: list,
+           brands: list | None = None,
            date_start: str,
            date_end: str,
            absolute_sort: str | bool = False,
            plot_type: str = 'brand',
-           bs_key_filter: list | tuple | None = None,
+           brands_var: str = 'superbrand',
+           filters: dict | None = None,
            if_volume: bool = True,
-           show_pretrain: bool = False
+           show_pretrain: bool = False,
            ):
     """
-    Create  waterfall (static decomposition) slide and add to `prs` PPTX presentation.
-    As for now only superbrand export is available (no SKU's). `bs_key_filter` could also be used
-    to filter only some of bs_key of the brands to be reported.
+    Create waterfall (static decomposition) slide and add to `prs` PPTX presentation.
 
     :param prs: Presentation object from python_pptx package
-    :param model_rep: ModelRep object (reporting settings)
-    :param model: Model object
+    :param node: ModelNode bundling (model, ds, model_rep)
     :param split_m_m: prepared dataset (see `fermatrica_rep.extract_effect()`)
-    :param option_name: name of the option to be reported. To be used only as title here, no impact on program behaviour
-    :param brands: superbrand string names as list
+    :param option_name: name of the option to be reported
+    :param brands: superbrand string names as list, None to keep all
     :param date_start: start of the period
     :param date_end: end of the period
     :param absolute_sort: sort by absolute values or take into account sign
     :param plot_type: 'retro', 'brand' or 'sku'. Used for naming only
-    :param bs_key_filter: list or tuple of 'bs_key' values to preserve
+    :param brands_var: column the simple filter values apply to
+    :param filters: dict of {column: values} to restrict the split data by (AND
+        masks). Columns absent from the split are skipped. The scope-union
+        filters derived for the reported scopes are merged (same-key
+        intersection) with these user filters before application.
     :param if_volume: optimize volume or value KPI
-    :return: Presentation object from python_pptx package
     :param show_pretrain: show pretrain periods or not
+    :return: Presentation object from python_pptx package
     """
+
+    model = node.model
+    model_rep = node.model_rep
 
     language = model_rep.language
 
-    if hasattr(model.conf, 'display_units'):
-        units = model.conf.display_units
-    else:
-        units = 'packs'
+    units_label = wording.units_label(model_rep, model.conf)
 
     # prepare slide in presentation
 
-    slide_layout = model_rep.pptx_cnf['Blank_slide']
+    slide_layout = _resolve_slide_layout(prs, model_rep.pptx_cnf['Blank_slide'])
 
     slide_height = model_rep.pptx_cnf['slide_height']
     slide_width = model_rep.pptx_cnf['slide_width']
@@ -98,12 +104,6 @@ def create(prs: Presentation,
                                                      (model_rep.vis_dict['variable'] == 'title'), language].iloc[0]
 
     slide_title = slide_title.replace('***id', option_name)
-    try:
-        units_label = model_rep.vis_dict.loc[
-            (model_rep.vis_dict['section'] == "shared") & (model_rep.vis_dict['variable'] == units), language].iloc[0]
-    except IndexError:
-        units_label = model_rep.vis_dict.loc[
-            (model_rep.vis_dict['section'] == "shared") & (model_rep.vis_dict['variable'] == 'units'), language].iloc[0]
     slide_title = slide_title.replace('***units', units_label)
 
     slide.shapes[0].text_frame.text = slide_title
@@ -127,16 +127,15 @@ def create(prs: Presentation,
     # data prep for waterfall
     split = copy.deepcopy(split_m_m)
 
-    if bs_key_filter is not None:
-        split = split[split['bs_key'].isin(bs_key_filter)]
-
     waterfall_data = _waterfall_chart_data(split=split,
                                            brands=brands,
                                            date_start=date_start,
                                            date_end=date_end,
                                            absolute_sort=absolute_sort,
                                            if_volume=if_volume,
-                                           show_pretrain=show_pretrain)
+                                           show_pretrain=show_pretrain,
+                                           brands_var=brands_var,
+                                           filters=filters)
 
     if len(waterfall_data) == 0:
         return prs
@@ -211,38 +210,84 @@ def create(prs: Presentation,
     return prs
 
 
+def create_legacy(prs: Presentation,
+                  model,
+                  model_rep,
+                  *,
+                  split_m_m: pd.DataFrame,
+                  option_name: str,
+                  brands: list,
+                  date_start: str,
+                  date_end: str,
+                  absolute_sort: str | bool = False,
+                  plot_type: str = 'brand',
+                  bs_key_filter: list | tuple | None = None,
+                  if_volume: bool = True,
+                  show_pretrain: bool = False,
+                  scope_filters: dict | None = None,
+                  ):
+    import warnings
+    warnings.warn(
+        "Passing Model and ModelRep to slides.waterfall is deprecated. "
+        "Use ModelNode instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    node = ModelNode(model=model, ds=pd.DataFrame(), model_rep=model_rep)
+    filters = dict(scope_filters) if scope_filters else {}
+    if bs_key_filter is not None:
+        if 'bs_key' in filters:
+            filters['bs_key'] = sorted(set(filters['bs_key']) & set(bs_key_filter))
+        else:
+            filters['bs_key'] = list(bs_key_filter)
+    return create(prs, node,
+                  split_m_m=split_m_m,
+                  option_name=option_name,
+                  brands=brands,
+                  date_start=date_start,
+                  date_end=date_end,
+                  absolute_sort=absolute_sort,
+                  plot_type=plot_type,
+                  filters=filters or None,
+                  if_volume=if_volume,
+                  show_pretrain=show_pretrain)
+
+
 def _waterfall_chart_data(split: pd.DataFrame,
-                          brands: list,
-                          date_start: str,
-                          date_end: str,
+                          brands: list | None = None,
+                          date_start: str = '2020-01-01',
+                          date_end: str = '2021-01-01',
                           absolute_sort: str | bool = False,
                           if_volume: bool = True,
-                          show_pretrain: bool = False):
+                          show_pretrain: bool = False,
+                          brands_var: str = 'superbrand',
+                          filters: dict | None = None):
     """
 
     Convert 'common' decomposed dataset to dataset prepared to be plotted.
 
-    :param split: prepared dataset (see `fermatrica_rep.extract_effect()`) filtered by bs_key
-    :param brands: superbrand string names as list
+    :param split: prepared dataset (see `fermatrica_rep.extract_effect()`)
+    :param brands: superbrand string names as list, None to keep all
     :param date_start: start of the period
     :param date_end: end of the period
     :param absolute_sort: sort by absolute values or take into account sign
     :param if_volume: optimize volume or value KPI
     :param show_pretrain: show pretrain periods or not
+    :param brands_var: column the simple filter values apply to
+    :param filters: dict of {column: values} to restrict the split data by (AND
+        masks). Columns absent from the split are skipped.
     :return: pandas DataFrame prepared to be plotted
     """
-
-    if not brands:
-        brands = split['superbrand'].unique()
 
     if absolute_sort == 'True':
         absolute_sort = True
     elif absolute_sort == 'False':
         absolute_sort = False
 
+    split = _filter_df(split, brands=brands, brands_var=brands_var, filters=filters)
+
     mask = (split['date'] >= pd.to_datetime(date_start)) & \
-           (split['date'] <= pd.to_datetime(date_end)) & \
-           (split['superbrand'].isin(brands))
+           (split['date'] <= pd.to_datetime(date_end))
 
     if not show_pretrain:
         mask = mask & ~split['listed'].isin([1])

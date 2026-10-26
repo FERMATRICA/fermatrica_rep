@@ -66,7 +66,7 @@ class TestP00Fit:
     def test_fit_main_plot_vol(self, setup):
         """fit_main_plot_vol returns a go.Figure with data traces."""
         import plotly.graph_objects as go
-        from fermatrica_rep.fit import fit_main_plot_vol
+        from fermatrica_rep.analysis.fit import fit_main_plot_vol
 
         fig = fit_main_plot_vol(
             setup["model"], setup["dt_pred"], setup["model_rep"], period="month",
@@ -77,7 +77,7 @@ class TestP00Fit:
 
     def test_fit_main_data_wide_long_consistency(self, setup):
         """fit_main_data wide and long DataFrames have matching totals."""
-        from fermatrica_rep.fit import fit_main_data
+        from fermatrica_rep.analysis.fit import fit_main_data
 
         wide, long = fit_main_data(
             setup["model"], setup["dt_pred"], period="month",
@@ -99,7 +99,7 @@ class TestP00Fit:
     def test_edge_case_period_week(self, setup):
         """fit_main_plot_vol with weekly period."""
         import plotly.graph_objects as go
-        from fermatrica_rep.fit import fit_main_plot_vol
+        from fermatrica_rep.analysis.fit import fit_main_plot_vol
 
         fig = fit_main_plot_vol(
             setup["model"], setup["dt_pred"], setup["model_rep"], period="week",
@@ -110,7 +110,7 @@ class TestP00Fit:
     def test_edge_case_period_quarter(self, setup):
         """fit_main_plot_vol with quarterly period."""
         import plotly.graph_objects as go
-        from fermatrica_rep.fit import fit_main_plot_vol
+        from fermatrica_rep.analysis.fit import fit_main_plot_vol
 
         fig = fit_main_plot_vol(
             setup["model"], setup["dt_pred"], setup["model_rep"], period="quarter",
@@ -121,7 +121,7 @@ class TestP00Fit:
     def test_edge_case_no_future(self, setup):
         """fit_main_plot_vol with show_future=False."""
         import plotly.graph_objects as go
-        from fermatrica_rep.fit import fit_main_plot_vol
+        from fermatrica_rep.analysis.fit import fit_main_plot_vol
 
         fig = fit_main_plot_vol(
             setup["model"], setup["dt_pred"], setup["model_rep"],
@@ -133,7 +133,7 @@ class TestP00Fit:
     def test_edge_case_zero_err_int(self, setup):
         """fit_main_plot_vol with err_int=0.0 (collapsed error band)."""
         import plotly.graph_objects as go
-        from fermatrica_rep.fit import fit_main_plot_vol
+        from fermatrica_rep.analysis.fit import fit_main_plot_vol
 
         fig = fit_main_plot_vol(
             setup["model"], setup["dt_pred"], setup["model_rep"],
@@ -146,7 +146,7 @@ class TestP00Fit:
         """fit_main_plot_vol matches golden expected trace values (p00 OLS)."""
         import os
         import yaml
-        from fermatrica_rep.fit import fit_main_plot_vol
+        from fermatrica_rep.analysis.fit import fit_main_plot_vol
         from tests.test_integration.helpers import compare_plot_golden
 
         pth = os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -223,7 +223,7 @@ class TestP01Fit:
     def test_fit_main_plot_vol(self, setup):
         """fit_main_plot_vol with single brand returns go.Figure."""
         import plotly.graph_objects as go
-        from fermatrica_rep.fit import fit_main_plot_vol
+        from fermatrica_rep.analysis.fit import fit_main_plot_vol
 
         fig = fit_main_plot_vol(
             setup["model"], setup["dt_pred"], setup["model_rep"],
@@ -236,7 +236,7 @@ class TestP01Fit:
     def test_fit_mult_plot_vol(self, setup):
         """fit_mult_plot_vol with 3 brands returns go.Figure with multiple traces."""
         import plotly.graph_objects as go
-        from fermatrica_rep.fit import fit_mult_plot_vol
+        from fermatrica_rep.analysis.fit import fit_mult_plot_vol
 
         fig = fit_mult_plot_vol(
             setup["model"], setup["dt_pred"], setup["model_rep"],
@@ -250,7 +250,7 @@ class TestP01Fit:
     def test_fit_mult_plot_vol_no_future(self, setup):
         """fit_mult_plot_vol with show_future=False."""
         import plotly.graph_objects as go
-        from fermatrica_rep.fit import fit_mult_plot_vol
+        from fermatrica_rep.analysis.fit import fit_mult_plot_vol
 
         fig = fit_mult_plot_vol(
             setup["model"], setup["dt_pred"], setup["model_rep"],
@@ -262,7 +262,7 @@ class TestP01Fit:
 
     def test_fit_main_data_wide_long_consistency(self, setup):
         """fit_main_data wide and long DataFrames have matching totals."""
-        from fermatrica_rep.fit import fit_main_data
+        from fermatrica_rep.analysis.fit import fit_main_data
 
         wide, long = fit_main_data(
             setup["model"], setup["dt_pred"], period="month",
@@ -284,7 +284,7 @@ class TestP01Fit:
         """fit_main_plot_vol matches golden expected trace values (p01 LME)."""
         import os
         import yaml
-        from fermatrica_rep.fit import fit_main_plot_vol
+        from fermatrica_rep.analysis.fit import fit_main_plot_vol
         from tests.test_integration.helpers import compare_plot_golden
 
         pth = os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -360,7 +360,7 @@ class TestP02Fit:
     def test_fit_main_plot_vol(self, setup):
         """fit_main_plot_vol with single brand returns go.Figure."""
         import plotly.graph_objects as go
-        from fermatrica_rep.fit import fit_main_plot_vol
+        from fermatrica_rep.analysis.fit import fit_main_plot_vol
 
         fig = fit_main_plot_vol(
             setup["model"], setup["dt_pred"], setup["model_rep"],
@@ -373,7 +373,7 @@ class TestP02Fit:
     def test_fit_mult_plot_vol(self, setup):
         """fit_mult_plot_vol with 3 brands returns go.Figure."""
         import plotly.graph_objects as go
-        from fermatrica_rep.fit import fit_mult_plot_vol
+        from fermatrica_rep.analysis.fit import fit_mult_plot_vol
 
         fig = fit_mult_plot_vol(
             setup["model"], setup["dt_pred"], setup["model_rep"],
@@ -386,7 +386,7 @@ class TestP02Fit:
     def test_fit_mult_plot_vol_no_future(self, setup):
         """fit_mult_plot_vol with show_future=False."""
         import plotly.graph_objects as go
-        from fermatrica_rep.fit import fit_mult_plot_vol
+        from fermatrica_rep.analysis.fit import fit_mult_plot_vol
 
         fig = fit_mult_plot_vol(
             setup["model"], setup["dt_pred"], setup["model_rep"],
@@ -397,7 +397,7 @@ class TestP02Fit:
 
     def test_fit_main_data_wide_long_consistency(self, setup):
         """fit_main_data wide and long DataFrames have matching totals."""
-        from fermatrica_rep.fit import fit_main_data
+        from fermatrica_rep.analysis.fit import fit_main_data
 
         wide, long = fit_main_data(
             setup["model"], setup["dt_pred"], period="month",
@@ -458,7 +458,7 @@ class TestP03Fit:
     def test_fit_main_plot_vol(self, setup):
         """fit_main_plot_vol with ABA target returns go.Figure."""
         import plotly.graph_objects as go
-        from fermatrica_rep.fit import fit_main_plot_vol
+        from fermatrica_rep.analysis.fit import fit_main_plot_vol
 
         fig = fit_main_plot_vol(
             setup["model"], setup["dt_pred"], setup["model_rep"],
@@ -470,7 +470,7 @@ class TestP03Fit:
 
     def test_fit_main_data_wide_long_consistency(self, setup):
         """fit_main_data wide and long DataFrames have matching totals."""
-        from fermatrica_rep.fit import fit_main_data
+        from fermatrica_rep.analysis.fit import fit_main_data
 
         wide, long = fit_main_data(
             setup["model"], setup["dt_pred"], period="month",
@@ -547,7 +547,7 @@ class TestP04Fit:
     def test_fit_main_plot_vol(self, setup):
         """fit_main_plot_vol with single region returns go.Figure."""
         import plotly.graph_objects as go
-        from fermatrica_rep.fit import fit_main_plot_vol
+        from fermatrica_rep.analysis.fit import fit_main_plot_vol
 
         fig = fit_main_plot_vol(
             setup["model"], setup["dt_pred"], setup["model_rep"],
@@ -560,7 +560,7 @@ class TestP04Fit:
     def test_fit_mult_plot_vol(self, setup):
         """fit_mult_plot_vol with 4 regions returns go.Figure."""
         import plotly.graph_objects as go
-        from fermatrica_rep.fit import fit_mult_plot_vol
+        from fermatrica_rep.analysis.fit import fit_mult_plot_vol
 
         fig = fit_mult_plot_vol(
             setup["model"], setup["dt_pred"], setup["model_rep"],
@@ -572,7 +572,7 @@ class TestP04Fit:
 
     def test_fit_main_data_wide_long_consistency(self, setup):
         """fit_main_data wide and long DataFrames have matching totals."""
-        from fermatrica_rep.fit import fit_main_data
+        from fermatrica_rep.analysis.fit import fit_main_data
 
         wide, long = fit_main_data(
             setup["model"], setup["dt_pred"], period="month",

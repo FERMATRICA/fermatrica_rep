@@ -118,10 +118,6 @@ class TestBasic:
 
     def test_basic_translation_with_seasonality(self):
         md = MockModelConf()
-        md.trans_path_df = pd.DataFrame({
-            'variable': ['brnd_tv_ots_clip'],
-            'price': [0.05]
-        })
         ssn_vals = [0.1, 0.2, 0.3, 0.4]
         ds = pd.DataFrame({
             'date': pd.date_range('2025-01-01', periods=4, freq='MS'),
@@ -131,10 +127,7 @@ class TestBasic:
         ds_mask = pd.Series([True] * 4)
         result = basic(md, ds, None, 'bdg_tv', 'brnd_tv_ots_clip', 100.0, ds_mask)
 
-        ssn_sum = sum(ssn_vals)
-        ssn_cor = 1.0 / ssn_sum
-        media_price = 0.05
-        expected = [s * ssn_cor * 100.0 * 1e6 / media_price for s in ssn_vals]
+        expected = [s * 100.0 * 1e6 / 1.0 for s in ssn_vals]
         np.testing.assert_array_almost_equal(result['brnd_tv_ots_clip'].values, expected)
 
     def test_media_price_defaults_to_1(self):
@@ -156,10 +149,6 @@ class TestBasic:
 
     def test_long_period_no_seasonality_correction(self):
         md = MockModelConf()
-        md.trans_path_df = pd.DataFrame({
-            'variable': ['my_var'],
-            'price': [0.1]
-        })
         ds = pd.DataFrame({
             'date': pd.date_range('2025-01-01', periods=4, freq='YS'),
             'opt_media_ssn_tv': [0.3, 0.7, 0.5, 0.9],
@@ -167,13 +156,8 @@ class TestBasic:
         })
         ds_mask = pd.Series([True, False, False, True])
         ssn_vals = ds.loc[ds_mask, 'opt_media_ssn_tv']
-        period_days = (ds.loc[ds_mask, 'date'].max() - ds.loc[ds_mask, 'date'].min()).days
         result = basic(md, ds, None, 'bdg_tv', 'my_var', 200.0, ds_mask)
-        if period_days > 366:
-            ssn_cor = 1.0
-        else:
-            ssn_cor = 1.0 / ssn_vals.sum()
-        expected_0 = ssn_vals.iloc[0] * ssn_cor * 200.0 * 1e6 / 0.1
+        expected_0 = ssn_vals.iloc[0] * 200.0 * 1e6 / 1.0
         assert np.isclose(result.loc[0, 'my_var'], expected_0)
 
 
@@ -252,14 +236,11 @@ class TestTvComplex:
                             'umb, sku_coef, umb_coef', 100.0, ds_mask,
                             clip_dur=10, tv_type='rolik_nat', media_prefix='ots')
         ssn = 0.1
-        ssn_sum = 12 * 0.1
-        ssn_cor = 1.0 / ssn_sum
         val = 100.0
         clip_dur = 10
-        media_price = 0.05
         sku_coef = 0.5
         aud_coef = 1.0
-        expected = ssn * ssn_cor * val * 1.0 / clip_dur * 1e6 / media_price * sku_coef * aud_coef
+        expected = ssn * val * 1.0 / clip_dur * 1e6 / 1.0 * sku_coef * aud_coef
         np.testing.assert_allclose(result.loc[0, 'ots_f_rolik_nat'], expected, rtol=1e-10)
 
     def test_4part_var_name(self, md, model_rep, ds):

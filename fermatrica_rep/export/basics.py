@@ -17,6 +17,7 @@ from fermatrica_utils import hex_to_rgb
 
 from fermatrica_rep import ModelRep
 from fermatrica_rep.options.define import OptionSettings
+from fermatrica_rep.options.scope import OptionScope
 
 
 def set_chart_colors_line(chart
@@ -282,3 +283,74 @@ def _extract_options_data(options_m: dict
                 if k in range(opt_set[0].date_start.year, opt_set[-1].date_end.year + 1)]
     else:
         return options_m[option_key]
+
+
+def _resolve_slide_layout(prs, layout_name: str = 'Blank_slide'):
+    """
+    Resolve a slide layout by name from a Presentation object.
+
+    Avoids storing a live ``SlideLayout`` object in configuration dicts that may be
+    deep-copied. Storing the layout object leads to duplicate Parts in the output ZIP
+    because ``Part.__hash__`` is identity-based and cannot deduplicate deep-copied
+    layout instances with the same partname.
+
+    :param prs: ``Presentation`` object from python-pptx
+    :param layout_name: name of the slide layout to look up (default ``'Blank_slide'``)
+    :return: ``SlideLayout`` object
+    """
+    for master in prs.slide_masters:
+        for layout in master.slide_layouts:
+            if layout.name == layout_name:
+                return layout
+    return prs.slide_layouts[0]
+
+
+def resolve_scopes_for_node(node_result: dict, scopes: list[OptionScope]) -> list[tuple[OptionScope, str]]:
+    """
+    Return all ``(OptionScope, scope_name)`` present in this node's compute result.
+
+    Finds every scope in ``scopes`` whose ``scope_name`` is a key
+    in ``node_result`` **and** whose summary has a non-zero prediction.
+    Skips scopes with all-zero (or ``None``) results. Scopes are
+    returned in ``scopes`` order. An empty list means no scope of this
+    node produced a non-zero prediction.
+
+    ``node_result`` values may be ``(ds, dt_pred, summary)`` tuples
+    (``return_full=True``) or plain summary dicts.
+
+    :param node_result: dict ``{scope_name: summary_or_tuple}`` for one node
+    :param scopes: list of ``OptionScope`` objects, in priority order
+    :return: list of ``(OptionScope, scope_name)`` tuples
+    """
+    resolved = []
+    for scope in scopes:
+        sresult = node_result.get(scope.scope_name)
+        if sresult is None:
+            continue
+        if isinstance(sresult, tuple):
+            sresult = sresult[2]
+        if not isinstance(sresult, dict):
+            continue
+        vol = sresult.get("pred_exact_vol")
+        if vol and vol > 0:
+            resolved.append((scope, scope.scope_name))
+    return resolved
+
+
+def resolve_scope_for_node(node_result: dict, scopes: list[OptionScope]) -> tuple[OptionScope, str]:
+    """
+    Return the ``(OptionScope, scope_name)`` present in this node's compute result.
+
+    Thin wrapper over :func:`resolve_scopes_for_node` returning the **first**
+    non-zero scope (or ``scopes[0]`` when no scope matches), kept for backward
+    compatibility. New code should use the plural version to obtain every
+    scope an option actually covers.
+
+    :param node_result: dict ``{scope_name: summary_or_tuple}`` for one node
+    :param scopes: list of ``OptionScope`` objects, in priority order
+    :return: ``(OptionScope, scope_name)``
+    """
+    resolved = resolve_scopes_for_node(node_result, scopes)
+    if resolved:
+        return resolved[0]
+    return scopes[0], scopes[0].scope_name
